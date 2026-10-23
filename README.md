@@ -1,0 +1,66 @@
+# content-engine — مرحله ۰ و ۱
+
+موتور تولید خودکار محتوا (متنی، اینفوگرافیک، ویدئو) برای تلگرام و اینستاگرام.
+این نسخه: **پایه‌ی پروژه + مغز محتوا** (موضوع ← JSON معتبر برای هر سه نوع).
+
+## ساختار
+
+```
+app/
+  config.py            تنظیمات از .env
+  db/models.py         جدول jobs و وضعیت‌ها
+  db/session.py        اتصال دیتابیس
+  brain/schemas.py     اسکیمای text / infographic / video
+  brain/prompts.py     پرامپت برند و هر نوع محتوا
+  brain/llm.py         کلاینت OpenRouter + اعتبارسنجی + retry + Mock
+  brain/generate.py    ساخت job و اجرای تولید
+scripts/
+  init_db.py           ساخت جدول‌ها
+  check_openrouter.py  تست کلید و پیدا کردن اسم مدل
+  generate.py          تولید محتوا از خط فرمان
+tests/                 تست‌ها (بدون اینترنت)
+```
+
+## راه‌اندازی با Docker
+
+```bash
+cp .env.example .env          # کلید OpenRouter را داخلش بگذارید
+docker compose up -d db
+docker compose run --rm app python -m scripts.init_db
+docker compose run --rm app python -m scripts.check_openrouter --search deepseek
+docker compose run --rm app python -m scripts.generate --type all
+```
+
+خروجی‌ها در پوشه‌ی `outputs/` ذخیره می‌شوند.
+
+## اجرای بدون Docker
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+# در .env:  DATABASE_URL=sqlite:///./content_engine.db
+python -m pytest                         # تست‌ها
+python -m scripts.generate --mock        # تست کامل بدون API
+python -m scripts.check_openrouter --search deepseek
+python -m scripts.generate --type all
+```
+
+## دستورهای مفید
+
+| کار | دستور |
+|---|---|
+| فقط یک نوع | `--type video` |
+| موضوع دیگر | `--topic "۵ اشتباه رایج در اولین سفر با کاراوان"` |
+| مدل دیگر | `--model <id>` |
+| مقایسه‌ی چند مدل | `--models "<id1>,<id2>"` |
+| بدون API | `--mock` |
+
+## نکته‌ها
+
+- اسم مدل‌ها در OpenRouter عوض می‌شود. همیشه با `check_openrouter --search` اسم دقیق را پیدا کنید.
+  ستون `json` نشان می‌دهد مدل `response_format` را پشتیبانی می‌کند یا نه.
+- کد فقط providerهایی را انتخاب می‌کند که خروجی JSON را پشتیبانی می‌کنند (`require_parameters`).
+- اگر خروجی مدل نامعتبر باشد، خطاها به مدل برگردانده می‌شود و تا `LLM_MAX_RETRIES` بار تکرار می‌شود.
+- هزینه و تعداد توکن هر job در دیتابیس و فایل خروجی ثبت می‌شود.
+- اگر از IP ایران اجرا کنید ممکن است مدل‌ها (Claude، OpenAI و...) در دسترس نباشند؛ روی سرور خارج (مثل Render) اجرا کنید.

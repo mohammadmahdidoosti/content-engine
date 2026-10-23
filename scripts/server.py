@@ -226,9 +226,26 @@ class Handler(BaseHTTPRequestHandler):
         return self._json(404, {"error": "not found"})
 
 
+def startup_test() -> None:
+    """
+    تست خودکار بعد از deploy، فقط وقتی STARTUP_TEST تنظیم شده باشد.
+    فرمت: «موضوع|نوع۱,نوع۲|مدل» و چند مورد با ; — مدل اختیاری است.
+    بعد از تست، این متغیر را خالی کنید تا با هر بیدار شدن سرویس هزینه نشود.
+    """
+    spec = os.environ.get("STARTUP_TEST", "").strip()
+    for part in filter(None, (p.strip() for p in spec.split(";"))):
+        topic, _, rest = part.partition("|")
+        types_s, _, model = rest.partition("|")
+        types = [t for t in (types_s or "text").split(",") if t in TYPES]
+        for t in types:
+            _submit(create_job(topic.strip(), t, model=model.strip() or get_settings().llm_model))
+        log.info("تست خودکار: %s | %s | %s", topic.strip()[:60], types, model.strip() or "(default)")
+
+
 def main() -> None:
     init_db()
     recover_jobs()
+    startup_test()
     if not RUN_TOKEN:
         log.warning("RUN_TOKEN تنظیم نشده؛ API و پنل قابل ورود نیستند.")
     port = int(os.environ.get("PORT", "10000"))

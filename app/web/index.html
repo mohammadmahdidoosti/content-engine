@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>پنل تولید محتوا</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f1ea; --surface:#fffdf8; --surface-2:#f0ebe0; --ink:#1f2a24; --ink-2:#55615a; --ink-3:#8a948e;
+  --line:#e2dccf; --accent:#2f6b4f; --accent-ink:#fff; --accent-soft:#e3efe8;
+  --amber:#b7791f; --amber-soft:#fbf0dc; --red:#b4412f; --red-soft:#f9e4df; --blue:#2c5d8f; --blue-soft:#e2ecf6;
+  --tg:#e9f4ec; --shadow:0 1px 2px rgba(31,42,36,.06),0 6px 20px rgba(31,42,36,.06); --r:14px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#121614; --surface:#1a201d; --surface-2:#222a26; --ink:#e8ece9; --ink-2:#a9b3ad; --ink-3:#77827b;
+    --line:#2d3631; --accent:#5fb08a; --accent-ink:#0e1411; --accent-soft:#1f3329;
+    --amber:#e0a84a; --amber-soft:#33291a; --red:#e07a66; --red-soft:#3a221d; --blue:#7fb0e0; --blue-soft:#1c2a38;
+    --tg:#1d2b23; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121614; --surface:#1a201d; --surface-2:#222a26; --ink:#e8ece9; --ink-2:#a9b3ad; --ink-3:#77827b;
+  --line:#2d3631; --accent:#5fb08a; --accent-ink:#0e1411; --accent-soft:#1f3329;
+  --amber:#e0a84a; --amber-soft:#33291a; --red:#e07a66; --red-soft:#3a221d; --blue:#7fb0e0; --blue-soft:#1c2a38;
+  --tg:#1d2b23; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:Vazirmatn,Tahoma,sans-serif;font-size:15px;line-height:1.75;
+  -webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit;color:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:38px;height:38px;border-radius:11px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:800}
+.brand h1{font-size:18px;margin:0;font-weight:800}
+.brand small{display:block;color:var(--ink-3);font-size:12px;margin-top:-4px}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:10px;padding:6px 12px;cursor:pointer;color:var(--ink-2)}
+.ghost:hover{background:var(--surface-2)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.stat b{display:block;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.stat span{color:var(--ink-3);font-size:12.5px}
+.grid{display:grid;grid-template-columns:360px 1fr;gap:18px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.card h2{font-size:15px;margin:0;padding:14px 16px;border-bottom:1px solid var(--line);font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.pad{padding:16px}
+label.f{display:block;font-size:13px;color:var(--ink-2);margin:0 0 6px;font-weight:500}
+textarea,input[type=text],input[type=password]{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none}
+textarea{min-height:84px;resize:vertical}
+textarea:focus,input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.types{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.type{position:relative}
+.type input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.type div{border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center;font-size:13px;transition:.15s;background:var(--bg)}
+.type div i{display:block;font-style:normal;font-size:20px;line-height:1.3}
+.type input:checked+div{border-color:var(--accent);background:var(--accent-soft);color:var(--ink);font-weight:700}
+.type input:focus-visible+div{box-shadow:0 0 0 3px var(--accent-soft)}
+.primary{width:100%;background:var(--accent);color:var(--accent-ink);border:0;border-radius:11px;padding:11px;font-weight:700;cursor:pointer;margin-top:14px}
+.primary:disabled{opacity:.55;cursor:wait}
+.hint{color:var(--ink-3);font-size:12px;margin-top:6px}
+.err{background:var(--red-soft);color:var(--red);border-radius:10px;padding:8px 12px;font-size:13px;margin-top:10px;display:none}
+.suggest{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.suggest button{background:var(--surface-2);border:0;border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;color:var(--ink-2)}
+.jobs{list-style:none;margin:0;padding:6px}
+.job{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px;border-radius:11px;cursor:pointer}
+.job:hover,.job.sel{background:var(--surface-2)}
+.ticon{width:34px;height:34px;border-radius:10px;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;font-size:16px}
+.job .t{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.job .m{color:var(--ink-3);font-size:12px}
+.badge{font-size:11.5px;border-radius:999px;padding:2px 9px;font-weight:600;white-space:nowrap}
+.b-generated{background:var(--accent-soft);color:var(--accent)}
+.b-failed{background:var(--red-soft);color:var(--red)}
+.b-pending,.b-generating{background:var(--amber-soft);color:var(--amber)}
+.b-generating::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-left:5px;animation:p 1s infinite}
+@keyframes p{50%{opacity:.25}}
+.empty{color:var(--ink-3);text-align:center;padding:30px 10px;font-size:14px}
+.detail{margin-top:18px}
+.meta{display:flex;flex-wrap:wrap;gap:6px 16px;color:var(--ink-3);font-size:12.5px;padding:10px 16px;border-bottom:1px solid var(--line)}
+.meta b{color:var(--ink-2);font-weight:600}
+.tabs{display:flex;gap:4px;padding:10px 16px 0}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:6px 10px;cursor:pointer;color:var(--ink-3);font-weight:600}
+.tabs button.on{color:var(--ink);border-color:var(--accent)}
+.pv{padding:16px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.phone{background:var(--surface-2);border-radius:18px;padding:14px}
+.phone h4{margin:0 0 8px;font-size:12.5px;color:var(--ink-3);font-weight:600}
+.bubble{background:var(--tg);border-radius:14px 14px 4px 14px;padding:12px 14px;white-space:pre-wrap;font-size:14px;line-height:1.9}
+.bubble .btn{display:block;text-align:center;background:var(--surface);border-radius:9px;margin-top:10px;padding:6px;color:var(--blue);font-weight:600}
+.caption{background:var(--surface);border-radius:12px;padding:12px 14px;white-space:pre-wrap;font-size:14px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tag{background:var(--blue-soft);color:var(--blue);border-radius:999px;padding:1px 10px;font-size:12.5px}
+.kw{background:var(--amber-soft);color:var(--amber)}
+.sec-t{font-size:12.5px;color:var(--ink-3);margin:16px 0 6px;font-weight:600}
+.copy{float:left;font-size:12px;padding:2px 9px}
+.ig{aspect-ratio:4/5;max-width:420px;margin:0 auto;border-radius:16px;padding:26px 22px;background:linear-gradient(160deg,var(--accent) 0%,#1d4634 100%);color:#fff;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow)}
+.ig .it{font-size:22px;font-weight:800;line-height:1.5}
+.ig .st{opacity:.85;font-size:13px;margin-top:-6px}
+.ig ul{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:7px;flex:1}
+.ig li{display:grid;grid-template-columns:30px 1fr;gap:8px;align-items:start;background:rgba(255,255,255,.1);border-radius:10px;padding:7px 9px}
+.ig li i{font-style:normal;font-size:17px;line-height:1.6;text-align:center}
+.ig li b{display:block;font-size:13.5px}
+.ig li span{font-size:12px;opacity:.88;line-height:1.6;display:block}
+.ig .tip{background:#fff;color:#1d4634;border-radius:10px;padding:7px 10px;font-size:12.5px;font-weight:600}
+.ig .cta{text-align:center;font-size:12.5px;opacity:.9}
+.warn{color:var(--amber);font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:right;color:var(--ink-3);font-weight:600;font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n{font-variant-numeric:tabular-nums;color:var(--ink-3);white-space:nowrap;direction:ltr;text-align:right}
+td .ost{font-weight:700}
+.vt{font-size:11px;color:var(--ink-3);direction:ltr;text-align:right}
+.timeline{display:flex;height:8px;border-radius:4px;overflow:hidden;margin:4px 0 14px;gap:2px}
+.timeline div{background:var(--accent);opacity:.75}
+.timeline div:nth-child(odd){opacity:.45}
+pre.raw{direction:ltr;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;font-size:12px;max-height:520px;white-space:pre-wrap}
+.errbox{background:var(--red-soft);color:var(--red);border-radius:10px;padding:10px 12px;font-size:13.5px}
+.actions{display:flex;gap:8px}
+#login{max-width:380px;margin:12vh auto 0}
+#login .logo{margin:0 auto 12px;width:52px;height:52px;font-size:22px}
+#login h1{text-align:center;font-size:18px;margin:0 0 4px}
+#login p{text-align:center;color:var(--ink-3);font-size:13px;margin:0 0 18px}
+.hidden{display:none!important}
+@media (max-width:900px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}}
+@media (max-width:420px){.types div{font-size:12px}.brand small{display:none}}
+</style>
+</head>
+<body>
+
+<div id="login" class="wrap hidden">
+  <div class="card pad">
+    <div class="logo">ک</div>
+    <h1>پنل تولید محتوا</h1>
+    <p>برای ورود، مقدار <code>RUN_TOKEN</code> را از بخش Environment سرویس در Render وارد کنید.</p>
+    <form id="loginForm">
+      <label class="f" for="tok">رمز ورود</label>
+      <input type="password" id="tok" autocomplete="current-password" required>
+      <button class="primary" type="submit">ورود</button>
+      <div class="err" id="loginErr"></div>
+    </form>
+  </div>
+</div>
+
+<div id="app" class="wrap hidden">
+  <header>
+    <div class="brand">
+      <div class="logo">ک</div>
+      <div><h1>پنل تولید محتوا</h1><small id="brandName"></small></div>
+    </div>
+    <div class="actions">
+      <button class="ghost" id="themeBtn" title="تغییر تم" aria-label="تغییر تم">🌓</button>
+      <button class="ghost" id="logoutBtn">خروج</button>
+    </div>
+  </header>
+
+  <section class="stats">
+    <div class="stat"><b id="sTotal">–</b><span>کل محتواها</span></div>
+    <div class="stat"><b id="sOk">–</b><span>موفق</span></div>
+    <div class="stat"><b id="sCost">–</b><span>هزینه‌ی کل (دلار)</span></div>
+    <div class="stat"><b id="sLat">–</b><span>میانگین زمان تولید (ثانیه)</span></div>
+  </section>
+
+  <div class="grid">
+    <div class="card">
+      <h2>محتوای جدید</h2>
+      <form class="pad" id="genForm">
+        <label class="f" for="topic">موضوع</label>
+        <textarea id="topic" maxlength="300" required placeholder="مثلاً: ۵ اشتباه رایج در اولین سفر با کاراوان"></textarea>
+        <div class="suggest" id="suggest"></div>
+
+        <div class="types">
+          <label class="type"><input type="checkbox" name="type" value="text" checked><div><i>📝</i>متنی</div></label>
+          <label class="type"><input type="checkbox" name="type" value="infographic"><div><i>📊</i>اینفوگرافیک</div></label>
+          <label class="type"><input type="checkbox" name="type" value="video"><div><i>🎬</i>ویدئو</div></label>
+        </div>
+
+        <label class="f" for="model">مدل</label>
+        <input type="text" id="model" list="models" dir="ltr" spellcheck="false">
+        <datalist id="models">
+          <option value="~deepseek/deepseek-pro-latest">
+          <option value="~deepseek/deepseek-flash-latest">
+        </datalist>
+        <div class="hint">خالی بگذارید تا مدل پیش‌فرض استفاده شود. هر نوع محتوا حدود ۳۰ تا ۹۰ ثانیه طول می‌کشد.</div>
+
+        <button class="primary" id="genBtn" type="submit">تولید محتوا</button>
+        <div class="err" id="genErr"></div>
+      </form>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>محتواها <button class="ghost" id="refreshBtn" style="padding:2px 10px;font-size:12px">به‌روزرسانی</button></h2>
+        <ul class="jobs" id="jobs"><li class="empty">در حال بارگذاری…</li></ul>
+      </div>
+      <div class="card detail hidden" id="detail"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const store = {
+    get(k){ try { return localStorage.getItem(k); } catch { return null; } },
+    set(k,v){ try { localStorage.setItem(k,v); } catch {} },
+    del(k){ try { localStorage.removeItem(k); } catch {} },
+  };
+  let token = store.get("ce_token") || "";
+  let selected = null, detailTab = "preview", pollTimer = null, lastDetail = null;
+
+  const TYPE = {text:{i:"📝",n:"متنی"}, infographic:{i:"📊",n:"اینفوگرافیک"}, video:{i:"🎬",n:"ویدئو"}};
+  const STATUS = {pending:"در صف", generating:"در حال تولید", generated:"آماده", failed:"خطا"};
+  const ICON = {check:"✅",warning:"⚠️",tire:"🛞",link:"🔗",light:"💡",weight:"⚖️",box:"📦",gas:"🔥",window:"🪟",
+    tool:"🔧",map:"🗺️",route:"🛣️",tent:"⛺",caravan:"🚐",car:"🚗",water:"💧",battery:"🔋",fire:"🧯",sun:"☀️",
+    moon:"🌙",snow:"❄️",money:"💰",clock:"⏱️",calendar:"📅",star:"⭐",heart:"❤️",shield:"🛡️",phone:"📱",
+    wifi:"📶",food:"🍲",first_aid:"🩹",trash:"🗑️",lock:"🔒",info:"ℹ️"};
+  const SUGGEST = ["چک‌لیست ۷ موردی قبل از حرکت با کاراوان","۵ اشتباه رایج در اولین سفر با کاراوان",
+    "نگهداری کاراوان در زمستان","چطور باتری کاراوان را شارژ نگه داریم"];
+
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const fa = n => n == null ? "–" : Number(n).toLocaleString("fa-IR");
+  const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+  const ago = iso => {
+    if (!iso) return "";
+    const s = (Date.now() - new Date(iso)) / 1000;
+    if (s < 60) return "همین الان";
+    if (s < 3600) return fa(Math.floor(s/60)) + " دقیقه پیش";
+    if (s < 86400) return fa(Math.floor(s/3600)) + " ساعت پیش";
+    return new Date(iso).toLocaleDateString("fa-IR");
+  };
+
+  async function api(path, opts = {}) {
+    const r = await fetch(path, {...opts, headers: {"Content-Type":"application/json","X-Run-Token":token, ...(opts.headers||{})}});
+    if (r.status === 401) { logout(); throw new Error("unauthorized"); }
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || ("HTTP " + r.status));
+    return data;
+  }
+
+  // ---------- auth ----------
+  async function tryLogin(t) {
+    token = t;
+    const me = await api("/api/me");
+    store.set("ce_token", t);
+    $("#brandName").textContent = me.brand || "";
+    $("#model").placeholder = me.default_model || "";
+    $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
+    refresh();
+  }
+  function logout() {
+    token = ""; store.del("ce_token"); clearTimeout(pollTimer);
+    $("#app").classList.add("hidden"); $("#login").classList.remove("hidden");
+  }
+  $("#loginForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const err = $("#loginErr"); err.style.display = "none";
+    try { await tryLogin($("#tok").value.trim()); }
+    catch { err.textContent = "رمز ورود درست نیست."; err.style.display = "block"; }
+  });
+  $("#logoutBtn").onclick = logout;
+
+  // ---------- theme ----------
+  const applyTheme = t => t ? document.documentElement.setAttribute("data-theme", t) : document.documentElement.removeAttribute("data-theme");
+  applyTheme(store.get("ce_theme"));
+  $("#themeBtn").onclick = () => {
+    const dark = document.documentElement.getAttribute("data-theme") === "dark" ||
+      (!document.documentElement.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
+    const t = dark ? "light" : "dark"; store.set("ce_theme", t); applyTheme(t);
+  };
+
+  // ---------- generate ----------
+  $("#suggest").innerHTML = SUGGEST.map(s => `<button type="button">${esc(s)}</button>`).join("");
+  $("#suggest").onclick = e => { if (e.target.tagName === "BUTTON") $("#topic").value = e.target.textContent; };
+
+  $("#genForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const err = $("#genErr"); err.style.display = "none";
+    const types = [...document.querySelectorAll('input[name=type]:checked')].map(i => i.value);
+    if (!types.length) { err.textContent = "حداقل یک نوع محتوا انتخاب کنید."; err.style.display = "block"; return; }
+    const btn = $("#genBtn"); btn.disabled = true; btn.textContent = "در حال ارسال…";
+    try {
+      const r = await api("/api/generate", {method:"POST", body: JSON.stringify({topic: $("#topic").value.trim(), types, model: $("#model").value.trim()})});
+      selected = r.job_ids[0];
+      await refresh();
+    } catch (ex) { err.textContent = ex.message; err.style.display = "block"; }
+    finally { btn.disabled = false; btn.textContent = "تولید محتوا"; }
+  });
+
+  // ---------- list ----------
+  async function refresh() {
+    clearTimeout(pollTimer);
+    try {
+      const [jobs, stats] = await Promise.all([api("/api/jobs?limit=60"), api("/api/stats")]);
+      renderStats(stats); renderJobs(jobs);
+      if (selected) await loadDetail(selected, true);
+      const busy = jobs.some(j => j.status === "pending" || j.status === "generating");
+      pollTimer = setTimeout(refresh, busy ? 4000 : 30000);
+    } catch (e) { if (e.message !== "unauthorized") pollTimer = setTimeout(refresh, 10000); }
+  }
+  $("#refreshBtn").onclick = refresh;
+
+  function renderStats(s) {
+    $("#sTotal").textContent = fa(s.total);
+    $("#sOk").textContent = fa(s.by_status?.generated || 0);
+    $("#sCost").textContent = (s.cost_usd || 0).toFixed(4);
+    $("#sLat").textContent = s.avg_latency_sec == null ? "–" : fa(s.avg_latency_sec);
+  }
+
+  function renderJobs(jobs) {
+    const ul = $("#jobs");
+    if (!jobs.length) { ul.innerHTML = '<li class="empty">هنوز محتوایی تولید نشده. از فرم کنار یک موضوع بدهید.</li>'; return; }
+    ul.innerHTML = jobs.map(j => `
+      <li class="job ${j.id === selected ? "sel" : ""}" data-id="${j.id}">
+        <div class="ticon">${TYPE[j.type]?.i || "•"}</div>
+        <div style="min-width:0">
+          <div class="t">${esc(j.title || j.topic)}</div>
+          <div class="m">${TYPE[j.type]?.n || j.type} · ${ago(j.created_at)}${j.cost_usd ? " · $" + j.cost_usd.toFixed(4) : ""}</div>
+        </div>
+        <span class="badge b-${j.status}">${STATUS[j.status] || j.status}</span>
+      </li>`).join("");
+  }
+  $("#jobs").onclick = e => {
+    const li = e.target.closest(".job"); if (!li) return;
+    selected = li.dataset.id; detailTab = "preview";
+    document.querySelectorAll(".job").forEach(x => x.classList.toggle("sel", x === li));
+    loadDetail(selected);
+  };
+
+  // ---------- detail ----------
+  async function loadDetail(id, silent) {
+    try {
+      const j = await api("/api/jobs/" + id);
+      const sig = j.status + (j.output ? "1" : "0");
+      if (silent && lastDetail && lastDetail.id === id && lastDetail.sig === sig) return;
+      lastDetail = {id, sig}; renderDetail(j);
+    } catch (e) { if (!silent) console.warn(e); }
+  }
+
+  function renderDetail(j) {
+    const box = $("#detail"); box.classList.remove("hidden");
+    const head = `<h2><span>${TYPE[j.type]?.i} ${esc(j.title || j.topic)}</span>
+      <span class="actions">${j.status === "failed" || j.status === "generated" ? '<button class="ghost" id="retryBtn" style="padding:2px 10px;font-size:12px">تولید دوباره</button>' : ""}
+      <span class="badge b-${j.status}">${STATUS[j.status]}</span></span></h2>
+      <div class="meta"><span>موضوع: <b>${esc(j.topic)}</b></span><span>مدل: <b dir="ltr">${esc(j.model || "–")}</b></span>
+      ${j.latency_sec != null ? `<span>زمان: <b>${fa(j.latency_sec)} ثانیه</b></span>` : ""}
+      ${j.cost_usd != null ? `<span>هزینه: <b dir="ltr">$${j.cost_usd.toFixed(5)}</b></span>` : ""}
+      ${j.attempts ? `<span>تلاش: <b>${fa(j.attempts)}</b></span>` : ""}
+      ${j.completion_tokens ? `<span>توکن: <b>${fa(j.prompt_tokens)} / ${fa(j.completion_tokens)}</b></span>` : ""}</div>`;
+
+    let body = "";
+    if (j.status === "pending" || j.status === "generating") {
+      body = `<div class="pv empty">⏳ ${STATUS[j.status]}… معمولاً ۳۰ تا ۹۰ ثانیه طول می‌کشد.</div>`;
+    } else if (j.status === "failed") {
+      body = `<div class="pv"><div class="errbox">${esc(j.error || "خطای نامشخص")}</div>
+        ${j.output?._raw_last ? `<div class="sec-t">آخرین خروجی خام مدل</div><pre class="raw">${esc(j.output._raw_last)}</pre>` : ""}</div>`;
+    } else {
+      body = `<div class="tabs"><button data-t="preview" class="${detailTab==="preview"?"on":""}">پیش‌نمایش</button>
+        <button data-t="raw" class="${detailTab==="raw"?"on":""}">JSON</button></div>
+        <div class="pv">${detailTab === "raw" ? `<pre class="raw">${esc(JSON.stringify(j.output, null, 2))}</pre>` : preview(j)}</div>`;
+    }
+    box.innerHTML = head + body;
+    box.querySelectorAll(".tabs button").forEach(b => b.onclick = () => { detailTab = b.dataset.t; renderDetail(j); });
+    box.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => {
+      navigator.clipboard?.writeText(b.dataset.copy).then(() => { b.textContent = "کپی شد ✓"; setTimeout(() => b.textContent = "کپی", 1500); });
+    });
+    const rb = $("#retryBtn");
+    if (rb) rb.onclick = async () => { rb.disabled = true; try { await api(`/api/jobs/${j.id}/retry`, {method:"POST"}); lastDetail = null; refresh(); } catch (e) { alertBox(e.message); } };
+  }
+  const alertBox = m => { const e = $("#genErr"); e.textContent = m; e.style.display = "block"; };
+
+  const tags = o => `${o.hashtags?.length ? `<div class="sec-t">هشتگ‌ها</div><div class="tags">${o.hashtags.map(h => `<span class="tag">${esc(h)}</span>`).join("")}</div>` : ""}
+    ${o.product_keywords?.length ? `<div class="sec-t">کلیدواژه‌ی محصولات مرتبط</div><div class="tags">${o.product_keywords.map(h => `<span class="tag kw">${esc(h)}</span>`).join("")}</div>` : ""}`;
+  const copyBtn = text => `<button class="ghost copy" data-copy="${esc(text)}">کپی</button>`;
+
+  function preview(j) {
+    const o = j.output || {};
+    if (j.type === "text") {
+      const tg = o.telegram_text || "", ig = (o.instagram_caption || "") + "\n\n" + (o.hashtags || []).join(" ");
+      return `<div class="two">
+        <div class="phone"><h4>تلگرام ${copyBtn(tg)}</h4><div class="bubble">${md(tg)}<span class="btn">🛒 مشاهده در سایت</span></div></div>
+        <div class="phone"><h4>اینستاگرام ${copyBtn(ig)}</h4><div class="caption">${esc(o.instagram_caption)}</div></div>
+      </div><div class="sec-t">CTA</div><div>${esc(o.cta)}</div>${tags(o)}`;
+    }
+    if (j.type === "infographic") {
+      const long = (o.items || []).filter(i => (i.desc || "").length > 60).length;
+      return `<div class="two"><div>
+        <div class="ig"><div class="it">${esc(o.title)}</div>${o.subtitle ? `<div class="st">${esc(o.subtitle)}</div>` : ""}
+          <ul>${(o.items || []).map(i => `<li><i>${ICON[i.icon] || "✅"}</i><div><b>${esc(i.title)}</b><span>${esc(i.desc)}</span></div></li>`).join("")}</ul>
+          ${o.tip ? `<div class="tip">💡 ${esc(o.tip)}</div>` : ""}<div class="cta">${esc(o.cta)}</div></div>
+        <div class="hint" style="text-align:center">پیش‌نمایش تقریبی؛ قالب نهایی در مرحله ۴ ساخته می‌شود · قالب: <span dir="ltr">${esc(o.template)}</span>
+        ${long ? `<div class="warn">${fa(long)} مورد توضیح بلندی دارد</div>` : ""}</div>
+      </div><div><div class="sec-t" style="margin-top:0">کپشن ${copyBtn(o.caption || "")}</div><div class="caption" style="background:var(--surface-2)">${esc(o.caption)}</div>${tags(o)}</div></div>`;
+    }
+    if (j.type === "video") {
+      const sc = o.scenes || []; let t = 0;
+      const total = sc.reduce((a, s) => a + s.duration_sec, 0) || 1;
+      const words = s => (s.voiceover || "").trim().split(/\s+/).filter(Boolean).length;
+      const rows = sc.map(s => {
+        const start = t; t += s.duration_sec; const wps = words(s) / s.duration_sec;
+        return `<tr><td class="n">${start.toFixed(1)}–${t.toFixed(1)}s</td>
+          <td><div class="ost">${esc(s.on_screen_text)}</div><div class="vt">${esc(s.visual?.type)} · ${esc(s.visual?.query)}</div></td>
+          <td>${esc(s.voiceover)}${wps > 3.2 ? `<div class="warn">متن برای این مدت زیاد است (${wps.toFixed(1)} کلمه/ثانیه)</div>` : ""}</td></tr>`;
+      }).join("");
+      return `<div class="meta" style="border:0;padding:0 0 6px"><span>مدت: <b>${fa(o.duration_sec)} ثانیه</b></span><span>نسبت: <b dir="ltr">${esc(o.aspect)}</b></span>
+        <span>موسیقی: <b>${esc(o.music_mood)}</b></span><span>صحنه‌ها: <b>${fa(sc.length)}</b></span></div>
+        <div class="sec-t" style="margin-top:4px">قلاب</div><div><b>${esc(o.hook)}</b></div>
+        <div class="timeline">${sc.map(s => `<div style="flex:${s.duration_sec / total}" title="${esc(s.on_screen_text)}"></div>`).join("")}</div>
+        <div style="overflow-x:auto"><table><thead><tr><th>زمان</th><th>متن روی تصویر / تصویر</th><th>متن گوینده</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <div class="sec-t">کپشن ${copyBtn(o.caption || "")}</div><div class="caption" style="background:var(--surface-2)">${esc(o.caption)}</div>${tags(o)}`;
+    }
+    return `<pre class="raw">${esc(JSON.stringify(o, null, 2))}</pre>`;
+  }
+
+  // ---------- boot ----------
+  if (token) tryLogin(token).catch(() => logout()); else logout();
+})();
+</script>
+</body>
+</html>

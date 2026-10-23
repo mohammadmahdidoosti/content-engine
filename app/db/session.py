@@ -8,10 +8,18 @@ _engine = None
 _Session = None
 
 
+def _normalize_url(url: str) -> str:
+    """آدرس Render (postgres:// یا postgresql://) را به درایور psycopg3 تبدیل می‌کند."""
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
+
+
 def get_engine():
     global _engine
     if _engine is None:
-        _engine = create_engine(get_settings().database_url, pool_pre_ping=True, future=True)
+        _engine = create_engine(_normalize_url(get_settings().database_url), pool_pre_ping=True, future=True)
     return _engine
 
 

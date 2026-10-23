@@ -60,7 +60,7 @@ class TextPost(BaseModel):
 class InfoItem(BaseModel):
     icon: str = Field(..., description=f"یکی از: {', '.join(ICONS)}")
     title: str = Field(..., max_length=40)
-    desc: str = Field(..., max_length=110)
+    desc: str = Field(..., max_length=70, description="حداکثر ۸ کلمه؛ روی تصویر نمایش داده می‌شود")
 
     @field_validator("icon")
     @classmethod

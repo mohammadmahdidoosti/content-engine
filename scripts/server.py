@@ -242,8 +242,16 @@ def startup_test() -> None:
         log.info("تست خودکار: %s | %s | %s", topic.strip()[:60], types, model.strip() or "(default)")
 
 
+def log_db_info() -> None:
+    from app.db.session import get_engine
+    with get_session() as db:
+        n = db.scalar(select(func.count()).select_from(Job))
+    log.info("دیتابیس: %s | تعداد محتواهای ذخیره‌شده: %d", get_engine().dialect.name, n)
+
+
 def main() -> None:
     init_db()
+    log_db_info()
     recover_jobs()
     startup_test()
     if not RUN_TOKEN:

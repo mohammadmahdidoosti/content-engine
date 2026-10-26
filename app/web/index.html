@@ -770,6 +770,15 @@ async function studio(){
   document.querySelectorAll("[data-job]").forEach(el => el.onclick = () => { selJob = el.dataset.job; studio(); });
   if (selJob) showJob(selJob);
   if (jobs.some(j => j.status === "pending" || j.status === "generating")) later(studio, 5000);
+  api("/api/seo/ideas?limit=18").then(r => { const v = $("#view"); if (!v || !$("#genForm") || !(r.ideas || []).length) return;
+    v.insertAdjacentHTML("beforeend", `<div class="card"><header>پیشنهاد محتوای سئو (از سرچ کنسول) <span class="small muted">روی «ساخت» بزنید تا موضوع و توضیح در فرم بیاید</span></header>
+      <div class="tbl"><table><thead><tr><th>نوع</th><th>عبارت گوگل</th><th>نمایش</th><th>رتبه</th><th>عنوان پیشنهادی</th><th>کالاهای لینک</th><th></th></tr></thead><tbody>
+      ${r.ideas.map((x, i) => `<tr><td class="small">${esc(x.kind_label)}</td><td>${esc(x.query)}</td><td class="num">${fa(x.impr)}</td><td class="num">${fa(x.pos)}</td><td>${esc(x.title)}</td>
+        <td class="small">${(x.products || []).map(p => `<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.name.slice(0, 40))}</a>`).join("<br>") || "–"}</td>
+        <td><button class="ghost sm" data-seo="${i}">ساخت</button></td></tr>`).join("")}</tbody></table></div>
+      <div class="pad small muted" style="padding-top:6px">الان بیشتر بازدید گوگل از مقاله‌های آموزشی است و به فروش نمی‌رسد، چون مقاله‌ها به کالا لینک نمی‌دهند. این پیشنهادها کلمه‌ی کالا را هدف می‌گیرند و کالای سایت را در متن می‌آورند.</div></div>`);
+    v.querySelectorAll("[data-seo]").forEach(b => b.onclick = () => { const x = r.ideas[+b.dataset.seo]; $("#topic").value = (x.title + " — " + x.brief).slice(0, 300); window.scrollTo(0, 0); toast("در فرم قرار گرفت"); });
+  }).catch(() => {});
 }
 async function showJob(id){
   const j = await api("/api/jobs/" + id); const box = $("#jobDetail"); if (!box) return; box.classList.remove("hidden"); const o = j.output || {};

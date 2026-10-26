@@ -112,6 +112,9 @@ def sync_history(days: int = 540, max_pages: int = 30, deadline: float | None = 
 
 
 GOOD = {"completed", "processing", "on-hold", "pending"}   # «pending» = سفارش ثبت‌شده‌ای که هنوز تأیید نشده
+# «failed» = سفارشی که ثبت شده ولی پرداخت آنلاین نشده. در فرایند کاروان صنعت (ثبت سفارش ← تماس ← فاکتور)
+# این‌ها هم مشتری بالقوه‌ی واقعی‌اند؛ پس در «تقاضا» حساب می‌شوند، ولی در «فروش» نه.
+LEADS = GOOD | {"failed"}
 
 
 def summary() -> dict:
@@ -126,8 +129,15 @@ def summary() -> dict:
     plan_state: dict[str, Counter] = defaultdict(Counter)
     top_products, plan_total = Counter(), Counter()
     months = Counter()
+    leads_state, leads_plan = Counter(), Counter()
     for o in rows:
         by_status[o.status] += 1
+        if o.status in LEADS:
+            leads_state[o.state or "نامشخص"] += 1
+            for li in o.items or []:
+                pl = prod_plan.get(li.get("product_id"))
+                if pl:
+                    leads_plan[pl] += 1
         if o.status not in GOOD:
             continue
         stt = o.state or "نامشخص"
@@ -154,6 +164,9 @@ def summary() -> dict:
         "products": [{"id": k, "name": prod_name.get(k), "qty": v} for k, v in top_products.most_common(20)],
         "plans": [{"plan_id": k, "name": plan_name.get(k), "orders": v,
                    "top_states": plan_state[k].most_common(5)} for k, v in plan_total.most_common(25)],
+        "leads": sum(leads_state.values()),
+        "lead_states": leads_state.most_common(31),
+        "lead_plans": [{"plan_id": k, "name": plan_name.get(k), "leads": v} for k, v in leads_plan.most_common(25)],
     }
 
 
@@ -164,7 +177,7 @@ def province_demand() -> dict[tuple[str, str], int]:
     with get_session() as db:
         prod_plan = dict(db.query(Product.id, Product.plan_id).all())
         for o in db.query(OrderRow).all():
-            if o.status not in GOOD or not o.state:
+            if o.status not in LEADS or not o.state:
                 continue
             for li in o.items or []:
                 pl = prod_plan.get(li.get("product_id"))

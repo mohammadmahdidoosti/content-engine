@@ -456,7 +456,8 @@ function historyBlock(h){
   return `<div class="card"><header>سفارش‌های قبلی سایت <span class="small muted">${fa(h.orders)} سفارش معتبر از ${fa(h.all_orders)} · به‌روز ${ago(h.last_sync_at)}</span>
       <button class="ghost sm" id="histRun">به‌روزرسانی</button></header>
     <div class="pad grid3 small">
-      <div><b>استان‌ها</b>${h.states.slice(0, 12).map(x => row(esc(x.state), fa(x.orders) + " · " + mtoman(x.revenue))).join("")}</div>
+      <div><b>استان‌ها (فروش قطعی)</b>${h.states.slice(0, 10).map(x => row(esc(x.state), fa(x.orders) + " · " + mtoman(x.revenue))).join("")}
+        ${h.leads ? `<div style="margin-top:8px"><b>تقاضای ثبت‌شده (شامل سفارش‌های پرداخت‌نشده): ${fa(h.leads)}</b>${(h.lead_states || []).slice(0, 8).map(([k, v]) => row(esc(k), fa(v))).join("")}</div>` : ""}</div>
       <div><b>شهرها</b>${h.cities.slice(0, 12).map(x => row(esc(x.city), fa(x.orders))).join("")}
         <div style="margin-top:8px"><b>منبع ورود</b>${(h.sources || []).slice(0, 6).map(([k, v]) => row(esc(k), fa(v))).join("")}</div></div>
       <div><b>دسته‌های پرفروش و استان‌هایشان</b>${h.plans.slice(0, 10).map(x => `<div style="margin-bottom:4px">${esc((x.name || x.plan_id).slice(0, 50))} — <b>${fa(x.orders)}</b>

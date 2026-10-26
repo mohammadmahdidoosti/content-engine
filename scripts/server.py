@@ -678,6 +678,29 @@ def api_ext_import(req, m):
         planner._hist_cache["at"] = 0.0
 
 
+def api_backup_download(req, m):
+    from app import backup
+    data, meta = backup.export_bytes()
+    name = "caravan-marketing-backup-" + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M") + ".json.gz"
+    req._send(200, data, "application/gzip", {"Content-Disposition": f'attachment; filename="{name}"'})
+    raise Handled()
+
+
+def api_backup_restore(req, m):
+    from app import backup
+    if sync.is_running():
+        raise HttpError(409, "همگام‌سازی در حال اجراست؛ چند دقیقه بعد دوباره امتحان کنید")
+    try:
+        return backup.restore_bytes(req.raw(max_bytes=80_000_000))
+    except ValueError as e:
+        raise HttpError(400, str(e)) from None
+
+
+def api_backup_status(req, m):
+    from app import backup
+    return backup.status()
+
+
 def api_ext(req, m):
     from app.tracking import external
     return external.summary()
@@ -777,6 +800,8 @@ ROUTES = [
     ("GET", r"/api/pricing", api_pricing_status), ("POST", r"/api/pricing/run", api_pricing_run),
     ("GET", r"/api/offline", api_offline), ("POST", r"/api/offline/import", api_offline_import),
     ("GET", r"/api/ext", api_ext), ("POST", r"/api/ext/import", api_ext_import),
+    ("GET", r"/api/backup", api_backup_download), ("POST", r"/api/backup/restore", api_backup_restore),
+    ("GET", r"/api/backup/status", api_backup_status),
 ]
 _COMPILED = [(meth, re.compile("^" + pat + "$"), fn) for meth, pat, fn in ROUTES]
 _PUBLIC = [("GET", re.compile(r"^/r/([A-Za-z0-9]{3,12})$"), public_redirect),

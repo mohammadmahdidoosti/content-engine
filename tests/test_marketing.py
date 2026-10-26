@@ -130,3 +130,18 @@ def test_torob_season_index_removes_growth(tmp_path, monkeypatch):
     un = y["plans"][0]
     assert y["months"] == ["1404-08", "1404-09", "1404-10", "1404-11"] and un["plan_id"] == "_unmatched"
     assert y["month_clicks"][2] == 300 + 900
+
+
+def test_backup_roundtrip(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/b.db")
+    from app.db import session as sess
+    monkeypatch.setattr(sess, "_engine", None)
+    monkeypatch.setattr(sess, "_Session", None)
+    from app import backup
+    from app.db.session import get_setting, set_setting
+    backup._tables()
+    set_setting("x.test", {"a": 1})
+    data, meta = backup.export_bytes()
+    set_setting("x.test", {"a": 2})
+    r = backup.restore_bytes(data)
+    assert get_setting("x.test") == {"a": 1} and r["restored"]["settings"] >= 1

@@ -256,6 +256,9 @@ def category_counts() -> dict:
         rows = db.query(WcCategory.plan_id, WcCategory.count).all()
     c = Counter()
     for plan_id, cnt in rows:
-        key = "unmapped" if plan_id is None else ("none" if plan_id == NONE else "mapped")
+        if plan_id is None and not cnt:
+            key = "empty"      # دسته‌ی بدون کالا؛ نگاشت لازم ندارد
+        else:
+            key = "unmapped" if plan_id is None else ("none" if plan_id == NONE else "mapped")
         c[key] += 1
     return dict(c)

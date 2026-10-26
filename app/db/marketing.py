@@ -120,6 +120,7 @@ class Campaign(Base):
     budget_toman: Mapped[int | None] = mapped_column(BigInteger)
     status: Mapped[str] = mapped_column(String(20), default="draft")  # draft | active | done
     brief: Mapped[dict | None] = mapped_column(JSON)   # خلاصه‌ی کمپین (چرا، کی، کجا، چطور)
+    city: Mapped[str | None] = mapped_column(String(80))   # کمپین مخصوص یک شهر
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
@@ -139,6 +140,8 @@ class Placement(Base):
     ad_status: Mapped[str] = mapped_column(String(20), default="none")  # none | generating | ready | failed
     ad_error: Mapped[str | None] = mapped_column(Text)
     ad_cost_usd: Mapped[float | None] = mapped_column(Float)
+    ad_variant: Mapped[str | None] = mapped_column(String(10))   # full | short (برای مقایسه‌ی A/B)
+    city: Mapped[str | None] = mapped_column(String(80))         # اگر تبلیغ برای یک شهر خاص است
     clicks: Mapped[int] = mapped_column(Integer, default=0)
     calls: Mapped[int] = mapped_column(Integer, default=0)       # تماس‌ها (دستی)
     orders: Mapped[int] = mapped_column(Integer, default=0)

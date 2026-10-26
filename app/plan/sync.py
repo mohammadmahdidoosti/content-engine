@@ -167,6 +167,25 @@ def run_daily(budget_sec: int = 720, mock_llm: bool = False, force: bool = False
         if get_setting("sync.initial_done_at") and time.monotonic() < deadline - 120:
             stats["proposals"] = mapping.propose_new_plans(mock=mock_llm, deadline=deadline - 90)
 
+        if get_setting("sync.initial_done_at") and time.monotonic() < deadline - 120:
+            try:
+                from app.plan.pricing import candidates, check_products
+                stats["pricing"] = check_products(candidates(), max_checks=60, deadline=deadline - 90)
+            except Exception as e:  # noqa: BLE001
+                stats["pricing"] = {"error": str(e)[:200]}
+        if _older_than("weather.refreshed_at", 6):
+            try:
+                from app.plan.weather import refresh as weather_refresh
+                stats["weather"] = weather_refresh()
+                set_setting("weather.refreshed_at", _now().isoformat())
+            except Exception as e:  # noqa: BLE001
+                stats["weather"] = {"error": str(e)[:200]}
+        if time.monotonic() < deadline - 90:
+            try:
+                from app.tracking.history import sync_history
+                stats["history"] = sync_history(deadline=deadline - 60)
+            except Exception as e:  # noqa: BLE001
+                stats["history"] = {"error": str(e)[:200]}
         if time.monotonic() < deadline - 60:
             try:
                 from app.tracking.orders import sync_orders
@@ -202,8 +221,10 @@ def _finish(run_id, ok: bool, stats: dict, error: str | None = None) -> None:
 
 
 def due() -> bool:
-    """آیا وقت اجرای بعدی است؟ (بار اول تا تمام شدن، هر بار؛ بعد روزی یک‌بار)."""
+    """آیا وقت اجرای بعدی است؟ (بار اول تا تمام شدن، هر بار؛ بعد روزی یک‌بار، یا وقتی دسته‌ی نگاشت‌نشده مانده)."""
     if not get_setting("sync.initial_done_at") or int(get_setting("sync.cat_page") or 1) > 1:
+        return True
+    if mapping.category_counts().get("unmapped", 0) and _older_than("sync.last_daily_at", 1):
         return True
     return _older_than("sync.last_daily_at", 20)
 

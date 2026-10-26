@@ -151,7 +151,7 @@ details[open]>summary::before{content:"▾ "}
   <nav class="tabs" id="tabs">
     <a href="#home">خانه</a><a href="#plan">برنامه‌ی تبلیغ</a><a href="#campaigns">کمپین‌ها</a>
     <a href="#channels">کانال‌ها</a><a href="#report">گزارش</a><a href="#map">نقشه</a>
-    <a href="#studio">استودیو محتوا</a><a href="#settings">تنظیمات</a>
+    <a href="#cities">شهرها</a><a href="#assistant">دستیار قیمت</a><a href="#studio">استودیو محتوا</a><a href="#settings">تنظیمات</a>
   </nav>
   <main id="view"></main>
 </div>
@@ -202,7 +202,7 @@ $("#themeBtn").onclick = () => { const cur = document.documentElement.getAttribu
   const t = dark ? "light" : "dark"; store.set("ce_theme", t); applyTheme(t); };
 
 // ---------------- router ----------------
-const VIEWS = {home, plan, campaigns, channels, report, map, studio, settings};
+const VIEWS = {home, plan, campaigns, channels, report, map, studio, settings, cities, assistant};
 window.addEventListener("hashchange", route);
 function route(){ clearTimeout(timer); const v = (location.hash || "#home").slice(1).split("/")[0];
   document.querySelectorAll("#tabs a").forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + v));
@@ -211,8 +211,20 @@ function route(){ clearTimeout(timer); const v = (location.hash || "#home").slic
 const later = (fn, ms) => { clearTimeout(timer); timer = setTimeout(() => fn().catch(() => {}), ms); };
 
 // ---------------- shared pieces ----------------
+function priceBadge(c){ if (!c) return "";
+  if (c.status === "cheaper") return `<span class="badge b-ok" title="کمترین قیمت ترب: ${fa(c.market_min)} در ${fa(c.shops)} فروشگاه">زیر بازار ${fa(Math.round((1 - c.ratio) * 100))}٪</span>`;
+  if (c.status === "pricier") return `<span class="badge b-bad" title="کمترین قیمت ترب: ${fa(c.market_min)}">گران‌تر ${fa(Math.round((c.ratio - 1) * 100))}٪</span>`;
+  if (c.status === "equal") return `<span class="badge">هم‌قیمت بازار</span>`;
+  if (c.status === "only_us") return `<span class="badge b-info">در ترب فقط ما</span>`;
+  return ""; }
 function prodStrip(list){ if (!list?.length) return ""; return `<div class="prods">${list.map(p => `<a class="prod" href="${esc(p.url || p.permalink || "#")}" target="_blank" rel="noopener">
-  ${p.image ? `<img src="${esc(p.image)}" alt="" loading="lazy">` : ""}${esc((p.name || "").slice(0, 60))}<br><b>${p.price ? mtoman(p.price) : ""}</b></a>`).join("")}</div>`; }
+  ${p.image ? `<img src="${esc(p.image)}" alt="" loading="lazy">` : ""}${esc((p.name || "").slice(0, 60))}<br><b>${p.price ? mtoman(p.price) : ""}</b> ${priceBadge(p.price_check)}</a>`).join("")}</div>`; }
+function weatherCard(w){ const al = (w && w.alerts) || []; if (!al.length) return "";
+  const by = {}; al.forEach(a => (by[a.kind] = by[a.kind] || []).push(a));
+  const T = {frost:"ضدیخ بتن، گرمایش مرغداری، عایق، موتورخانه، موتور برق", heat:"پمپ چاه، کولر صنعتی، موتور برق، پمپ ساختمانی، مخزن", rain:"کف‌کش و لجن‌کش، آب‌بندی"};
+  return `<div class="card"><header>🌦 هشدار آب‌وهوا (۷ روز آینده) <span class="small muted">به‌روز ${ago(w.at)}</span></header><div class="pad small">
+    ${Object.entries(by).map(([k, a]) => `<div style="margin-bottom:6px"><b>${a[0].icon} ${esc(a[0].label)}</b> در ${esc([...new Set(a.map(x => x.province))].join("، "))}
+      <div class="muted">فرصت تبلیغ: ${T[k] || ""} — این‌ها در «برنامه‌ی تبلیغ» امتیاز بیشتری گرفته‌اند.</div></div>`).join("")}</div></div>`; }
 function recCard(r, opts = {}){
   return `<div class="rec">
     <div class="inline" style="justify-content:space-between"><span class="badge b-info">${esc(r.group_name)}</span>
@@ -224,7 +236,11 @@ function recCard(r, opts = {}){
     <div class="meta"><span>کالا در سایت: <b>${fa(r.products)}</b> (موجود ${fa(r.in_stock)})</span>
       ${r.p90_price ? `<span>رده‌ی قیمت: <b>تا ${mtoman(r.p90_price)}</b></span>` : ""}
       ${r.budget_toman ? `<span>بودجه‌ی پیشنهادی: <b>${mtoman(r.budget_toman)}</b> (~${fa(r.est_placements)} تبلیغ)</span>` : ""}
-      <span>امتیاز: <b>${fa(r.score)}</b></span></div>
+      <span>امتیاز: <b>${fa(r.score)}</b></span>
+      ${r.margin && r.margin !== 1 ? `<span>سود: <b>${r.margin > 1 ? "زیاد" : "کم"}</b></span>` : ""}
+      ${r.price_weight && r.price_weight !== 1 ? `<span>قیمت نسبت به بازار: <b>${r.price_weight > 1 ? "رقابتی" : "گران"}</b></span>` : ""}
+      ${r.performance && r.performance !== 1 ? `<span>نتیجه‌ی تبلیغ‌های قبلی: <b>${r.performance > 1 ? "خوب" : "ضعیف"}</b></span>` : ""}
+      ${r.past_orders ? `<span>سفارش قبلی از این استان‌ها: <b>${fa(r.past_orders)}</b></span>` : ""}</div>
     ${opts.full ? `<div class="small"><b>خریدار:</b> ${esc(r.buyers)}</div><div class="small"><b>پیام:</b> ${esc(r.angle)}</div>
       <div class="small"><b>زمان انتشار:</b> ${esc(r.time)}</div>${r.note ? `<div class="small muted">💡 ${esc(r.note)}</div>` : ""}` : ""}
     ${prodStrip(r.examples)}
@@ -260,6 +276,7 @@ async function home(){
   ${!s.initial_done_at ? `<div class="card pad"><div class="inline" style="justify-content:space-between"><b>بارگذاری محصولات سایت</b>${syncBadge(s)}</div>
     <div class="bar" style="margin:10px 0 6px"><i style="width:${pct}%"></i></div>
     <div class="small muted">سرور سایت کند است؛ برای اینکه سایت زیر فشار نرود، محصولات آرام و تکه‌تکه خوانده می‌شوند و بارگذاری اول چند ساعت طول می‌کشد. تا آن موقع برنامه با آمار فایل نقشه کار می‌کند.</div></div>` : ""}
+  ${weatherCard(d.weather)}
   <div class="card"><header><span>📅 این هفته چه تبلیغ کنیم؟ <span class="muted small">(${esc(d.month_name)} · بودجه‌ی ماهانه ${mtoman(d.budget_toman)} تومان)</span></span>
     <a class="ghost sm" href="#plan" style="text-decoration:none">همه‌ی پیشنهادها</a></header>
     <div class="pad grid3">${d.recommendations.slice(0, 3).map(r => recCard(r)).join("") || '<div class="empty">برای این ماه پیشنهادی نیست.</div>'}</div></div>
@@ -331,6 +348,7 @@ function plRow(p){
     <span>${p.channel ? `${esc(p.channel.title)} <span class="muted small ltr">@${esc(p.channel.username)}</span> ${p.channel.members ? `<span class="muted small">${fa(p.channel.members)} عضو · ${fa(p.channel.avg_views)} بازدید</span>` : ""}` : "بدون کانال"} <span class="badge">${esc(p.code)}</span></span>
     <span class="inline small">
       <select data-plst="${p.id}" style="width:auto;padding:2px 6px">${Object.entries(PL_ST).map(([k, v]) => `<option value="${k}" ${p.status === k ? "selected" : ""}>${v}</option>`).join("")}</select>
+      <select data-plvar="${p.id}" style="width:auto;padding:2px 6px" title="کدام نسخه منتشر شد؟ (برای مقایسه)">${[["", "نسخه؟"], ["full", "نسخه‌ی کامل"], ["short", "نسخه‌ی کوتاه"]].map(([v, t]) => `<option value="${v}" ${(p.ad_variant || "") === v ? "selected" : ""}>${t}</option>`).join("")}</select>
       <span class="badge ${PL_CLS[p.status] || ""}">${PL_ST[p.status]}</span></span></header>
   <div class="pad grid2">
     <div>${p.ad_status === "generating" ? '<div class="empty pulse">در حال نوشتن متن تبلیغ…</div>' :
@@ -368,6 +386,7 @@ function bindCampaigns(chans){
   v.querySelectorAll("[data-addpl0]").forEach(b => b.onclick = async () => { b.disabled = true;
     await post("/api/placements", {campaign_id: +b.dataset.addpl0, channel_ids: [null]}); location.hash = "#campaigns/" + b.dataset.addpl0; campaigns(); });
   v.querySelectorAll("[data-regen]").forEach(b => b.onclick = async () => { b.disabled = true; await post(`/api/placements/${b.dataset.regen}/ad`); campaigns(); });
+  v.querySelectorAll("[data-plvar]").forEach(s => s.onchange = async () => { await post("/api/placements/" + s.dataset.plvar, {ad_variant: s.value}); toast("ذخیره شد"); });
   v.querySelectorAll("[data-plst]").forEach(s => s.onchange = async () => { await post("/api/placements/" + s.dataset.plst, {status: s.value}); toast("وضعیت ذخیره شد"); campaigns(); });
   v.querySelectorAll("[data-plf]").forEach(i => i.onchange = async () => {
     try { await post("/api/placements/" + i.dataset.plf, {[i.dataset.k]: i.value.replace(/[٬,]/g, "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))}); toast("ذخیره شد"); }
@@ -415,21 +434,40 @@ async function channels(){
 
 // ================= REPORT =================
 async function report(){
-  const d = await api("/api/report"); const t = d.total || {};
+  const [d, h] = await Promise.all([api("/api/report"), api("/api/history").catch(() => null)]); const t = d.total || {};
   const tbl = (rows, title) => `<div class="card"><h2>${title}</h2><div class="tbl">${rows.length ? `<table><thead><tr><th>نام</th><th>تبلیغ</th><th>هزینه</th><th>کلیک</th><th>تماس</th><th>سفارش</th><th>فروش</th><th>هزینه هر مشتری بالقوه</th><th>بازگشت</th></tr></thead><tbody>
     ${rows.map(r => `<tr><td>${esc(r.title)}</td><td class="num">${fa(r.placements)}</td><td class="num">${mtoman(r.spent)}</td><td class="num">${fa(r.clicks)}</td><td class="num">${fa(r.calls)}</td><td class="num">${fa(r.orders)}</td><td class="num">${mtoman(r.revenue)}</td><td class="num">${mtoman(r.cost_per_lead)}</td><td class="num"><b>${r.roas != null ? fa(r.roas) + "×" : "–"}</b></td></tr>`).join("")}</tbody></table>` : '<div class="empty">هنوز داده‌ای نیست.</div>'}</div></div>`;
+  setTimeout(() => { const hr = $("#histRun"); if (hr) hr.onclick = async () => { hr.disabled = true; try { await post("/api/history/run"); toast("خواندن سفارش‌ها شروع شد؛ چند دقیقه بعد صفحه را تازه کنید"); } catch (e) { toast(e.message); } }; }, 0);
   $("#view").innerHTML = `<section class="stats">
     <div class="stat"><b>${mtoman(t.spent || 0)}</b><span>هزینه‌ی تبلیغ (تومان)</span></div>
     <div class="stat"><b>${fa(t.clicks || 0)}</b><span>کلیک روی لینک‌ها</span></div>
     <div class="stat"><b>${fa((t.orders || 0) + (t.calls || 0))}</b><span>مشتری بالقوه (سفارش + تماس)</span></div>
     <div class="stat"><b>${t.roas != null ? fa(t.roas) + "×" : "–"}</b><span>بازگشت هزینه</span></div></section>
     ${ME.orders_enabled ? "" : `<div class="warnbox" style="margin-bottom:16px">سفارش‌ها هنوز خودکار شمرده نمی‌شوند. برای اینکه هر سفارش سایت خودکار به تبلیغی که از آن آمده وصل شود، یک کلید فقط-خواندنی ووکامرس لازم است (راهنما در «تنظیمات»). تا آن موقع تماس و سفارش را دستی در هر تبلیغ وارد کنید.</div>`}
-    ${tbl(d.channels, "بر اساس کانال")}${tbl(d.campaigns, "بر اساس کمپین")}`;
+    ${tbl(d.channels, "بر اساس کانال")}${tbl(d.campaigns, "بر اساس کمپین")}${tbl(d.variants || [], "نسخه‌ی کامل در برابر کوتاه (A/B)")}
+    ${historyBlock(h)}
+    <div class="note small">یادگیری خودکار: وقتی یک دسته حداقل ۲ تبلیغ منتشرشده داشته باشد، اگر هزینه‌ی هر مشتری‌اش از میانه‌ی بقیه کمتر باشد امتیازش در برنامه تا ×۱٫۶ بالا می‌رود و اگر بیشتر باشد تا ×۰٫۶ پایین می‌آید؛ پس بودجه‌ی پیشنهادی خودکار به سمت چیزی می‌رود که جواب داده.</div>`;
+}
+
+function historyBlock(h){
+  if (!ME.orders_enabled) return "";
+  if (!h || !h.all_orders) return `<div class="card"><h2>سفارش‌های قبلی سایت</h2><div class="pad small">هنوز خوانده نشده. <button class="btn sm" id="histRun">خواندن سفارش‌ها</button></div></div>`;
+  const row = (a, b) => `<div class="inline" style="justify-content:space-between;flex-wrap:nowrap"><span>${a}</span><b class="num">${b}</b></div>`;
+  return `<div class="card"><header>سفارش‌های قبلی سایت <span class="small muted">${fa(h.orders)} سفارش معتبر از ${fa(h.all_orders)} · به‌روز ${ago(h.last_sync_at)}</span>
+      <button class="ghost sm" id="histRun">به‌روزرسانی</button></header>
+    <div class="pad grid3 small">
+      <div><b>استان‌ها</b>${h.states.slice(0, 12).map(x => row(esc(x.state), fa(x.orders) + " · " + mtoman(x.revenue))).join("")}</div>
+      <div><b>شهرها</b>${h.cities.slice(0, 12).map(x => row(esc(x.city), fa(x.orders))).join("")}
+        <div style="margin-top:8px"><b>منبع ورود</b>${(h.sources || []).slice(0, 6).map(([k, v]) => row(esc(k), fa(v))).join("")}</div></div>
+      <div><b>دسته‌های پرفروش و استان‌هایشان</b>${h.plans.slice(0, 10).map(x => `<div style="margin-bottom:4px">${esc((x.name || x.plan_id).slice(0, 50))} — <b>${fa(x.orders)}</b>
+        <div class="muted">${(x.top_states || []).map(([s2, n]) => esc(s2) + " " + fa(n)).join("، ")}</div></div>`).join("")}</div></div>
+    <div class="pad small muted" style="padding-top:0">این داده در برنامه اثر دارد: اگر از استان‌های یک بخش قبلاً برای همان دسته سفارش آمده، امتیازش تا ×۱٫۴ بالا می‌رود. اطلاعات شخصی خریدار (نام، تلفن، آدرس) ذخیره نمی‌شود؛ فقط شهر و استان.</div></div>`;
 }
 
 // ================= MAP =================
 async function map(){
-  const [d, um] = await Promise.all([api("/api/plan"), api("/api/categories/unmapped")]);
+  const [d, um, st] = await Promise.all([api("/api/plan"), api("/api/categories/unmapped"), api("/api/settings")]);
+  const margins = st["planner.margins"] || {};
   const G = ME.groups; const items = d.items; const cm = d.category_map || {};
   const proposed = items.filter(p => p.status === "proposed");
   const active = items.filter(p => p.status === "base" || p.status === "approved");
@@ -441,9 +479,10 @@ async function map(){
     <h3>${esc(p.name)} <span class="badge b-warn">پیشنهاد</span></h3><div class="small"><b>خریدار:</b> ${esc(p.buyers)}</div><div class="small"><b>پیام:</b> ${esc(p.angle)}</div>
     ${(p.segments || []).map(s => `<div class="small">• ${esc(s.name)}: ${esc((s.provinces || []).join("، "))} — اوج ${esc((s.peak || []).map(mon).join("، "))}</div>`).join("")}
     <div class="inline"><button class="btn sm" data-pst="${esc(p.id)}|approved">تأیید</button><button class="ghost sm danger" data-pst="${esc(p.id)}|rejected">رد</button></div></div>`).join("")}</div></div>` : ""}
-  <div class="card"><header>ردیف‌های نقشه (${fa(active.length)})<input type="text" id="mapQ" placeholder="جست‌وجو…" style="width:200px"></header><div class="tbl"><table><thead><tr><th>دسته</th><th>گروه</th><th>کالا</th><th>موجود</th><th>میانه‌ی قیمت</th><th>تازه (۷ روز)</th><th>اوج‌ها</th></tr></thead><tbody id="mapBody">
+  <div class="card"><header>ردیف‌های نقشه (${fa(active.length)})<input type="text" id="mapQ" placeholder="جست‌وجو…" style="width:200px"></header><div class="tbl"><table><thead><tr><th>دسته</th><th>گروه</th><th>کالا</th><th>موجود</th><th>میانه‌ی قیمت</th><th>تازه (۷ روز)</th><th>اوج‌ها</th><th>حاشیه‌ی سود</th></tr></thead><tbody id="mapBody">
   ${active.map(p => `<tr data-name="${esc(p.name)}"><td>${esc(p.name)} ${p.source === "llm" ? '<span class="badge b-info">جدید</span>' : ""}</td><td class="small">${esc(G[p.group] || p.group)}</td><td class="num">${fa(p.product_count)}</td><td class="num">${fa(p.in_stock_count)}</td><td class="num">${mtoman(p.median_price)}</td><td class="num">${p.new_7d ? `<b>${fa(p.new_7d)}</b>` : "–"}</td>
-    <td class="small">${(p.segments || []).map(s => `${esc(s.name.split("—")[0].trim())}: ${(s.peak || []).map(mon).join("،")}`).join("<br>")}</td></tr>`).join("")}</tbody></table></div></div>
+    <td class="small">${(p.segments || []).map(s => `${esc(s.name.split("—")[0].trim())}: ${(s.peak || []).map(mon).join("،")}`).join("<br>")}</td>
+    <td><select data-margin="${esc(p.id)}" style="width:auto;padding:2px 6px">${[["", "—"], ["high", "زیاد"], ["mid", "متوسط"], ["low", "کم"]].map(([v, t]) => `<option value="${v}" ${(margins[p.id] || "") === v ? "selected" : ""}>${t}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table></div></div>
   <div class="card"><header>دسته‌های سایت بدون ردیف نقشه (${fa(um.length)})
     ${um.length ? `<button class="btn sm" id="proposeBtn">ساخت ردیف پیشنهادی (ماه اوج، استان، خریدار) برای این‌ها</button>` : ""}</header>
     ${um.length ? `<div class="pad small muted" style="padding-bottom:0">هوش مصنوعی این دسته‌ها را بر اساس ریشه گروه می‌کند و برای هر گروه یک ردیف نقشه پیشنهاد می‌دهد. پیشنهادها بالای همین صفحه می‌آیند تا تأیید یا رد کنید؛ تا تأیید نکنید، وارد برنامه‌ی تبلیغ نمی‌شوند. حدود ۳ تا ۶ دقیقه طول می‌کشد.</div>` : ""}<div class="tbl">${um.length ? `<table><thead><tr><th>دسته</th><th>کالا</th><th>وصل به</th></tr></thead><tbody>
@@ -454,6 +493,7 @@ async function map(){
   const pb = $("#proposeBtn"); if (pb) pb.onclick = async () => { pb.disabled = true; pb.textContent = "در حال ساخت…";
     try { await post("/api/plan/propose"); toast("شروع شد؛ چند دقیقه بعد صفحه را تازه کنید"); later(map, 120000); } catch (e) { toast(e.message); pb.disabled = false; } };
   document.querySelectorAll("[data-cmap]").forEach(s => s.onchange = async () => { if (!s.value) return; await post("/api/categories/" + s.dataset.cmap, {plan_id: s.value}); toast("وصل شد"); });
+  document.querySelectorAll("[data-margin]").forEach(s => s.onchange = async () => { await post("/api/settings/margins", {margins: {[s.dataset.margin]: s.value}}); toast("ذخیره شد؛ روی امتیاز برنامه اثر می‌گذارد"); });
 }
 
 // ================= SETTINGS =================
@@ -475,6 +515,8 @@ async function settings(){
     <div class="tbl"><table><thead><tr><th>شروع</th><th>نتیجه</th><th>جزئیات</th></tr></thead><tbody>${(sy.runs || []).map(r => `<tr><td class="num">${ago(r.started_at)}</td>
       <td>${r.ok == null ? '<span class="badge b-warn pulse">در جریان</span>' : r.ok ? '<span class="badge b-ok">موفق</span>' : '<span class="badge b-bad">خطا</span>'}</td>
       <td class="small"><code class="ltr" style="font-size:11px">${esc(JSON.stringify(r.stats || {}).slice(0, 220))}</code>${r.error ? `<div class="danger">${esc(r.error.slice(0, 200))}</div>` : ""}</td></tr>`).join("")}</tbody></table></div></div></div></div>
+  <div class="grid2"><div class="card"><h2>مقایسه‌ی قیمت با ترب</h2><div class="pad small" id="pricingBox">در حال خواندن…</div></div>
+    <div class="card"><h2>هشدار آب‌وهوا</h2><div class="pad small" id="wxBox">در حال خواندن…</div></div></div>
   <div class="card"><h2>اتصال سفارش‌ها ${s.orders_enabled ? '<span class="badge b-ok">فعال</span>' : '<span class="badge b-warn">غیرفعال</span>'}</h2><div class="pad small">
     ${s.orders_enabled ? "سفارش‌های سایت روزانه خوانده می‌شوند و هر سفارشی که از لینک یک تبلیغ آمده باشد، خودکار به همان تبلیغ وصل می‌شود." :
     `برای شمارش خودکار سفارش‌ها:<ol style="margin:6px 0;padding-right:20px"><li>در پیشخوان وردپرس: ووکامرس ← پیکربندی ← پیشرفته ← REST API ← افزودن کلید.</li>
@@ -484,6 +526,15 @@ async function settings(){
     const weights = {}; document.querySelectorAll("[data-w]").forEach(i => weights[i.dataset.w] = +i.value);
     try { await post("/api/settings", {"budget.monthly_toman": n($("#sBudget").value), "budget.avg_ad_price_toman": n($("#sAvg").value), "planner.pilot_size": $("#sPilot").value, "planner.weights": weights}); toast("ذخیره شد"); }
     catch (e) { toast(e.message); } };
+  api("/api/pricing").then(pr => { const b = pr.by_status || {}; if (!$("#pricingBox")) return; $("#pricingBox").innerHTML = `
+    <div>بررسی‌شده: زیر بازار <b>${fa(b.cheaper || 0)}</b> · هم‌قیمت <b>${fa(b.equal || 0)}</b> · گران‌تر <b>${fa(b.pricier || 0)}</b> · فقط ما <b>${fa(b.only_us || 0)}</b> · بی‌تطبیق <b>${fa(b.no_match || 0)}</b></div>
+    <div class="muted">کالاهای پیشنهادهای برنامه و کمپین‌ها روزانه (حداکثر ۶۰ کالا، هر ۳ ثانیه یکی) با ترب مقایسه می‌شوند. آخرین اجرا: ${ago(pr.last_run_at)}</div>
+    ${pr.last_error ? `<div class="danger">آخرین خطا: ${esc(pr.last_error)}</div>` : ""}<button class="btn sm" id="priceNow" style="margin-top:8px">مقایسه‌ی الان</button>`;
+    $("#priceNow").onclick = async () => { try { await post("/api/pricing/run"); toast("شروع شد؛ چند دقیقه طول می‌کشد"); } catch (e) { toast(e.message); } }; }).catch(() => {});
+  api("/api/weather").then(w => { if (!$("#wxBox")) return; $("#wxBox").innerHTML = `<div>${fa((w.alerts || []).length)} هشدار فعال · به‌روز ${ago(w.at)}</div>
+    <div class="muted">پیش‌بینی ۷ روزه‌ی مرکز ۳۱ استان از Open-Meteo، هر ۶ ساعت. قانون‌ها: یخبندان (≤ −۳°)، گرما (≥ ۴۰°)، بارش سنگین (≥ ۲۰ م‌م در روز).</div>
+    <button class="btn sm" id="wxNow" style="margin-top:8px">به‌روزرسانی الان</button>`;
+    $("#wxNow").onclick = async () => { try { const r = await post("/api/weather/refresh"); toast(fa(r.alerts) + " هشدار"); settings(); } catch (e) { toast(e.message); } }; }).catch(() => {});
   $("#syncNow").onclick = async () => { try { await post("/api/sync", {}); toast("همگام‌سازی شروع شد"); setTimeout(settings, 1500); } catch (e) { toast(e.message); } };
   if (sy.running) later(settings, 15000);
 }
@@ -525,6 +576,76 @@ async function showJob(id){
   else body = `<div class="small muted">${fa(o.duration_sec)} ثانیه · ${fa((o.scenes || []).length)} صحنه</div><div class="tbl"><table><thead><tr><th>#</th><th>روی تصویر</th><th>گوینده</th></tr></thead><tbody>${(o.scenes || []).map(s => `<tr><td class="num">${fa(s.index)}</td><td><b>${esc(s.on_screen_text)}</b><div class="small muted ltr">${esc(s.visual?.query)}</div></td><td>${esc(s.voiceover)}</td></tr>`).join("")}</tbody></table></div>`;
   box.innerHTML = `<header><span>${TYPE[j.type]?.i} ${esc(j.title || j.topic)}</span><span class="small muted">${esc(j.model || "")} ${j.cost_usd != null ? "· $" + j.cost_usd.toFixed(4) : ""}</span></header><div class="pad">${body}</div>`;
   box.querySelectorAll("[data-copy2]").forEach(b => b.onclick = () => copy(b.dataset.copy2));
+}
+
+// ================= CITIES =================
+async function cities(){
+  const list = await api("/api/cities");
+  const cur = decodeURIComponent(location.hash.split("/")[1] || "") || store.get("ce_city") || "";
+  $("#view").innerHTML = `<div class="card"><header>شهر × محصول <span class="small muted">کدام کالا را در کدام شهر تبلیغ کنیم؟</span></header><div class="pad">
+    <div class="inline"><input type="text" id="cityQ" list="cityList" placeholder="نام شهر، مثلاً جیرفت" value="${esc(cur)}" style="max-width:280px">
+      <datalist id="cityList">${list.map(c => `<option value="${esc(c.name)}">${esc(c.province || "")}${c.profile ? " · تحقیق‌شده" : ""}</option>`).join("")}</datalist>
+      <button class="btn sm" id="cityGo">نمایش</button></div>
+    <div class="small muted" style="margin-top:8px">${fa(list.length)} شهر از نقشه‌ی تبلیغات · ${fa(list.filter(c => c.profile).length)} شهر با پروفایل تحقیقی (کشاورزی، صنعت، منبع)</div>
+    <div class="chips" style="margin-top:8px">${list.filter(c => c.profile).slice(0, 24).map(c => `<button class="chip kw" data-city="${esc(c.name)}">${esc(c.name)}</button>`).join("")}</div></div></div>
+    <div id="cityOut"></div>`;
+  const go = async name => { if (!name) return; store.set("ce_city", name); $("#cityOut").innerHTML = '<div class="empty">در حال تحلیل…</div>';
+    try { const d = await api("/api/cities/plan?city=" + encodeURIComponent(name)); if ($("#cityOut")) renderCity(d); } catch (e) { $("#cityOut").innerHTML = `<div class="err">${esc(e.message)}</div>`; } };
+  $("#cityGo").onclick = () => go($("#cityQ").value.trim());
+  $("#cityQ").onkeydown = e => { if (e.key === "Enter") go(e.target.value.trim()); };
+  document.querySelectorAll("[data-city]").forEach(b => b.onclick = () => { $("#cityQ").value = b.dataset.city; go(b.dataset.city); });
+  if (cur) go(cur);
+}
+function fact(x){ const m = String(x).match(/^(.*?)\s*\((?:منبع|source)\s*:\s*(https?:\/\/[^)\s]+)\)\s*$/i);
+  return m ? `${esc(m[1])} <a class="small" href="${esc(m[2])}" target="_blank" rel="noopener">منبع</a>` : esc(x); }
+function renderCity(d){
+  const pf = d.profile; const S = {3: "قوی", 2: "روشن", 1: "احتمالی"};
+  $("#cityOut").innerHTML = `${pf ? `<div class="card"><header>${esc(d.city)} <span class="small muted">${esc(d.province || "")}</span></header><div class="pad small">
+      <div style="margin-bottom:8px">${esc(pf.summary || "")}</div>
+      <div class="grid2"><div>${(pf.agri || []).length ? `<b>کشاورزی</b><ul style="margin:4px 0;padding-right:18px">${pf.agri.map(x => `<li>${fact(x)}</li>`).join("")}</ul>` : ""}</div>
+      <div>${(pf.industry || []).length ? `<b>صنعت و ساخت‌وساز</b><ul style="margin:4px 0;padding-right:18px">${pf.industry.map(x => `<li>${fact(x)}</li>`).join("")}</ul>` : ""}
+        ${(pf.other || []).length ? `<b>سایر</b><ul style="margin:4px 0;padding-right:18px">${pf.other.map(x => `<li>${fact(x)}</li>`).join("")}</ul>` : ""}</div></div>
+      <details><summary class="small">منابع (${fa((pf.sources || []).length)}) — بیشتر از تیتر خبرها؛ پیش از تصمیم بزرگ، خبر را باز کنید</summary><div style="padding:0 16px 10px">${(pf.sources || []).map(u => `<div class="ltr" style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="${esc(u)}" target="_blank" rel="noopener">${esc(u)}</a></div>`).join("")}</div></details></div></div>`
+    : `<div class="warnbox" style="margin-bottom:16px">برای ${esc(d.city)} هنوز پروفایل تحقیقی نداریم؛ پیشنهادها فقط از نقشه‌ی تبلیغات است.</div>`}
+    <div class="card"><header>بهترین گروه‌ها برای تبلیغ در ${esc(d.city)} — ${esc(d.month_name)}</header><div class="pad grid2">
+    ${d.items.map(it => `<div class="rec"><div class="inline" style="justify-content:space-between"><span class="badge b-info">${esc(it.group_name)}</span>
+        ${it.strength ? `<span class="badge ${it.strength >= 3 ? "b-ok" : ""}">تقاضای محلی ${S[it.strength] || ""}</span>` : ""}</div>
+      <h3>${esc(it.name)}</h3><div class="why">⏱ ${esc(it.why)}</div>
+      ${it.reason ? `<div class="small">📍 ${esc(it.reason)}</div>` : ""}
+      <div class="meta"><span>کالا: <b>${fa(it.products)}</b> (موجود ${fa(it.in_stock)})</span><span>امتیاز: <b>${fa(it.score)}</b></span>
+        ${it.source === "research" ? "<span>از تحقیق شهر</span>" : ""}</div>
+      ${prodStrip(it.examples)}
+      <div class="inline" style="justify-content:space-between"><span class="small muted">${it.keywords.slice(0, 3).map(esc).join(" · ")}</span>
+        <button class="btn sm" data-citycamp="${esc(it.plan_id)}|${it.segment_index}">کمپین برای ${esc(d.city)}</button></div></div>`).join("") || '<div class="empty">برای این ماه پیشنهادی نیست.</div>'}</div></div>`;
+  document.querySelectorAll("[data-citycamp]").forEach(b => b.onclick = async () => { const [pid, si] = b.dataset.citycamp.split("|"); b.disabled = true;
+    try { const c = await post("/api/campaigns", {plan_id: pid, segment_index: +si, city: d.city, province: d.province}); toast("کمپین " + c.code + " ساخته شد"); location.hash = "#campaigns/" + c.id; }
+    catch (e) { toast(e.message); b.disabled = false; } });
+}
+
+// ================= ASSISTANT =================
+async function assistant(){
+  const s = await api("/api/assistant"); const base = location.origin;
+  $("#view").innerHTML = `<div class="grid2"><div class="card"><h2>امتحان دستیار</h2><div class="pad">
+      <div class="inline" style="flex-wrap:nowrap"><input type="text" id="aQ" placeholder="مثلاً: قیمت پمپ شناور ۳ اسب چنده؟"><button class="btn sm" id="aGo">بپرس</button></div>
+      <div id="aOut" style="margin-top:10px"></div></div></div>
+    <div class="card"><h2>کانال‌های دستیار</h2><div class="pad small">
+      <div><b>پنجره‌ی گفت‌وگوی سایت:</b> این یک خط را در وردپرس (Elementor ← Custom Code یا افزونه‌ی «Insert Headers and Footers»، بخش Footer) اضافه کنید:
+        <pre class="raw" style="margin:6px 0">&lt;script src="${esc(base)}/widget.js" defer&gt;&lt;/script&gt;</pre>
+        <button class="ghost sm" data-copy3='&lt;script src="${esc(base)}/widget.js" defer&gt;&lt;\/script&gt;'>کپی</button></div>
+      <div style="margin-top:12px"><b>ربات تلگرام:</b> ${s.bots.telegram ? '<span class="badge b-ok">توکن تنظیم شده</span>' : '<span class="badge b-warn">توکن ندارد</span>'}
+        · <b>ربات بله:</b> ${s.bots.bale ? '<span class="badge b-ok">توکن تنظیم شده</span>' : '<span class="badge b-warn">توکن ندارد</span>'}</div>
+      <div class="muted" style="margin-top:4px">ربات را با @BotFather (تلگرام) یا @botfather (بله) بسازید و توکنش را خودتان در Render با نام <code>TELEGRAM_BOT_TOKEN</code> یا <code>BALE_BOT_TOKEN</code> بگذارید؛ بعد این دکمه را بزنید:</div>
+      <button class="btn sm" id="botSetup" style="margin-top:6px" ${s.bots.telegram || s.bots.bale ? "" : "disabled"}>اتصال ربات‌ها</button><div id="botOut" class="small"></div>
+      <div class="warnbox" style="margin-top:10px">روی پلن رایگان Render، اولین پیام بعد از خواب سرویس حدود یک دقیقه طول می‌کشد. برای استفاده‌ی واقعی، سرویس باید همیشه بیدار باشد (Starter یا VPS).</div></div></div></div>
+    <div class="grid2"><div class="card"><h2>بیشترین کالاهای پرسیده‌شده</h2><div class="pad small">${(s.top_products || []).map(p => `<div>${esc(p.name || p.id)} — <b>${fa(p.count)}</b></div>`).join("") || '<div class="muted">هنوز پرسشی نیست.</div>'}</div></div>
+      <div class="card"><h2>شهرهای پرسش‌کنندگان</h2><div class="pad small">${(s.top_cities || []).map(([c, n]) => `<div>${esc(c)} — <b>${fa(n)}</b></div>`).join("") || '<div class="muted">هنوز شهری گفته نشده.</div>'}</div></div></div>
+    <div class="card"><header>آخرین پرسش‌ها <span class="small muted">${fa(s.total)} پرسش · ${Object.entries(s.by_channel || {}).map(([k, v]) => esc(k) + " " + fa(v)).join(" · ")}</span></header><div class="tbl"><table><thead><tr><th>زمان</th><th>کانال</th><th>پرسش</th><th>شهر</th><th>جواب</th></tr></thead><tbody>
+      ${(s.recent || []).map(r => `<tr><td class="num">${ago(r.ts)}</td><td>${esc(r.channel)}</td><td>${esc(r.question)}</td><td>${esc(r.city || "")}</td><td class="small muted">${esc((r.answer || "").slice(0, 140))}</td></tr>`).join("")}</tbody></table></div></div>`;
+  const ask = async () => { const q = $("#aQ").value.trim(); if (!q) return; $("#aOut").innerHTML = '<div class="muted pulse">…</div>';
+    try { const r = await post("/api/assistant/ask", {q}); $("#aOut").innerHTML = `<pre class="ad">${esc(r.answer)}</pre>${prodStrip(r.products)}`; } catch (e) { $("#aOut").innerHTML = `<div class="err">${esc(e.message)}</div>`; } };
+  $("#aGo").onclick = ask; $("#aQ").onkeydown = e => { if (e.key === "Enter") ask(); };
+  document.querySelectorAll("[data-copy3]").forEach(b => b.onclick = () => copy(b.dataset.copy3));
+  const bs = $("#botSetup"); if (bs) bs.onclick = async () => { bs.disabled = true; try { const r = await post("/api/bots/setup"); $("#botOut").innerHTML = `<pre class="raw">${esc(JSON.stringify(r, null, 2))}</pre>`; } catch (e) { toast(e.message); } bs.disabled = false; };
 }
 
 // ---------------- boot ----------------

@@ -3,9 +3,12 @@
 «این هفته کدام دسته را، در کدام استان و شهرها، با چه بودجه‌ای تبلیغ کنیم».
 
 امتیاز = زمان‌بندی × وزن گروه × وزن ارزش کالا × موجودی × اطمینان داده
+         × حاشیه‌ی سود (اگر وارد شده) × عملکرد واقعی تبلیغ‌های قبلی × هشدار آب‌وهوا
 """
 import math
 import re
+import time
+from statistics import median
 
 from app.db.marketing import PlanCategory
 from app.db.session import get_session, get_setting
@@ -19,12 +22,84 @@ DEFAULTS = {
     "budget.avg_ad_price_toman": 600_000,
     "planner.weights": DEFAULT_WEIGHTS,
     "planner.pilot_size": 3,
+    "planner.margins": {},     # plan_id یا گروه ← low | mid | high
 }
+MARGIN_FACTORS = {"low": 0.8, "mid": 1.0, "high": 1.3}
+
+
+def _strip(p: str) -> str:
+    return re.sub(r"\s*\(.*?\)", "", p or "").strip()
 
 
 def cfg(key: str):
     v = get_setting(key)
     return DEFAULTS.get(key) if v is None else v
+
+
+def margin_weight(plan_id: str, group: str | None = None) -> float:
+    """حاشیه‌ی سود: اول تنظیم خود دسته، بعد تنظیم گروه."""
+    mg = cfg("planner.margins") or {}
+    lvl = mg.get(plan_id) or (mg.get(group) if group else None)
+    return MARGIN_FACTORS.get(lvl, 1.0)
+
+
+_perf_cache: dict = {"at": 0.0, "data": {}}
+
+
+def performance_by_plan() -> dict[str, dict]:
+    """هزینه به ازای هر مشتری بالقوه، برای هر دسته‌ی نقشه، از تبلیغ‌های پرداخت‌شده."""
+    if time.monotonic() - _perf_cache["at"] < 60:
+        return _perf_cache["data"]
+    from app.db.marketing import Campaign, Placement
+    from app.plan.campaigns import placement_metrics
+    out: dict[str, dict] = {}
+    with get_session() as db:
+        m = placement_metrics(db)
+        camps = {c.id: c.plan_id for c in db.query(Campaign).all()}
+        for pl in db.query(Placement).filter(Placement.status.in_(["published", "done"])).all():
+            x = m.get(pl.id) or {}
+            d = out.setdefault(camps.get(pl.campaign_id), {"spent": 0, "leads": 0, "placements": 0, "revenue": 0})
+            d["spent"] += x.get("cost") or 0
+            d["leads"] += x.get("leads") or 0
+            d["revenue"] += x.get("revenue") or 0
+            d["placements"] += 1
+    for d in out.values():
+        d["cpl"] = d["spent"] / d["leads"] if d["leads"] else None
+    _perf_cache.update(at=time.monotonic(), data=out)
+    return out
+
+
+def performance_weight(plan_id: str) -> float:
+    """
+    یادگیری از نتیجه: دسته‌ای که با حداقل ۲ تبلیغ منتشرشده هزینه‌ی هر مشتری‌اش از میانه کمتر است
+    امتیاز بیشتری می‌گیرد (تا ×۱.۶) و برعکس (تا ×۰.۶). دسته‌ی بی‌نتیجه با ۳ تبلیغ یا بیشتر ×۰.۶.
+    """
+    perf = performance_by_plan()
+    d = perf.get(plan_id)
+    if not d or d["placements"] < 2:
+        return 1.0
+    cpls = [x["cpl"] for x in perf.values() if x.get("cpl") and x["placements"] >= 2]
+    if d["cpl"] is None:
+        return 0.6 if d["placements"] >= 3 and d["spent"] > 0 else 1.0
+    if not cpls:
+        return 1.0
+    return max(0.6, min(1.6, median(cpls) / d["cpl"]))
+
+
+_hist_cache: dict = {"at": 0.0, "data": {}}
+
+
+def history_weight(plan_id: str, provinces: list[str]) -> tuple[float, int]:
+    """داده‌ی خود فروشگاه: اگر از این استان‌ها قبلاً برای این دسته سفارش آمده، امتیاز بیشتر (تا ×۱.۴)."""
+    if time.monotonic() - _hist_cache["at"] > 300:
+        try:
+            from app.tracking.history import province_demand
+            _hist_cache["data"] = province_demand()
+        except Exception:  # noqa: BLE001
+            _hist_cache["data"] = {}
+        _hist_cache["at"] = time.monotonic()
+    n = sum(_hist_cache["data"].get((plan_id, _strip(p)), 0) for p in provinces)
+    return (1 + min(0.4, 0.1 * math.log2(1 + n)) if n else 1.0), n
 
 
 def _timing(seg: dict, m: int) -> tuple[float, str]:
@@ -91,16 +166,26 @@ def recommendations(limit: int = 12, month: int | None = None) -> dict:
     m = month or today.month
     weights = {**DEFAULT_WEIGHTS, **(cfg("planner.weights") or {})}
     recs = []
+    from app.plan.pricing import plan_price_weight
+    from app.plan.weather import boosts
+    wx = boosts()
     with get_session() as db:
         plans = db.query(PlanCategory).filter(PlanCategory.status.in_(["base", "approved"])).all()
         for p in plans:
             best = None
+            price_w = plan_price_weight(p.examples or [])
             for idx, seg in enumerate(p.segments or []):
                 t, why = _timing(seg, m)
+                alerts = [a for a in wx.get((p.id, idx), []) if a["province"] in [_strip(x) for x in seg.get("provinces", [])]]
+                if alerts:
+                    t = max(t, 0.9)
+                    why = " · ".join(sorted({f"{a['icon']} {a['label']} در {a['province']}" for a in alerts})) + (f" — {why}" if why else "")
                 if t <= 0:
                     continue
                 score = (t * weights.get(p.group, 1.0) * _value_weight(p.p90_price, p.median_price)
-                         * _stock_weight(p) * _conf_weight(seg))
+                         * _stock_weight(p) * _conf_weight(seg) * margin_weight(p.id, p.group)
+                         * performance_weight(p.id) * price_w * (1.25 if alerts else 1.0)
+                         * history_weight(p.id, seg.get("provinces", []))[0])
                 if score <= 0:
                     continue
                 if best is None or score > best["score"]:
@@ -113,6 +198,9 @@ def recommendations(limit: int = 12, month: int | None = None) -> dict:
                         "channels": p.channels, "products": p.product_count, "in_stock": p.in_stock_count,
                         "median_price": p.median_price, "p90_price": p.p90_price,
                         "examples": (p.examples or [])[:4], "keywords": channel_keywords(p, seg),
+                        "weather": alerts, "margin": margin_weight(p.id, p.group),
+                        "performance": performance_weight(p.id), "price_weight": price_w,
+                        "past_orders": history_weight(p.id, seg.get("provinces", []))[1],
                     }
             if best:
                 recs.append(best)

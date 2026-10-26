@@ -32,7 +32,8 @@ def _landing_url(db, plan_id: str) -> str | None:
     return by_id[best].permalink
 
 
-def create_campaign(plan_id: str, segment_index: int, budget_toman: int | None = None) -> Campaign:
+def create_campaign(plan_id: str, segment_index: int, budget_toman: int | None = None,
+                    city: str | None = None, province: str | None = None) -> Campaign:
     with get_session() as db:
         plan = db.get(PlanCategory, plan_id)
         if plan is None:
@@ -45,17 +46,19 @@ def create_campaign(plan_id: str, segment_index: int, budget_toman: int | None =
         while db.query(Campaign).filter(Campaign.code == code).first():
             code = new_code("C", 3)
         product_ids = [e["id"] for e in (plan.examples or []) if e.get("id")][:6]
+        short = plan.name.split('(')[0].strip()
         camp = Campaign(
-            code=code, plan_id=plan.id, segment=seg.get("name"),
-            title=f"{plan.name.split('(')[0].strip()} — {seg.get('name')}",
-            provinces=seg.get("provinces") or [], cities=seg.get("cities"), product_ids=product_ids,
+            code=code, plan_id=plan.id, segment=seg.get("name"), city=city,
+            title=f"{short} — {city}" if city else f"{short} — {seg.get('name')}",
+            provinces=[province] if city and province else (seg.get("provinces") or []),
+            cities=city or seg.get("cities"), product_ids=product_ids,
             target_url=_landing_url(db, plan.id) or get_settings().brand_site_url, budget_toman=budget_toman,
             status="active",
             brief={
                 "group": groups().get(plan.group, plan.group), "buyers": plan.buyers, "angle": plan.angle,
                 "time": plan.time, "channels": plan.channels, "note": seg.get("note"),
                 "peak": [month_name(m) for m in seg.get("peak") or []],
-                "keywords": channel_keywords(plan, seg, limit=20),
+                "keywords": channel_keywords(plan, {**seg, "cities": city} if city else seg, limit=20),
             },
         )
         db.add(camp)
@@ -109,9 +112,19 @@ def build_ad_prompt(db, pl: Placement) -> tuple[str, str]:
     if not prods and plan and plan.examples:
         lines = "\n".join(f"- {e.get('name')}" for e in plan.examples[:6])
     else:
-        lines = "\n".join(f"- [{p.id}] {p.name} | {_fmt_price(p.price)} | "
-                          f"{'موجود' if p.in_stock else 'ناموجود'}{' | برند ' + p.brand if p.brand else ''}"
-                          for p in prods)
+        from app.plan.pricing import checks_for
+        pc = checks_for([p.id for p in prods])
+
+        def _mk(p):
+            c = pc.get(p.id) or {}
+            tag = ""
+            if c.get("status") == "cheaper" and (c.get("ratio") or 1) <= 0.95:
+                tag = f" | ✅ زیر قیمت بازار (کمترین قیمت ترب {c['market_min']:,} تومان در {c.get('shops') or 1} فروشگاه)"
+            elif c.get("status") == "only_us":
+                tag = " | ✅ فروشنده‌ی کم‌یاب (در ترب فقط ما)"
+            return (f"- [{p.id}] {p.name} | {_fmt_price(p.price)} | {'موجود' if p.in_stock else 'ناموجود'}"
+                    f"{' | برند ' + p.brand if p.brand else ''}{tag}")
+        lines = "\n".join(_mk(p) for p in prods)
     b = camp.brief or {}
     system = (f"تو کپی‌رایتر تبلیغات کانالی (تلگرام، ایتا، بله) برای «{s.brand_name}» هستی: {s.brand_niche}.\n"
               f"لحن: {s.brand_tone}\n"
@@ -122,6 +135,8 @@ def build_ad_prompt(db, pl: Placement) -> tuple[str, str]:
               "- مخاطب را به ثبت سفارش در سایت هدایت کن («قیمت روز و ثبت سفارش در سایت؛ کارشناس ما برای "
               "تأیید و فاکتور با شما تماس می‌گیرد»)، نه به تماس برای پرسیدن قیمت.\n"
               "- لینک و شماره‌ی تلفن را ننویس؛ بعداً اضافه می‌شود.\n"
+              "- اگر کنار کالایی «✅ زیر قیمت بازار» آمده، این مزیت را برجسته کن (مثلاً «زیر قیمت بازار»)؛ "
+              "برای کالاهای دیگر ادعای ارزان‌تر بودن نکن.\n"
               "خروجی فقط JSON مطابق اسکیما.")
     user = (f"کمپین: {camp.title}\nگروه: {b.get('group')}\nخریداران: {b.get('buyers')}\n"
             f"زاویه‌ی پیام: {b.get('angle')}\nمنطقه: {camp.segment} — استان‌ها: {'، '.join(camp.provinces or [])}\n"
@@ -195,7 +210,7 @@ def placement_metrics(db) -> dict[int, dict]:
         c = clicks.get(pl.code, 0)
         leads = o + (pl.calls or 0)
         out[pl.id] = {
-            "clicks": c, "orders_auto": o_auto, "orders": o, "revenue": rev, "calls": pl.calls or 0,
+            "variant": pl.ad_variant, "clicks": c, "orders_auto": o_auto, "orders": o, "revenue": rev, "calls": pl.calls or 0,
             "leads": leads, "cost": cost,
             "cpc": round(cost / c) if c and cost else None,
             "cost_per_lead": round(cost / leads) if leads and cost else None,
@@ -211,11 +226,12 @@ def report() -> dict:
         chans = {c.id: c for c in db.query(Channel).all()}
         by_camp = defaultdict(lambda: Counter())
         by_chan = defaultdict(lambda: Counter())
+        by_var = defaultdict(lambda: Counter())
         rows = []
         for pl in db.query(Placement).all():
             x = m[pl.id]
             spent = x["cost"] if pl.status in ("paid", "published", "done") else 0
-            for agg, key in ((by_camp, pl.campaign_id), (by_chan, pl.channel_id)):
+            for agg, key in ((by_camp, pl.campaign_id), (by_chan, pl.channel_id), (by_var, pl.ad_variant or "—")):
                 agg[key].update({"spent": spent, "clicks": x["clicks"], "orders": x["orders"],
                                  "revenue": x["revenue"], "calls": x["calls"], "placements": 1})
             ch = chans.get(pl.channel_id)
@@ -238,5 +254,7 @@ def report() -> dict:
             "campaigns": [{"id": k, "title": camps[k].title if k in camps else "—", **fin(v)} for k, v in by_camp.items()],
             "channels": [{"id": k, "title": ((chans[k].title or chans[k].username) if k in chans else "بدون کانال"),
                           **fin(v)} for k, v in by_chan.items()],
+            "variants": [{"id": k, "title": {"full": "نسخه‌ی کامل", "short": "نسخه‌ی کوتاه"}.get(k, "نامشخص"), **fin(v)}
+                         for k, v in by_var.items()],
             "placements": rows,
         }

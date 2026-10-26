@@ -50,3 +50,22 @@ def test_parse_product():
                        "short_description": "<p>کوتاه</p>"})
     assert p["name"] == "پمپ & تابلو" and p["price"] == 120000 and p["brand"] == "لئو"
     assert p["in_stock"] is False and p["category_ids"] == [9] and p["short_desc"] == "کوتاه"
+
+
+def test_weather_rules():
+    from app.plan.weather import _check
+    d = {"time": ["d1", "d2", "d3", "d4"], "temperature_2m_min": [2, -5, -1, 0],
+         "temperature_2m_max": [12, 10, 41, 15], "precipitation_sum": [0, 15, 18, 10]}
+    kinds = {a["kind"] for a in _check(d)}
+    assert kinds == {"frost", "heat", "rain"}
+    assert _check({"time": ["a"], "temperature_2m_min": [5], "temperature_2m_max": [25], "precipitation_sum": [1]}) == []
+
+
+def test_city_index_alignment():
+    from types import SimpleNamespace
+    from app.plan.cities import city_index
+    p = SimpleNamespace(id="X", segments=[{"provinces": ["خوزستان", "کرمان (جنوب)"],
+                                           "cities": "دزفول، شوش | جیرفت، کهنوج"}])
+    idx = city_index([p])
+    assert idx["دزفول"]["province"] == "خوزستان" and idx["جیرفت"]["province"] == "کرمان"
+    assert idx["کهنوج"]["entries"][0] == ("X", 0, 3)

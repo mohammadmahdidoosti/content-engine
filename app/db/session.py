@@ -33,7 +33,31 @@ def get_session():
 def init_db() -> None:
     """ساخت جدول‌ها (در مراحل بعد به Alembic منتقل می‌شود)."""
     from app.db import marketing  # noqa: F401  (ثبت جدول‌های بازاریابی)
+    from app.plan import pricing  # noqa: F401  (جدول مقایسه‌ی قیمت)
+    from app import assistant  # noqa: F401  (جدول پرسش‌های دستیار)
+    from app.tracking import history  # noqa: F401  (جدول تاریخچه‌ی سفارش‌ها)
     Base.metadata.create_all(get_engine())
+    _add_missing_columns()
+
+
+def _add_missing_columns() -> None:
+    """مهاجرت ساده: ستون‌های جدیدِ مدل‌ها را (nullable) به جدول‌های موجود اضافه می‌کند."""
+    import logging
+
+    from sqlalchemy import inspect, text
+    eng = get_engine()
+    insp = inspect(eng)
+    with eng.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            if not insp.has_table(table.name):
+                continue
+            have = {c["name"] for c in insp.get_columns(table.name)}
+            for col in table.columns:
+                if col.name in have:
+                    continue
+                ddl = col.type.compile(dialect=eng.dialect)
+                conn.execute(text(f'ALTER TABLE {table.name} ADD COLUMN {col.name} {ddl}'))
+                logging.getLogger("db").info("ستون جدید اضافه شد: %s.%s", table.name, col.name)
 
 
 def get_setting(key: str, default=None):

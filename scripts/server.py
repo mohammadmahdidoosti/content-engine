@@ -27,9 +27,10 @@ from app.db.models import ContentType, Job, JobStatus
 from app.db.session import get_engine, get_session, get_setting, init_db, set_setting
 from app.logging_setup import setup_logging
 from app.plan import campaigns as camps
-from app.plan import mapping, planner, sync
+from app.plan import cities, mapping, planner, sync, weather
 from app.plan.data import groups, month_name, province_names, seed_plan, today_jalali
 from app.tracking.links import short_url, visitor_hash
+from app import assistant, bots
 
 setup_logging()
 log = logging.getLogger("server")
@@ -48,6 +49,10 @@ class HttpError(Exception):
     def __init__(self, code: int, msg: str):
         super().__init__(msg)
         self.code, self.msg = code, msg
+
+
+class Handled(Exception):
+    """پاسخ قبلاً فرستاده شده."""
 
 
 class Redirect(Exception):
@@ -280,9 +285,51 @@ def api_products(req, m):
                 for p in qry.limit(limit).all()]
 
 
+def _with_prices(items: list[dict], key: str = "examples") -> list[dict]:
+    from app.plan.pricing import checks_for
+    ids = [e["id"] for it in items for e in (it.get(key) or []) if e.get("id")]
+    ch = checks_for(ids) if ids else {}
+    for it in items:
+        for e in it.get(key) or []:
+            if e.get("id") in ch:
+                e["price_check"] = ch[e["id"]]
+    return items
+
+
 def api_recommendations(req, m):
     month = _int(req.q("month"), "month", 1, 12)
-    return planner.recommendations(limit=_int(req.q("limit", "12"), "limit", 1, 50), month=month)
+    r = planner.recommendations(limit=_int(req.q("limit", "12"), "limit", 1, 50), month=month)
+    _with_prices(r["items"])
+    return r
+
+
+def api_pricing_run(req, m):
+    from app.plan.pricing import candidates, check_products
+    if sync.is_running():
+        raise HttpError(409, "همگام‌سازی در حال اجراست")
+    _bg(lambda: check_products(candidates(), max_checks=40), pool=_sync_pool)
+    return 202, {"started": True}
+
+
+def api_history(req, m):
+    from app.tracking.history import summary
+    return summary()
+
+
+def api_history_run(req, m):
+    from app.tracking.history import sync_history
+    if sync.is_running():
+        raise HttpError(409, "همگام‌سازی در حال اجراست")
+    _bg(lambda: sync_history(max_pages=40), pool=_sync_pool)
+    return 202, {"started": True}
+
+
+def api_pricing_status(req, m):
+    from app.plan.pricing import PriceCheck
+    with get_session() as db:
+        rows = dict(db.query(PriceCheck.status, func.count()).group_by(PriceCheck.status).all())
+    return {"by_status": rows, "last_run_at": get_setting("pricing.last_run_at"),
+            "last_error": get_setting("pricing.last_error")}
 
 
 # =============== تنظیمات ===============
@@ -406,7 +453,7 @@ def api_channel_delete(req, m):
 
 # =============== کمپین و تبلیغ ===============
 PL_FIELDS = ("id", "code", "campaign_id", "channel_id", "status", "cost_toman", "publish_at", "target_url", "ad",
-             "ad_status", "ad_error", "ad_cost_usd", "calls", "orders", "revenue_toman", "notes", "created_at")
+             "ad_status", "ad_error", "ad_cost_usd", "ad_variant", "calls", "orders", "revenue_toman", "notes", "created_at")
 
 
 def _camp_row(db, c: Campaign, metrics: dict | None = None) -> dict:
@@ -426,7 +473,9 @@ def _camp_row(db, c: Campaign, metrics: dict | None = None) -> dict:
                         "score": ch.score} if ch else None
         d["placements"].append(r)
     d["spent"] = sum((p.cost_toman or 0) for p in pls if p.status in ("paid", "published", "done"))
-    d["products"] = [_row(p, "id", "name", "price", "image", "permalink", "in_stock")
+    from app.plan.pricing import checks_for
+    pc = checks_for(c.product_ids or [])
+    d["products"] = [{**_row(p, "id", "name", "price", "image", "permalink", "in_stock"), "price_check": pc.get(p.id)}
                      for p in db.query(Product).filter(Product.id.in_(c.product_ids or [])).all()]
     return d
 
@@ -439,8 +488,10 @@ def api_campaigns(req, m):
 
 def api_campaign_create(req, m):
     b = req.body()
+    city = (b.get("city") or "").strip()[:80] or None
+    prov = (b.get("province") or "").strip()[:60] or None
     c = camps.create_campaign(b.get("plan_id") or "", _int(b.get("segment_index"), "segment_index", 0, required=True),
-                              _int(b.get("budget_toman"), "بودجه", 0))
+                              _int(b.get("budget_toman"), "بودجه", 0), city=city, province=prov)
     with get_session() as db:
         return 201, _camp_row(db, db.get(Campaign, c.id))
 
@@ -483,6 +534,8 @@ def api_placement_update(req, m):
             raise HttpError(404, "پیدا نشد")
         if b.get("status") in ("draft", "contacted", "agreed", "paid", "published", "done", "cancelled"):
             p.status = b["status"]
+        if b.get("ad_variant") in ("full", "short", ""):
+            p.ad_variant = b["ad_variant"] or None
         if "cost_toman" in b:
             p.cost_toman = _int(b["cost_toman"], "هزینه", 0, 10**12)
         for k in ("calls", "orders", "revenue_toman"):
@@ -524,11 +577,48 @@ def api_overview(req, m):
         n_camps = db.query(Campaign).filter(Campaign.status == "active").count()
         new_products = db.query(Product).order_by(Product.first_seen_at.desc()).limit(6).all() \
             if st.get("initial_done_at") else []
+    _with_prices(rec["items"])
     return {"jalali": rec["jalali"], "month_name": rec["month_name"], "budget_toman": rec["budget_toman"],
             "recommendations": rec["items"], "sync": {k: st[k] for k in ("running", "products", "in_stock", "categories",
                                                                          "site_total", "initial_done_at", "last_daily_at")},
+            "weather": weather.current(),
             "plan": plan_counts, "channels": n_channels, "active_campaigns": n_camps, "report": camps.report()["total"],
             "new_products": [_row(p, "id", "name", "price", "image", "permalink", "first_seen_at") for p in new_products]}
+
+
+# =============== شهرها، آب‌وهوا، سود ===============
+def api_cities(req, m):
+    return cities.list_cities(req.q("q") or "")[:400]
+
+
+def api_city_plan(req, m):
+    city = (req.q("city") or "").strip()
+    if not city:
+        raise HttpError(400, "نام شهر لازم است")
+    r = cities.city_plan(city, month=_int(req.q("month"), "month", 1, 12),
+                         limit=_int(req.q("limit", "10"), "limit", 1, 30))
+    _with_prices(r["items"])
+    return r
+
+
+def api_weather(req, m):
+    return weather.current()
+
+
+def api_weather_refresh(req, m):
+    return weather.refresh()
+
+
+def api_margins(req, m):
+    b = req.body()
+    cur = dict(planner.cfg("planner.margins") or {})
+    for k, v in (b.get("margins") or {}).items():
+        if v in ("low", "mid", "high"):
+            cur[str(k)[:40]] = v
+        elif v in ("", None):
+            cur.pop(str(k), None)
+    set_setting("planner.margins", cur)
+    return {"planner.margins": cur}
 
 
 # =============== لینک کوتاه ===============
@@ -542,6 +632,69 @@ def public_redirect(req, m):
                      referer=(req.headers.get("Referer") or "")[:300] or None))
         db.commit()
         raise Redirect(p.target_url or get_settings().brand_site_url)
+
+
+# =============== دستیار، ربات‌ها، ویجت ===============
+_rate: dict = {}
+ALLOWED_ORIGINS = {"https://caravansanat.com", "https://www.caravansanat.com"}
+
+
+def _rate_ok(ip: str, limit: int = 20, window: int = 600) -> bool:
+    now = time.time()
+    q = [t for t in _rate.get(ip, []) if now - t < window]
+    if len(q) >= limit:
+        _rate[ip] = q
+        return False
+    q.append(now)
+    _rate[ip] = q
+    if len(_rate) > 5000:
+        _rate.clear()
+    return True
+
+
+def public_ask(req, m):
+    if not _rate_ok(req.client_ip()):
+        raise HttpError(429, "تعداد پرسش‌ها زیاد شد؛ چند دقیقه بعد دوباره امتحان کنید")
+    b = req.body()
+    q = (b.get("q") or "").strip()
+    if not 2 <= len(q) <= 300:
+        raise HttpError(400, "پرسش کوتاه یا بلند است")
+    return assistant.ask(q, channel="site", user_id=(b.get("session") or req.client_ip())[:64], mock=MOCK)
+
+
+def public_widget(req, m):
+    req._send(200, (WEB_DIR / "widget.js").read_bytes(), "application/javascript; charset=utf-8",
+              {"Cache-Control": "public, max-age=600", "Access-Control-Allow-Origin": "*"})
+    raise Handled()
+
+
+def public_bot(req, m):
+    platform, sec = m.group(1), m.group(2)
+    if platform not in bots.APIS or not bots.secret(platform) or not hmac.compare_digest(sec, bots.secret(platform)):
+        raise HttpError(404, "not found")
+    upd = req.body()
+    _bg(bots.handle_update, platform, upd)
+    return {"ok": True}
+
+
+def api_assistant_ask(req, m):
+    q = (req.body().get("q") or "").strip()
+    if not q:
+        raise HttpError(400, "پرسش خالی است")
+    return assistant.ask(q, channel="panel", mock=MOCK)
+
+
+def api_assistant_stats(req, m):
+    s = assistant.stats()
+    s["bots"] = bots.configured()
+    return s
+
+
+def api_bots_setup(req, m):
+    base = get_settings().public_base_url or os.environ.get("RENDER_EXTERNAL_URL", "")
+    if not base:
+        raise HttpError(400, "آدرس عمومی سرویس معلوم نیست")
+    return bots.setup_webhooks(base)
 
 
 # =============== مسیرها ===============
@@ -564,9 +717,19 @@ ROUTES = [
     ("POST", r"/api/placements", api_placement_create), ("POST", r"/api/placements/(\d+)", api_placement_update),
     ("POST", r"/api/placements/(\d+)/ad", api_placement_ad),
     ("GET", r"/api/report", api_report),
+    ("GET", r"/api/cities", api_cities), ("GET", r"/api/cities/plan", api_city_plan),
+    ("GET", r"/api/weather", api_weather), ("POST", r"/api/weather/refresh", api_weather_refresh),
+    ("POST", r"/api/settings/margins", api_margins),
+    ("POST", r"/api/assistant/ask", api_assistant_ask), ("GET", r"/api/assistant", api_assistant_stats),
+    ("POST", r"/api/bots/setup", api_bots_setup),
+    ("GET", r"/api/history", api_history), ("POST", r"/api/history/run", api_history_run),
+    ("GET", r"/api/pricing", api_pricing_status), ("POST", r"/api/pricing/run", api_pricing_run),
 ]
 _COMPILED = [(meth, re.compile("^" + pat + "$"), fn) for meth, pat, fn in ROUTES]
-_PUBLIC = [("GET", re.compile(r"^/r/([A-Za-z0-9]{3,12})$"), public_redirect)]
+_PUBLIC = [("GET", re.compile(r"^/r/([A-Za-z0-9]{3,12})$"), public_redirect),
+           ("POST", re.compile(r"^/public/ask$"), public_ask),
+           ("GET", re.compile(r"^/widget\.js$"), public_widget),
+           ("POST", re.compile(r"^/bot/(telegram|bale)/([0-9a-f]{24})$"), public_bot)]
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -605,9 +768,19 @@ class Handler(BaseHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(data)
 
+    def _cors(self) -> dict:
+        origin = self.headers.get("Origin", "")
+        if urlparse(self.path).path == "/public/ask" and origin in ALLOWED_ORIGINS:
+            return {"Access-Control-Allow-Origin": origin, "Vary": "Origin",
+                    "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type"}
+        return {}
+
     def _json(self, code: int, body):
         self._send(code, json.dumps(body, ensure_ascii=False, default=str).encode("utf-8"),
-                   "application/json; charset=utf-8")
+                   "application/json; charset=utf-8", self._cors())
+
+    def do_OPTIONS(self):
+        self._send(204, b"", "text/plain", self._cors())
 
     def _authorized(self) -> bool:
         return bool(RUN_TOKEN) and hmac.compare_digest(self.headers.get("X-Run-Token", ""), RUN_TOKEN)
@@ -629,7 +802,9 @@ class Handler(BaseHTTPRequestHandler):
             for meth, rx, fn in _PUBLIC:
                 mm = rx.match(path)
                 if mm and meth == method:
-                    return fn(self, mm)
+                    res = fn(self, mm)
+                    code, body = res if isinstance(res, tuple) else (200, res)
+                    return self._json(code, body)
             if not path.startswith("/api/"):
                 return self._json(404, {"error": "not found"})
             if not self._authorized():
@@ -641,6 +816,8 @@ class Handler(BaseHTTPRequestHandler):
                     code, body = res if isinstance(res, tuple) else (200, res)
                     return self._json(code, body)
             return self._json(404, {"error": "not found"})
+        except Handled:
+            pass
         except Redirect as r:
             self._send(302, b"", "text/plain", {"Location": r.url})
         except HttpError as e:

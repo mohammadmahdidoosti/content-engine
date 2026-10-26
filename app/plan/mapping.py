@@ -123,6 +123,9 @@ def assign_products_and_stats() -> dict:
     """هر محصول را به دسته‌ی نقشه‌ی مربوط نسبت می‌دهد و آمار هر دسته را از نو حساب می‌کند."""
     initial_done_at = get_setting("sync.initial_done_at")
     new_since = datetime.now(timezone.utc) - timedelta(days=7)
+    if initial_done_at:
+        # محصولاتی که در بارگذاری اولیه آمده‌اند «جدید» حساب نشوند
+        new_since = max(new_since, datetime.fromisoformat(initial_done_at))
     with get_session() as db:
         cats = {c.id: c for c in db.query(WcCategory).all()}
         per_plan: dict[str, list[Product]] = defaultdict(list)
@@ -152,7 +155,7 @@ def assign_products_and_stats() -> dict:
             plan.in_stock_count = len(in_stock)
             plan.median_price = int(statistics.median(prices)) if prices else None
             plan.p90_price = prices[int(len(prices) * 0.9) - 1] if len(prices) >= 10 else (prices[-1] if prices else None)
-            plan.new_7d = sum(1 for p in items if initial_done_at and _aware(p.first_seen_at) >= new_since)
+            plan.new_7d = sum(1 for p in items if initial_done_at and _aware(p.first_seen_at) > new_since)
             showcase = sorted((p for p in in_stock if p.image and p.price), key=lambda p: -(p.price or 0))[:8]
             plan.examples = [{"id": p.id, "name": p.name, "price": p.price, "image": p.image,
                               "url": p.permalink} for p in showcase]

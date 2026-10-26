@@ -101,11 +101,8 @@ def test_offline_demand_baseline():
     assert d["days"] == 2 and d["per_day"] == 15.0 and d["plan_prov"] == {"IRRIG|تهران": 20}
 
 
-def test_external_key_and_gsc(monkeypatch):
-    monkeypatch.setenv("RUN_TOKEN", "abc")
+def test_external_gsc():
     from app.tracking import external
-    k = external.import_key()
-    assert external.key_ok(k) and not external.key_ok("x" * 32)
     g = external._gsc([["قیمت شیر پروانه ای", 0, 120, "0%", 12.0], ["تست شیر برقی کنیستر", 35, 2535, "1.4%", 7.7]], {})
     assert g["commercial"]["queries"] == 1 and g["quick_wins"][0]["q"] == "تست شیر برقی کنیستر"
     assert external._slug("https://caravansanat.com/product/%D9%88%D8%A7%D9%86/") == "وان"

@@ -1,9 +1,9 @@
 """
 داده‌ی بیرونی از پنل‌هایی که کلید API عمومی ندارند (پنل ترب، سرچ کنسول، آنالیتیکس).
 
-جمع‌آوری در مرورگر صاحب فروشگاه انجام می‌شود (با نشست خودش، فقط خواندنی) و خلاصه‌ی بی‌نام
-با یک «کلید ورود روزانه» به /ext/import فرستاده می‌شود. کلید از RUN_TOKEN و تاریخ ساخته می‌شود،
-فقط اجازه‌ی همین ورود داده را دارد و فردا باطل است.
+جمع‌آوری در مرورگر صاحب فروشگاه انجام می‌شود (با نشست خودش، فقط خواندنی). صفحه‌ی منبع، پنل را در
+پنجره‌ی «پل» (#bridge) باز می‌کند و داده را با postMessage می‌دهد؛ پنل فقط از ORIGINS می‌پذیرد و با توکن
+خودش به /api/ext/import می‌فرستد. هیچ کلید یا رمزی بین دو صفحه جابه‌جا نمی‌شود.
 
 منابع:
 - torob_clicks : کلیک و هزینه‌ی کلیک هر کالا در ترب  ← به تفکیک دسته‌ی نقشه، خط مبنای کلیک روزانه
@@ -11,13 +11,10 @@
 - ga_cities    : کاربران سایت به تفکیک شهر (آنالیتیکس)       ← علاقه‌ی هر شهر
 - ga_sources   : نشست‌ها به تفکیک منبع/رسانه
 """
-import hashlib
-import hmac
 import logging
-import os
 import re
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from urllib.parse import unquote, urlparse
 
 from app.db.session import get_session, get_setting, set_setting
@@ -26,22 +23,6 @@ log = logging.getLogger("tracking.external")
 SOURCES = {"torob_clicks", "gsc_queries", "ga_cities", "ga_sources"}
 ORIGINS = {"https://panel.torob.com", "https://search.google.com", "https://analytics.google.com"}
 _COMMERCIAL = re.compile(r"قیمت|خرید|فروش|نمایندگی|لیست قیمت|بازار|ارزان|عمده")
-
-
-# ---------------- کلید ورود روزانه ----------------
-def _day(offset: int = 0) -> str:
-    return (datetime.now(timezone.utc) + timedelta(days=offset)).strftime("%Y-%m-%d")
-
-
-def import_key(day: str | None = None) -> str:
-    tok = os.environ.get("RUN_TOKEN", "")
-    return hmac.new(tok.encode(), f"ext-import|{day or _day()}".encode(), hashlib.sha256).hexdigest()[:32]
-
-
-def key_ok(k: str) -> bool:
-    if not k or not os.environ.get("RUN_TOKEN"):
-        return False
-    return any(hmac.compare_digest(k, import_key(_day(o))) for o in (0, -1))
 
 
 # ---------------- ورود ----------------

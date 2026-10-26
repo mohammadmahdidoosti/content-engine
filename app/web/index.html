@@ -732,6 +732,22 @@ async function assistant(){
   const bs = $("#botSetup"); if (bs) bs.onclick = async () => { bs.disabled = true; try { const r = await post("/api/bots/setup"); $("#botOut").innerHTML = `<pre class="raw">${esc(JSON.stringify(r, null, 2))}</pre>`; } catch (e) { toast(e.message); } bs.disabled = false; };
 }
 
+// ---------------- bridge: داده‌ی پنل‌های بیرونی (ترب، سرچ کنسول، آنالیتیکس) ----------------
+// صفحه‌ی منبع این پنل را با #bridge باز می‌کند و داده را با postMessage می‌دهد؛ فقط این مبدأها پذیرفته می‌شوند.
+const BRIDGE_ORIGINS = ["https://panel.torob.com", "https://search.google.com", "https://analytics.google.com"];
+if (location.hash === "#bridge" && window.opener) {
+  document.title = "پل داده — مدیر بازاریابی";
+  window.addEventListener("message", async e => {
+    if (!BRIDGE_ORIGINS.includes(e.origin) || !e.data || e.data.type !== "ce-import" || !token) return;
+    let res;
+    try { const r = await fetch("/api/ext/import", {method: "POST", headers: {"Content-Type": "application/json", "X-Run-Token": token}, body: JSON.stringify(e.data.payload || {})});
+      res = {ok: r.ok, data: await r.json().catch(() => ({}))}; } catch (err) { res = {ok: false, data: {error: String(err)}}; }
+    try { e.source.postMessage({type: "ce-import-result", ...res}, e.origin); } catch {}
+    toast(res.ok ? `دریافت شد: ${res.data.source} (${fa(res.data.rows)} ردیف)` : (res.data.error || "خطا"));
+  });
+  setTimeout(() => { try { window.opener.postMessage({type: "ce-ready"}, "*"); } catch {} }, 300);
+}
+
 // ---------------- boot ----------------
 if (token) login(token).catch(() => logout()); else logout();
 })();

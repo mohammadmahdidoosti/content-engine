@@ -665,11 +665,10 @@ def public_ask(req, m):
     return assistant.ask(q, channel="site", user_id=(b.get("session") or req.client_ip())[:64], mock=MOCK)
 
 
-def public_ext_import(req, m):
-    """ورود داده‌ی پنل‌های بیرونی (ترب، سرچ کنسول، آنالیتیکس) با کلید روزانه؛ فقط از مرورگر صاحب فروشگاه."""
+def api_ext_import(req, m):
+    """ورود داده‌ی پنل‌های بیرونی (ترب، سرچ کنسول، آنالیتیکس). از صفحه‌ی «پل» پنل خودمان فرستاده می‌شود:
+    صفحه‌ی منبع (با نشست خود صاحب فروشگاه) داده را با postMessage به پنل می‌دهد و پنل با توکن خودش ارسال می‌کند."""
     from app.tracking import external
-    if not external.key_ok(req.headers.get("X-Import-Key", "")):
-        raise HttpError(401, "کلید ورود نامعتبر یا منقضی است")
     try:
         payload = json.loads(req.raw(max_bytes=4_000_000) or b"{}")
         return external.ingest(payload if isinstance(payload, dict) else {})
@@ -677,11 +676,6 @@ def public_ext_import(req, m):
         raise HttpError(400, str(e)[:200]) from None
     finally:
         planner._hist_cache["at"] = 0.0
-
-
-def api_ext_key(req, m):
-    from app.tracking import external
-    return {"key": external.import_key(), "valid": "امروز (UTC) و فردا", "endpoint": "/ext/import"}
 
 
 def api_ext(req, m):
@@ -782,13 +776,12 @@ ROUTES = [
     ("GET", r"/api/history", api_history), ("POST", r"/api/history/run", api_history_run),
     ("GET", r"/api/pricing", api_pricing_status), ("POST", r"/api/pricing/run", api_pricing_run),
     ("GET", r"/api/offline", api_offline), ("POST", r"/api/offline/import", api_offline_import),
-    ("GET", r"/api/ext", api_ext), ("GET", r"/api/ext/key", api_ext_key),
+    ("GET", r"/api/ext", api_ext), ("POST", r"/api/ext/import", api_ext_import),
 ]
 _COMPILED = [(meth, re.compile("^" + pat + "$"), fn) for meth, pat, fn in ROUTES]
 _PUBLIC = [("GET", re.compile(r"^/r/([A-Za-z0-9]{3,12})$"), public_redirect),
            ("POST", re.compile(r"^/public/ask$"), public_ask),
            ("GET", re.compile(r"^/widget\.js$"), public_widget),
-           ("POST", re.compile(r"^/ext/import$"), public_ext_import),
            ("POST", re.compile(r"^/bot/(telegram|bale)/([0-9a-f]{24})$"), public_bot)]
 
 
@@ -838,12 +831,6 @@ class Handler(BaseHTTPRequestHandler):
 
     def _cors(self) -> dict:
         origin = self.headers.get("Origin", "")
-        if urlparse(self.path).path == "/ext/import":
-            from app.tracking.external import ORIGINS
-            if origin in ORIGINS:
-                return {"Access-Control-Allow-Origin": origin, "Vary": "Origin", "Access-Control-Allow-Methods": "POST, OPTIONS",
-                        "Access-Control-Allow-Headers": "Content-Type, X-Import-Key", "Access-Control-Max-Age": "600"}
-            return {}
         if urlparse(self.path).path == "/public/ask" and origin in ALLOWED_ORIGINS:
             return {"Access-Control-Allow-Origin": origin, "Vary": "Origin",
                     "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type"}

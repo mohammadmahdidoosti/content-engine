@@ -50,6 +50,7 @@ def sync_categories(client: StoreClient, deadline: float) -> dict:
     n = 0
     while time.monotonic() < deadline:
         rows, _, pages = client.categories(page)
+        log.info("دسته‌ها: صفحه‌ی %d از %s (%d ردیف)", page, pages, len(rows))
         with get_session() as db:
             for raw in rows:
                 c = parse_category(raw)
@@ -97,6 +98,7 @@ def sync_products_full_pass(client: StoreClient, deadline: float, max_pages: int
     new = upd = pages_done = 0
     while time.monotonic() < deadline and (max_pages is None or pages_done < max_pages):
         rows, total, pages = client.products(page, orderby="id", order="asc")
+        log.info("محصولات: صفحه‌ی %d از %s", page, pages)
         a, b = _upsert_products(rows)
         new, upd, pages_done = new + a, upd + b, pages_done + 1
         if not rows or page >= (pages or page):
@@ -139,6 +141,7 @@ def run_daily(budget_sec: int = 720, mock_llm: bool = False, force: bool = False
     deadline = time.monotonic() + budget_sec
     run_id = None
     stats: dict = {}
+    log.info("همگام‌سازی روزانه شروع شد (سقف %d ثانیه)", budget_sec)
     try:
         with get_session() as db:
             r = SyncRun(kind="daily")

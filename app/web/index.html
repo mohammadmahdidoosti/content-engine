@@ -501,18 +501,18 @@ function extBlock(e, off){
   if (!t && !g && !gc) return `<div class="card"><h2>ترب، سرچ کنسول و آنالیتیکس</h2><div class="pad small muted">هنوز داده‌ای وارد نشده.</div></div>`;
   const months = (off && off.months || []).slice(-4, -1); const invPerMonth = months.length ? months.reduce((a, m) => a + m[1], 0) / months.length : null;
   const monthCost = t && t.per_day && t.cpc ? t.per_day * 30 * t.cpc : null;
-  const STATUS = {page_not_available: "ناموجود در سایت", page_deleted_temporary_technical: "حذف موقت (مشکل فنی خواندن صفحه)", base_not_merged: "ادغام‌نشده (در مقایسه‌ی قیمت نیست)", page_not_accessible: "صفحه در دسترس نیست", page_deleted_temporary_content: "حذف موقت (محتوا)", price_not_valid: "قیمت نامعتبر"};
+  const STATUS = {page_not_available: "ناموجود در سایت", page_deleted_temporary_technical: "حذف موقت (مشکل فنی خواندن صفحه)", base_not_merged: "ادغام‌نشده (در مقایسه‌ی قیمت نیست)", page_not_accessible: "صفحه در دسترس نیست", page_deleted_temporary_content: "حذف موقت (محتوا)", price_not_valid: "قیمت نامعتبر", in_progress_add: "در صف اضافه شدن به ترب", done: ""};
   return `<div class="card"><header>ترب، سرچ کنسول و آنالیتیکس <span class="small muted">${t ? "ترب " + ago(t.at) : ""}${g ? " · سرچ کنسول " + ago(g.at) : ""}${gc ? " · آنالیتیکس " + ago(gc.at) : ""}</span></header>
     ${t ? `<section class="stats" style="padding:12px 16px 0;margin:0">
       <div class="stat"><b>${fa(t.per_day)}</b><span>کلیک ترب در روز (خط مبنا)</span></div>
       <div class="stat"><b>${mtoman(t.cpc)}</b><span>هزینه‌ی هر کلیک ترب</span></div>
-      <div class="stat"><b>${mtoman(monthCost)}</b><span>هزینه‌ی ماهانه‌ی ترب (تخمین)</span></div>
-      <div class="stat"><b>${monthCost && invPerMonth ? mtoman(monthCost / invPerMonth) : "–"}</b><span title="هزینه‌ی ماهانه‌ی ترب ÷ میانگین فاکتور ماهانه‌ی ۳ ماه اخیر؛ سقف بالا چون همه‌ی فاکتورها از ترب نیست">هزینه‌ی ترب به ازای هر فاکتور (حداکثر)</span></div></section>
+      <div class="stat"><b>${mtoman(Math.round(monthCost))}</b><span>هزینه‌ی ماهانه‌ی ترب (تخمین)</span></div>
+      <div class="stat"><b>${monthCost && invPerMonth ? mtoman(Math.round(monthCost / invPerMonth)) : "–"}</b><span title="هزینه‌ی ماهانه‌ی ترب ÷ میانگین فاکتور ماهانه‌ی ۳ ماه اخیر؛ سقف بالا چون همه‌ی فاکتورها از ترب نیست">هزینه‌ی ترب به ازای هر فاکتور (حداکثر)</span></div></section>
     <div class="pad grid3 small">
       <div><b>کلیک ترب به تفکیک دسته (${esc(t.from || "")} تا ${esc(t.to || "")})</b>${(t.plans || []).slice(0, 12).map(p => row(esc(p.name), fa(p.clicks) + " · " + mtoman(p.cost))).join("")}
         ${t.unmatched && t.unmatched.clicks ? row("<span class='muted'>کالاهای بدون دسته</span>", fa(t.unmatched.clicks)) : ""}</div>
       <div><b>پرکلیک‌ترین کالاها در ترب</b>${(t.top || []).slice(0, 12).map(p => row(esc(p.name), fa(p.clicks))).join("")}</div>
-      <div><b>کالاهایی که در ترب دیده نمی‌شوند</b>${Object.entries(t.status || {}).filter(([k, v]) => v && k !== "no_problem").sort((a, b) => b[1] - a[1]).map(([k, v]) => row(esc(STATUS[k] || k), fa(v))).join("") || "<div class='muted'>–</div>"}
+      <div><b>کالاهایی که در ترب دیده نمی‌شوند</b>${Object.entries(t.status || {}).filter(([k, v]) => v && k !== "no_problem" && STATUS[k] !== "").sort((a, b) => b[1] - a[1]).map(([k, v]) => row(esc(STATUS[k] || k), fa(v))).join("") || "<div class='muted'>–</div>"}
         <div class="muted" style="margin-top:6px">موجودی حساب ترب: <b>${mtoman(t.balance)}</b></div></div></div>` : ""}
     ${g ? `<div class="pad grid3 small" style="border-top:1px solid var(--line)">
       <div><b>گوگل: ${fa(g.clicks)} کلیک از ${fa(g.impr)} نمایش (${fa(g.queries)} عبارت)</b>

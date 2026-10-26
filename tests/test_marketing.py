@@ -180,3 +180,19 @@ def test_call_log(tmp_path, monkeypatch):
     assert calls.plan_province_counts()[("IRRIG", "خوزستان")] == 1.0
     st = calls.stats()
     assert st["total"] == 1 and st["sources"][0]["conv_pct"] == 100.0
+
+
+def test_lift_window(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/l.db")
+    from app.db import session as sess
+    monkeypatch.setattr(sess, "_engine", None)
+    monkeypatch.setattr(sess, "_Session", None)
+    sess.init_db()
+    from collections import Counter
+    from datetime import date, timedelta
+    from app.tracking.lift import _avg, _j2g
+    c = Counter({date(2026, 10, 1) + timedelta(days=i): (2 if i < 7 else 5) for i in range(14)})
+    assert _avg(c, date(2026, 10, 1), 7, date(2026, 12, 1))[0] == 2 and _avg(c, date(2026, 10, 8), 7, date(2026, 12, 1))[0] == 5
+    assert _j2g("1405/08/04") == date(2026, 10, 26)
+    from app.tracking import lift
+    assert lift.placement_lift() == [] and set(lift.baselines()) == {"calls", "orders", "torob"}

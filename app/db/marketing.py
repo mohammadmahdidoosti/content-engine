@@ -161,6 +161,7 @@ class Placement(Base):
     # draft | contacted | agreed | paid | published | done | cancelled
     cost_toman: Mapped[int | None] = mapped_column(BigInteger)
     publish_at: Mapped[str | None] = mapped_column(String(40))   # متن آزاد، مثلاً «۱۲ آذر ساعت ۲۱»
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))   # وقتی وضعیت «منتشر شد» زده شد
     target_url: Mapped[str | None] = mapped_column(Text)
     ad: Mapped[dict | None] = mapped_column(JSON)               # متن و تصویر تبلیغ
     ad_status: Mapped[str] = mapped_column(String(20), default="none")  # none | generating | ready | failed

@@ -469,7 +469,7 @@ def api_channel_delete(req, m):
 
 
 # =============== کمپین و تبلیغ ===============
-PL_FIELDS = ("id", "code", "campaign_id", "channel_id", "status", "cost_toman", "publish_at", "target_url", "ad",
+PL_FIELDS = ("id", "code", "campaign_id", "channel_id", "status", "cost_toman", "publish_at", "published_at", "target_url", "ad",
              "ad_status", "ad_error", "ad_cost_usd", "ad_variant", "calls", "orders", "revenue_toman", "notes", "created_at")
 
 
@@ -550,6 +550,8 @@ def api_placement_update(req, m):
         if not p:
             raise HttpError(404, "پیدا نشد")
         if b.get("status") in ("draft", "contacted", "agreed", "paid", "published", "done", "cancelled"):
+            if b["status"] == "published" and not p.published_at:
+                p.published_at = datetime.now(timezone.utc)
             p.status = b["status"]
         if b.get("ad_variant") in ("full", "short", ""):
             p.ad_variant = b["ad_variant"] or None
@@ -777,6 +779,11 @@ def api_call_delete(req, m):
     return {"ok": True}
 
 
+def api_lift(req, m):
+    from app.tracking import lift
+    return {"placements": lift.placement_lift(), "baselines": lift.baselines(), "window_days": lift.WINDOW}
+
+
 def api_ext(req, m):
     from app.tracking import external
     return external.summary()
@@ -881,7 +888,7 @@ ROUTES = [
     ("GET", r"/api/hunter", api_hunter), ("POST", r"/api/hunter/run", api_hunter_run),
     ("POST", r"/api/hunter/pause", api_hunter_pause), ("GET", r"/api/hunter/coverage", api_hunter_coverage),
     ("GET", r"/api/hunter/queries", api_hunter_queries),
-    ("GET", r"/api/calls", api_calls), ("POST", r"/api/calls", api_call_add),
+    ("GET", r"/api/lift", api_lift), ("GET", r"/api/calls", api_calls), ("POST", r"/api/calls", api_call_add),
     ("POST", r"/api/calls/(\d+)", api_call_update), ("POST", r"/api/calls/(\d+)/delete", api_call_delete),
 ]
 _COMPILED = [(meth, re.compile("^" + pat + "$"), fn) for meth, pat, fn in ROUTES]

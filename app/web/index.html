@@ -510,7 +510,7 @@ async function calls(){
 
 // ================= REPORT =================
 async function report(){
-  const [d, h, off, ext] = await Promise.all([api("/api/report"), api("/api/history").catch(() => null), api("/api/offline").catch(() => null), api("/api/ext").catch(() => null)]); const t = d.total || {};
+  const [d, h, off, ext, lf] = await Promise.all([api("/api/report"), api("/api/history").catch(() => null), api("/api/offline").catch(() => null), api("/api/ext").catch(() => null), api("/api/lift").catch(() => null)]); const t = d.total || {};
   setTimeout(() => bindOffline(), 0);
   const tbl = (rows, title) => `<div class="card"><h2>${title}</h2><div class="tbl">${rows.length ? `<table><thead><tr><th>نام</th><th>تبلیغ</th><th>هزینه</th><th>کلیک</th><th>تماس</th><th>سفارش</th><th>فروش</th><th>هزینه هر مشتری بالقوه</th><th>بازگشت</th><th title="فروش × نرخ سود واقعی آن دسته (فایل فروش) منهای هزینه‌ی تبلیغ">سود خالص</th></tr></thead><tbody>
     ${rows.map(r => `<tr><td>${esc(r.title)}</td><td class="num">${fa(r.placements)}</td><td class="num">${mtoman(r.spent)}</td><td class="num">${fa(r.clicks)}</td><td class="num">${fa(r.calls)}</td><td class="num">${fa(r.orders)}</td><td class="num">${mtoman(r.revenue)}</td><td class="num">${mtoman(r.cost_per_lead)}</td><td class="num"><b>${r.roas != null ? fa(r.roas) + "×" : "–"}</b></td><td class="num">${r.net_profit != null && r.est_profit ? `<b style="color:var(${r.net_profit >= 0 ? "--accent" : "--red"})">${mtoman(r.net_profit)}</b>` : "–"}</td></tr>`).join("")}</tbody></table>` : '<div class="empty">هنوز داده‌ای نیست.</div>'}</div></div>`;
@@ -521,6 +521,7 @@ async function report(){
     <div class="stat"><b>${fa((t.orders || 0) + (t.calls || 0))}</b><span>مشتری بالقوه (سفارش + تماس)</span></div>
     <div class="stat"><b>${t.roas != null ? fa(t.roas) + "×" : "–"}</b><span>بازگشت هزینه</span></div></section>
     ${ME.orders_enabled ? "" : `<div class="warnbox" style="margin-bottom:16px">سفارش‌ها هنوز خودکار شمرده نمی‌شوند. برای اینکه هر سفارش سایت خودکار به تبلیغی که از آن آمده وصل شود، یک کلید فقط-خواندنی ووکامرس لازم است (راهنما در «تنظیمات»). تا آن موقع تماس و سفارش را دستی در هر تبلیغ وارد کنید.</div>`}
+    ${liftBlock(lf)}
     ${tbl(d.channels, "بر اساس کانال")}${tbl(d.campaigns, "بر اساس کمپین")}${tbl(d.variants || [], "نسخه‌ی کامل در برابر کوتاه (A/B)")}
     ${offlineBlock(off)}
     ${extBlock(ext, off)}
@@ -566,6 +567,20 @@ function demandBlock(d, files){
       <div><b>استان تماس‌گیرنده‌ها</b>${(d.provinces || []).slice(0, 10).map(([k, v]) => row(esc(k), fa(v))).join("")}</div>
       <div><b>دسته‌های درخواستی</b>${(d.plans || []).slice(0, 10).map(([k, v]) => row(esc(k), fa(v))).join("")}</div></div></div></div>
     ${(files || []).length > 1 ? `<div class="pad small muted" style="padding-top:0">فایل‌های بارگذاری‌شده: ${files.map(f => `${esc((f.sheets || []).slice(0, 3).join("، "))} (${ago(f.at)})`).join(" · ")} — بارگذاری دوباره‌ی همان فایل، نسخه‌ی قبلی‌اش را جایگزین می‌کند.</div>` : ""}`;
+}
+function liftBlock(l){
+  if (!l) return "";
+  const b = l.baselines || {};
+  const cell = (m, k) => { const x = (m || {})[k]; if (!x || x.after == null) return "<td class='num muted'>–</td>";
+    const up = (x.lift || 0) > 0; return `<td class="num">${fa(x.before)} ← <b>${fa(x.after)}</b> <span style="color:var(${up ? "--accent" : "--ink-3"})">${x.lift != null ? (up ? "+" : "") + fa(x.lift) : ""}</span></td>`; };
+  return `<div class="card"><header>اثر کمپین (قبل و بعد از انتشار) <span class="small muted">خط مبنای ۲۸ روز اخیر در روز: تماس ${fa(b.calls)} · سفارش سایت ${fa(b.orders)} · کلیک ترب ${fa(b.torob)}</span></header>
+    ${(l.placements || []).length ? `<div class="tbl"><table><thead><tr><th>تبلیغ</th><th>انتشار</th><th>تماس در روز</th><th>سفارش در روز</th><th>کلیک ترب</th><th>همان دسته و استان (تماس/سفارش)</th><th>مشتری اضافه</th><th>هزینه هر مشتری اضافه</th></tr></thead><tbody>
+      ${l.placements.map(p => `<tr><td>${esc(p.channel || "—")} <span class="badge">${esc(p.code)}</span>${p.overlap > 0 ? `<div class="small" style="color:var(--amber)">⚠ ${fa(p.overlap)} تبلیغ دیگر هم‌زمان</div>` : ""}</td><td class="num">${esc(p.published)}</td>
+        ${cell(p.metrics, "calls")}${cell(p.metrics, "orders")}${cell(p.metrics, "torob")}
+        <td class="num">${p.metrics.seg_calls ? fa(p.metrics.seg_calls.lift) + " / " + fa((p.metrics.seg_orders || {}).lift) : "–"}</td>
+        <td class="num"><b>${fa(p.extra_leads)}</b></td><td class="num">${mtoman(p.cost_per_extra_lead)}</td></tr>`).join("")}</tbody></table></div>`
+      : '<div class="pad small muted">هنوز تبلیغی «منتشر شد» نخورده. وقتی وضعیت تبلیغ را «منتشر شد» بزنید، تاریخ انتشار ثبت می‌شود و ۷ روز قبل و بعدش مقایسه می‌شود.</div>'}
+    <div class="pad small muted" style="padding-top:6px">«مشتری اضافه» = (تماس و سفارش روزانه‌ی بعد از انتشار − قبل از آن) × روزهای گذشته. این شامل کسانی هم هست که آگهی را دیده‌اند و بدون لینک تماس گرفته‌اند یا در ترب جست‌وجو کرده‌اند. نوسان طبیعی روزانه هم در آن هست؛ برای همین با چند تبلیغ و ستون «همان دسته و استان» قضاوت کنید.</div></div>`;
 }
 function extBlock(e, off){
   if (!e) return "";

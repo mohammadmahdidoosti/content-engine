@@ -267,9 +267,10 @@ function syncBadge(s){
 
 // ================= HOME =================
 async function home(){
-  const d = await api("/api/overview"); const s = d.sync, rp = d.report || {};
+  const [d, al] = await Promise.all([api("/api/overview"), api("/api/alerts").catch(() => ({alerts: []}))]); const s = d.sync, rp = d.report || {};
   const pct = s.site_total ? Math.min(100, Math.round(100 * s.products / s.site_total)) : 0;
-  $("#view").innerHTML = `
+  const alertBox = (al.alerts || []).length ? `<div class="card"><h2>هشدارها</h2><div class="pad small">${al.alerts.map(a => `<div style="padding:6px 10px;margin-bottom:6px;border-radius:9px;background:var(${a.level === "critical" ? "--red-soft" : a.level === "warn" ? "--amber-soft" : "--blue-soft"});color:var(${a.level === "critical" ? "--red" : a.level === "warn" ? "--amber" : "--blue"})">${a.level === "critical" ? "⛔" : a.level === "warn" ? "⚠️" : "ℹ️"} ${esc(a.text)}${a.link ? ` <a href="${esc(a.link)}">مشاهده</a>` : ""}</div>`).join("")}</div></div>` : "";
+  $("#view").innerHTML = alertBox + `
   <section class="stats">
     <div class="stat"><b>${fa(s.products)}</b><span>محصول همگام‌شده ${s.site_total ? "از " + fa(s.site_total) : ""}</span></div>
     <div class="stat"><b>${fa(d.active_campaigns)}</b><span>کمپین فعال</span></div>

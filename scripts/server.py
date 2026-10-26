@@ -789,6 +789,11 @@ def api_seo_ideas(req, m):
     return {"ideas": seo.ideas(_int(req.q("limit", "24"), "limit", 1, 60))}
 
 
+def api_alerts(req, m):
+    from app import alerts
+    return {"alerts": alerts.collect()}
+
+
 def api_ext(req, m):
     from app.tracking import external
     return external.summary()
@@ -893,7 +898,7 @@ ROUTES = [
     ("GET", r"/api/hunter", api_hunter), ("POST", r"/api/hunter/run", api_hunter_run),
     ("POST", r"/api/hunter/pause", api_hunter_pause), ("GET", r"/api/hunter/coverage", api_hunter_coverage),
     ("GET", r"/api/hunter/queries", api_hunter_queries),
-    ("GET", r"/api/lift", api_lift), ("GET", r"/api/seo/ideas", api_seo_ideas), ("GET", r"/api/calls", api_calls), ("POST", r"/api/calls", api_call_add),
+    ("GET", r"/api/alerts", api_alerts), ("GET", r"/api/lift", api_lift), ("GET", r"/api/seo/ideas", api_seo_ideas), ("GET", r"/api/calls", api_calls), ("POST", r"/api/calls", api_call_add),
     ("POST", r"/api/calls/(\d+)", api_call_update), ("POST", r"/api/calls/(\d+)/delete", api_call_delete),
 ]
 _COMPILED = [(meth, re.compile("^" + pat + "$"), fn) for meth, pat, fn in ROUTES]

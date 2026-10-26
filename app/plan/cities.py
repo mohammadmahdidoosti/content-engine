@@ -128,8 +128,12 @@ def city_plan(city: str, month: int | None = None, limit: int = 10) -> dict:
                 continue
             p = by_id[pid]
             s = c.get("strength") or 0
-            score = (c["t"] * weights.get(p.group, 1.0) * planner._value_weight(p.p90_price, p.median_price)
-                     * planner._stock_weight(p) * (1 + 0.3 * s) * planner.margin_weight(p.id, p.group)
+            # در نمای شهر، تقاضای محلی تحقیق‌شده مهم‌تر از رده‌ی قیمت است
+            local = (1 + 0.45 * s) if prof else 1.0
+            if prof and not s:
+                local = 0.85
+            score = (c["t"] * weights.get(p.group, 1.0) * planner._value_weight(p.p90_price, p.median_price) ** 0.5
+                     * planner._stock_weight(p) * local * planner.margin_weight(p.id, p.group)
                      * planner.performance_weight(p.id) * plan_price_weight(p.examples or []))
             if score <= 0:
                 continue

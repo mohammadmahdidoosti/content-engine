@@ -63,9 +63,18 @@ def refresh(timeout: float = 30) -> dict:
     names = list(PROVINCE_CENTERS)
     lat = ",".join(str(PROVINCE_CENTERS[n][0]) for n in names)
     lon = ",".join(str(PROVINCE_CENTERS[n][1]) for n in names)
-    r = httpx.get("https://api.open-meteo.com/v1/forecast", timeout=timeout, params={
-        "latitude": lat, "longitude": lon, "forecast_days": 7, "timezone": "Asia/Tehran",
-        "daily": "temperature_2m_min,temperature_2m_max,precipitation_sum"})
+    import time
+    params = {"latitude": lat, "longitude": lon, "forecast_days": 7, "timezone": "Asia/Tehran",
+              "daily": "temperature_2m_min,temperature_2m_max,precipitation_sum"}
+    r = None
+    for attempt in range(4):   # آی‌پی مشترک Render گاهی ۴۲۹ می‌گیرد
+        r = httpx.get("https://api.open-meteo.com/v1/forecast", timeout=timeout, params=params,
+                      headers={"User-Agent": "content-engine/1.0 (caravansanat)"})
+        if r.status_code != 429:
+            break
+        time.sleep(10 * (attempt + 1))
+    if r.status_code == 429:
+        raise RuntimeError("سرویس آب‌وهوا موقتاً محدود کرده (۴۲۹)؛ چند دقیقه بعد دوباره امتحان می‌شود")
     r.raise_for_status()
     data = r.json()
     if isinstance(data, dict):

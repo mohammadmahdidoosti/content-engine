@@ -606,7 +606,10 @@ def api_weather(req, m):
 
 
 def api_weather_refresh(req, m):
-    return weather.refresh()
+    try:
+        return weather.refresh()
+    except Exception as e:  # noqa: BLE001
+        raise HttpError(503, str(e)[:200]) from None
 
 
 def api_margins(req, m):

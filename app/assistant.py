@@ -50,22 +50,44 @@ class _Answer(BaseModel):
 
 
 def _tokens(q: str) -> list[str]:
-    q = (q or "").translate(FA_DIGITS).replace("‌", " ").replace("ي", "ی").replace("ك", "ک")
+    q = (q or "").translate(FA_DIGITS).replace("\u200c", " ").replace("ي", "ی").replace("ك", "ک")
     q = re.sub(r"[؟?!.,،:؛()\[\]\"'«»]", " ", q)
-    return [t for t in q.split() if len(t) >= 2 and t not in _STOP][:8]
+    return [t for t in q.split() if (len(t) >= 2 or t.isdigit()) and t not in _STOP][:8]
+
+
+_TO_FA = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+
+
+def _variants(t: str) -> list[str]:
+    """نام کالاها گاهی عدد فارسی دارند و گاهی لاتین."""
+    return list({t, t.translate(_TO_FA)})
+
+
+def _match(name: str, t: str) -> bool:
+    n = (name or "").replace("\u200c", " ")
+    return any(v in n for v in _variants(t))
 
 
 def search_products(q: str, limit: int = 8) -> list[Product]:
     toks = _tokens(q)
     if not toks:
         return []
+    words = [t for t in toks if not t.isdigit()] or toks
     with get_session() as db:
-        cand = (db.query(Product).filter(or_(*[Product.name.ilike(f"%{t}%") for t in toks]))
-                .limit(400).all())
-    scored = []
+        # اول: کالاهایی که همه‌ی کلمه‌ها را دارند؛ اگر کم بود، آن‌هایی که بیشترشان را دارند
+        qry = db.query(Product)
+        for t in words:
+            qry = qry.filter(or_(*[Product.name.ilike(f"%{v}%") for v in _variants(t)]))
+        cand = qry.limit(600).all()
+        if len(cand) < limit and len(words) > 1:
+            cand += (db.query(Product).filter(or_(*[Product.name.ilike(f"%{v}%") for t in words for v in _variants(t)]))
+                     .limit(600).all())
+    seen, scored = set(), []
     for p in cand:
-        name = (p.name or "").translate(FA_DIGITS).replace("‌", " ").lower()
-        hit = sum(1 for t in toks if t.lower() in name)
+        if p.id in seen:
+            continue
+        seen.add(p.id)
+        hit = sum(1 for t in toks if _match(p.name, t))
         if not hit:
             continue
         scored.append((hit / len(toks) + (0.15 if p.in_stock else 0) + (0.05 if p.price else 0), p))

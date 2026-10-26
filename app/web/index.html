@@ -320,7 +320,11 @@ async function campaigns(){
 }
 function campCard(c, chans, open){
   const b = c.brief || {}; const used = new Set(c.placements.map(p => p.channel_id));
-  const avail = chans.filter(ch => !used.has(ch.id) && ch.status !== "blocked");
+  const provs = (c.provinces || []).map(x => String(x).replace(/\s*\(.*?\)/g, "").trim());
+  const fit = ch => { if (ch.relevant === false) return 0; const inP = (ch.provinces || []).some(p => provs.includes(p)); const top = (ch.plan_ids || []).includes(c.plan_id);
+    if (inP && top) return 1; if (inP && ["local_news", "classifieds", "trade"].includes(ch.audience)) return 0.6; if (top && (ch.scope === "national" || !(ch.provinces || []).length)) return 0.5; return inP ? 0.3 : 0; };
+  const avail = chans.filter(ch => !used.has(ch.id) && ch.status !== "blocked").map(ch => ({...ch, _fit: fit(ch)}))
+    .sort((a, b) => (b._fit * (b.score || 30)) - (a._fit * (a.score || 30))).filter((ch, i) => ch._fit > 0 || i < 15).slice(0, 60);
   return `<div class="card" id="camp${c.id}"><header><span>${esc(c.title)} <span class="badge">${esc(c.code)}</span></span>
     <span class="inline small"><span>بودجه: <b>${mtoman(c.budget_toman)}</b></span><span>خرج‌شده: <b>${mtoman(c.spent)}</b></span>
     <select data-campst="${c.id}" style="width:auto;padding:3px 8px">${["active","draft","done"].map(s => `<option value="${s}" ${c.status === s ? "selected" : ""}>${({active:"فعال",draft:"پیش‌نویس",done:"تمام‌شده"})[s]}</option>`).join("")}</select></span></header>
@@ -339,7 +343,7 @@ function campCard(c, chans, open){
     <div class="inline" style="margin:14px 0 8px"><b style="font-size:14px">تبلیغ‌ها</b>
       <button class="ghost sm" data-addpl0="${c.id}">تبلیغ بدون کانال مشخص</button></div>
     ${avail.length ? `<div class="chlist" data-addch="${c.id}">${avail.map(ch => `<label><input type="checkbox" value="${ch.id}"> <b>${esc(ch.title || ch.username)}</b>
-        <span class="muted small">${ch.score != null ? "امتیاز " + fa(ch.score) : ""}${ch.members ? " · " + fa(ch.members) + " عضو" : ""}${ch.price_toman ? " · " + mtoman(ch.price_toman) : ""}</span></label>`).join("")}</div>
+        <span class="muted small">${ch._fit >= 1 ? "✅ هم‌استان و هم‌موضوع · " : ch._fit >= 0.6 ? "📍 کانال عمومی همان منطقه · " : ch._fit >= 0.5 ? "🎯 تخصصی سراسری · " : ""}${ch.score != null ? "امتیاز " + fa(ch.score) : ""}${ch.members ? " · " + fa(ch.members) + " عضو" : ""}${ch.price_toman ? " · " + mtoman(ch.price_toman) : ""}</span></label>`).join("")}</div>
       <button class="btn sm" data-addpl="${c.id}" style="margin:8px 0 12px">افزودن کانال‌های انتخاب‌شده + ساخت متن تبلیغ</button>`
       : `<div class="small muted" style="margin-bottom:10px">کانال آزادی نیست؛ اول در بخش <a href="#channels">کانال‌ها</a> اضافه کنید.</div>`}
     ${c.placements.map(p => plRow(p)).join("") || '<div class="muted small">هنوز تبلیغی ثبت نشده.</div>'}
@@ -397,22 +401,45 @@ function bindCampaigns(chans){
 }
 
 // ================= CHANNELS =================
+const AUD = {farmer: "کشاورز", contractor: "پیمانکار/ساختمانی", industry: "صنعتی", technician: "تعمیرکار/فنی", local_news: "خبری شهر", classifieds: "نیازمندی", trade: "بازار و فروشنده", general: "عمومی", irrelevant: "نامرتبط"};
+let CHF = {prov: "", aud: "", rel: "1"};
 async function channels(){
-  const list = await api("/api/channels");
-  $("#view").innerHTML = `<div class="card"><h2>افزودن کانال</h2><div class="pad grid2">
+  const [all, hs, cov] = await Promise.all([api("/api/channels"), api("/api/hunter").catch(() => null), api("/api/hunter/coverage?limit=15").catch(() => null)]);
+  const list = all.filter(c => (!CHF.prov || (c.provinces || []).includes(CHF.prov)) && (!CHF.aud || c.audience === CHF.aud) && (CHF.rel !== "1" || c.relevant !== false)).slice(0, 200);
+  const cand = (hs && hs.candidates) || {};
+  const hunterCard = hs ? `<div class="card"><header>شکارچی کانال <span class="small muted">${fa(hs.channels)} کانال · ${fa(hs.relevant)} مرتبط · ${fa(hs.tagged)} برچسب‌خورده · نامزد در صف: ${fa(cand.new || 0)} · ردشده: ${fa(cand.rejected || 0)}</span>
+      <span class="inline"><button class="ghost sm" id="hRun">اجرای الان</button><button class="ghost sm" id="hPause">${hs.paused ? "ادامه" : "توقف"}</button></span></header>
+    <div class="pad grid3 small">
+      <div><b>منبع کانال‌ها</b>${Object.entries(hs.by_source || {}).map(([k, v]) => `<div class="inline" style="justify-content:space-between"><span>${esc({manual: "دستی", snowball: "گلوله‌برفی", google: "گوگل", eitaa: "ایتا"}[k] || k)}</span><b>${fa(v)}</b></div>`).join("")}</div>
+      <div><b>نوع مخاطب</b>${Object.entries(hs.audience || {}).filter(([k]) => k !== "null").sort((a, b) => b[1] - a[1]).map(([k, v]) => `<div class="inline" style="justify-content:space-between"><span>${esc(AUD[k] || k)}</span><b>${fa(v)}</b></div>`).join("") || "<div class='muted'>هنوز برچسب نخورده</div>"}</div>
+      <div><b>آخرین اجراها</b>${(hs.runs || []).slice().reverse().map(r => `<div class="muted">${ago(r.at)}: ${r.snowball ? "خزش " + fa(r.snowball.parents || 0) + " کانال، " + fa(r.snowball.new_candidates || 0) + " نامزد · " : ""}${r.check ? fa(r.check.added || 0) + " اضافه، " + fa(r.check.rejected || 0) + " رد · " : ""}${r.tag ? fa(r.tag.tagged || 0) + " برچسب" : ""}</div>`).join("") || "<div class='muted'>هنوز اجرا نشده</div>"}</div></div>
+    <div class="pad small muted" style="padding-top:0">هر ۱۵ دقیقه (وقتی سرویس بیدار است): پست‌های کانال‌های خوب خوانده می‌شود و کانال‌هایی که در آن‌ها لینک یا فوروارد شده‌اند «نامزد» می‌شوند؛ نامزدها بررسی می‌شوند (حداقل ${fa(800)} عضو و ${fa(150)} بازدید) و هوش مصنوعی شهر، موضوع و نوع مخاطبشان را برچسب می‌زند. هیچ پیامی فرستاده نمی‌شود.</div></div>` : "";
+  const covCard = cov && cov.cells ? `<div class="card"><header>جدول پوشش (پیشنهادهای این ماه و ماه بعد) <span class="small muted">${fa(cov.covered)} از ${fa(cov.total)} خانه حداقل ${fa(cov.target)} کانال دارد</span></header>
+    <div class="tbl"><table><thead><tr><th>دسته</th><th>بخش</th><th>استان</th><th>کانال مناسب</th><th>کمبود</th><th>بهترین‌ها</th></tr></thead><tbody>
+      ${cov.cells.slice(0, 40).map(x => `<tr><td>${esc(x.name)}</td><td class="small">${esc(x.segment || "")}</td><td>${esc(x.province)}</td><td class="num">${fa(x.channels)}</td>
+        <td class="num">${x.gap ? `<span class="badge b-warn">${fa(x.gap)}</span>` : '<span class="badge b-ok">کامل</span>'}</td>
+        <td class="small">${(x.top || []).slice(0, 3).map(t => esc(t.title || t.username)).join("، ")}</td></tr>`).join("")}</tbody></table></div>
+    <div class="pad small muted" style="padding-top:6px">«کانال مناسب»: کانالی که هم در آن استان است و هم موضوعش می‌خورد، یا کانال خبری/نیازمندی همان شهر، یا کانال تخصصی سراسری همان موضوع. خانه‌های پرکمبود اول با جست‌وجوی گوگل پر می‌شوند.</div></div>` : "";
+  const filt = `<div class="inline small" style="gap:8px;padding:8px 16px;border-bottom:1px solid var(--line)">
+    <select id="fProv" style="width:auto"><option value="">همه‌ی استان‌ها</option>${ME.provinces.map(p => `<option ${CHF.prov === p ? "selected" : ""}>${esc(p)}</option>`).join("")}</select>
+    <select id="fAud" style="width:auto"><option value="">همه‌ی مخاطب‌ها</option>${Object.entries(AUD).map(([k, v]) => `<option value="${k}" ${CHF.aud === k ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
+    <label><input type="checkbox" id="fRel" ${CHF.rel === "1" ? "checked" : ""}> فقط مرتبط‌ها</label><span class="muted">${fa(list.length)} از ${fa(all.length)}</span></div>`;
+  $("#view").innerHTML = hunterCard + covCard + `<div class="card"><h2>افزودن کانال</h2><div class="pad grid2">
     <div><label class="f">لینک یا @نام کانال‌ها (هر خط یکی؛ از تلگرام، ایتا، بله یا روبیکا)</label>
       <textarea id="chText" placeholder="https://t.me/keshavarzan_dezful&#10;@agri_jiroft&#10;https://eitaa.com/keshavarzi_khuzestan"></textarea></div>
     <div><label class="f">استان‌ها (اختیاری)</label><select id="chProv" multiple size="4">${ME.provinces.map(p => `<option>${esc(p)}</option>`).join("")}</select>
       <label class="f">موضوع (اختیاری)</label><input type="text" id="chTopic" placeholder="مثلاً کشاورزی، اخبار شهر، شهرک صنعتی">
       <button class="btn" id="chAdd" style="margin-top:12px">افزودن و بررسی خودکار</button></div></div>
     <div class="pad" style="padding-top:0"><div class="note small">کانال‌های تلگرام خودکار بررسی می‌شوند: عضو، میانگین بازدید ۲۰ پست آخر، نسبت بازدید به عضو (برای تشخیص عضو فیک)، تعداد پست در روز و سهم پست‌های تبلیغاتی. برای ایتا، بله و روبیکا عضو و بازدید را خودتان در جدول وارد کنید. قیمت تبلیغ را که از ادمین گرفتید وارد کنید تا «هزینه به ازای هر ۱۰۰۰ بازدید» حساب شود.</div></div></div>
-  <div class="card"><header>کانال‌ها (${fa(list.length)}) <span class="small muted">مرتب بر اساس امتیاز</span></header>
+  <div class="card"><header>کانال‌ها (${fa(all.length)}) <span class="small muted">مرتب بر اساس امتیاز</span></header>${filt}
   <div class="tbl">${list.length ? `<table><thead><tr><th>کانال</th><th>عضو</th><th>میانگین بازدید</th><th>بازدید/عضو</th><th>پست در روز</th><th>امتیاز</th><th>قیمت تبلیغ (تومان)</th><th>هزینه هر ۱۰۰۰ بازدید</th><th>ادمین</th><th></th></tr></thead><tbody>
   ${list.map(c => `<tr>
     <td><a href="${esc(c.url || "#")}" target="_blank" rel="noopener"><b>${esc(c.title || c.username)}</b></a><div class="small muted"><span class="badge">${esc(c.platform)}</span> <span class="ltr">@${esc(c.username)}</span></div>
       ${c.status === "error" ? `<div class="small danger">${esc(c.error)}</div>` : ""}
       ${(c.flags || []).map(f => `<div class="small" style="color:var(--amber)">⚠ ${esc(f)}</div>`).join("")}
-      ${(c.provinces || []).length ? `<div class="small muted">${esc(c.provinces.join("، "))}</div>` : ""}</td>
+      ${(c.provinces || []).length || (c.cities || []).length ? `<div class="small muted">📍 ${esc([...(c.cities || []), ...(c.provinces || [])].filter((x, i, a) => a.indexOf(x) === i).slice(0, 5).join("، "))}${c.scope === "national" ? " · سراسری" : ""}</div>` : (c.scope === "national" ? '<div class="small muted">سراسری</div>' : "")}
+      ${c.audience ? `<div class="small"><span class="badge ${c.relevant === false ? "b-bad" : "b-info"}">${esc(AUD[c.audience] || c.audience)}</span> ${(c.plan_ids || []).slice(0, 3).map(x => `<span class="badge">${esc(x)}</span>`).join(" ")}</div>` : ""}
+      ${c.source && c.source !== "manual" ? `<div class="small muted">پیدا شده از ${esc({snowball: "گلوله‌برفی", google: "گوگل", eitaa: "ایتا"}[c.source] || c.source)}${c.found_via ? ": " + esc(c.found_via.slice(0, 40)) : ""}</div>` : ""}</td>
     <td class="num">${c.platform === "telegram" ? fa(c.members) : `<input type="text" inputmode="numeric" style="width:90px" data-chf="${c.id}" data-k="members" value="${c.members ?? ""}">`}</td>
     <td class="num">${c.platform === "telegram" ? fa(c.avg_views) : `<input type="text" inputmode="numeric" style="width:80px" data-chf="${c.id}" data-k="avg_views" value="${c.avg_views ?? ""}">`}</td>
     <td class="num">${c.view_rate != null ? fa(Math.round(c.view_rate * 100)) + "٪" : "–"}</td>
@@ -432,7 +459,11 @@ async function channels(){
     try { await post("/api/channels/" + i.dataset.chf, {[i.dataset.k]: i.value.replace(/[٬,]/g, "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))}); toast("ذخیره شد"); channels(); } catch (e) { toast(e.message); } });
   v.querySelectorAll("[data-chk]").forEach(b => b.onclick = async () => { b.disabled = true; b.textContent = "…"; try { await post(`/api/channels/${b.dataset.chk}/check`); } catch (e) { toast(e.message); } channels(); });
   v.querySelectorAll("[data-chdel]").forEach(b => b.onclick = async () => { await post(`/api/channels/${b.dataset.chdel}/delete`); channels(); });
-  if (list.some(c => c.status === "new")) later(channels, 5000);
+  const fp = $("#fProv"), fa2 = $("#fAud"), fr = $("#fRel");
+  if (fp) { fp.onchange = () => { CHF.prov = fp.value; channels(); }; fa2.onchange = () => { CHF.aud = fa2.value; channels(); }; fr.onchange = () => { CHF.rel = fr.checked ? "1" : ""; channels(); }; }
+  const hr = $("#hRun"); if (hr) hr.onclick = async () => { hr.disabled = true; try { await post("/api/hunter/run"); toast("شکارچی شروع شد؛ چند دقیقه طول می‌کشد"); } catch (e) { toast(e.message); } };
+  const hp = $("#hPause"); if (hp) hp.onclick = async () => { await post("/api/hunter/pause", {paused: !hs.paused}); channels(); };
+  if (all.some(c => c.status === "new")) later(channels, 8000);
 }
 
 // ================= REPORT =================

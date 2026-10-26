@@ -63,8 +63,27 @@ def _num(s: str) -> int:
         return 0
 
 
-def fetch_telegram(username: str, timeout: float = 30) -> dict:
-    r = httpx.get(f"https://t.me/s/{username}", timeout=timeout, follow_redirects=True,
+_SKIP_USERS = {"joinchat", "s", "c", "addlist", "share", "proxy", "socks", "iv", "setlanguage", "addstickers",
+               "addemoji", "boost", "contact", "login", "telegram", "durov", "bot", "jobs"}
+
+
+def extract_mentions(html_text: str, self_name: str = "") -> list[str]:
+    """نام کانال‌هایی که در پست‌ها لینک یا @ شده‌اند یا پست از آن‌ها فوروارد شده (برای گلوله‌برفی)."""
+    names = re.findall(r'href="https?://t\.me/(?:s/)?([A-Za-z][A-Za-z0-9_]{3,31})(?:[/?"])', html_text)
+    names += re.findall(r'(?<![A-Za-z0-9_/])@([A-Za-z][A-Za-z0-9_]{3,31})\b', re.sub(r"<[^>]+>", " ", html_text))
+    me = self_name.lower()
+    out = []
+    for n in names:
+        low = n.lower()
+        if low == me or low in _SKIP_USERS or low.endswith("bot"):
+            continue
+        out.append(n)
+    return out
+
+
+def fetch_telegram(username: str, timeout: float = 30, before: int | None = None) -> dict:
+    url = f"https://t.me/s/{username}" + (f"?before={before}" if before else "")
+    r = httpx.get(url, timeout=timeout, follow_redirects=True,
                   headers={"User-Agent": "Mozilla/5.0 (compatible; content-engine/1.0)"})
     r.raise_for_status()
     t = r.text
@@ -80,7 +99,10 @@ def fetch_telegram(username: str, timeout: float = 30) -> dict:
     texts = re.findall(r'<div class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>', t, re.S)
     clean = [html.unescape(re.sub(r"<[^>]+>", " ", x)) for x in texts]
     ads = sum(1 for x in clean if _AD_WORDS.search(x) or len(re.findall(r"t\.me/|@[A-Za-z]", x)) >= 3)
+    ids = [int(x) for x in re.findall(r'data-post="[^"/]+/(\d+)"', t)]
     return {
+        "mentions": extract_mentions(t, username), "texts": [re.sub(r"\s+", " ", x).strip()[:400] for x in clean],
+        "min_post_id": min(ids) if ids else None,
         "title": html.unescape(re.sub(r"<[^>]+>", "", title.group(1))).strip() if title else None,
         "description": html.unescape(re.sub(r"<[^>]+>", " ", desc.group(1))).strip()[:500] if desc else None,
         "members": members, "views": views, "dates": dates, "posts": len(clean), "ads": ads,
@@ -144,6 +166,7 @@ def check_channel(channel_id: int) -> Channel:
                 if ds:
                     ch.last_post_days = round((datetime.now(timezone.utc) - ds[-1]).total_seconds() / 86400, 1)
                 ch.ad_ratio = round(d["ads"] / d["posts"], 2) if d["posts"] else None
+                ch.sample = "\n".join(d["texts"][-8:])[:3000] or ch.sample
             ch.view_rate = round(ch.avg_views / ch.members, 3) if ch.avg_views and ch.members else None
             ch.score, ch.flags, _ = score_channel(ch.members, ch.avg_views, ch.posts_per_day, ch.ad_ratio,
                                                   ch.last_post_days, ch.price_toman)

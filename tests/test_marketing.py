@@ -145,3 +145,21 @@ def test_backup_roundtrip(tmp_path, monkeypatch):
     set_setting("x.test", {"a": 2})
     r = backup.restore_bytes(data)
     assert get_setting("x.test") == {"a": 1} and r["restored"]["settings"] >= 1
+
+
+def test_hunter_candidates_and_fit(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/h.db")
+    from app.db import session as sess
+    monkeypatch.setattr(sess, "_engine", None)
+    monkeypatch.setattr(sess, "_Session", None)
+    sess.init_db()
+    from app.channels import hunter
+    from app.db.marketing import Channel
+    r = hunter.add_candidates([("telegram", "Rasht_Kesht"), ("telegram", "rasht_kesht"), ("telegram", "abc_news")], "snowball", "x")
+    assert r["added"] == 2 and r["bumped"] == 1
+    ch = Channel(platform="telegram", username="a", provinces=["گیلان"], plan_ids=["IRRIG"], audience="farmer", relevant=True)
+    assert hunter._fit(ch, "IRRIG", "WATER", "گیلان") == 1.0
+    ch2 = Channel(platform="telegram", username="b", provinces=["گیلان"], plan_ids=[], audience="local_news", relevant=True)
+    assert hunter._fit(ch2, "PNEU", "PNEU", "گیلان") == 0.6 and hunter._fit(ch2, "PNEU", "PNEU", "تهران") == 0
+    g = hunter.ingest_candidates([["https://t.me/new_chan", "site:t.me کشاورزی رشت"], ["https://eitaa.com/rasht_agri", "q"]])
+    assert g["added"] == 2

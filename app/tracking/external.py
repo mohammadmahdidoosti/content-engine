@@ -20,7 +20,7 @@ from urllib.parse import unquote, urlparse
 from app.db.session import get_session, get_setting, set_setting
 
 log = logging.getLogger("tracking.external")
-SOURCES = {"torob_clicks", "torob_yearly", "gsc_queries", "ga_cities", "ga_sources"}
+SOURCES = {"channel_candidates", "torob_clicks", "torob_yearly", "gsc_queries", "ga_cities", "ga_sources"}
 ORIGINS = {"https://panel.torob.com", "https://search.google.com", "https://analytics.google.com"}
 _COMMERCIAL = re.compile(r"قیمت|خرید|فروش|نمایندگی|لیست قیمت|بازار|ارزان|عمده")
 
@@ -39,6 +39,10 @@ def ingest(payload: dict) -> dict:
     if not isinstance(rows, list) or len(rows) > 60000:
         raise ValueError("ردیف‌ها نامعتبر")
     meta = payload.get("meta") or {}
+    if src == "channel_candidates":                     # لینک کانال‌ها از نتیجه‌ی جست‌وجوی گوگل
+        from app.channels.hunter import ingest_candidates
+        res = ingest_candidates(rows, "google")
+        return {"source": src, "rows": len(rows), **res}
     if src == "torob_yearly":
         data = _torob_yearly(rows, payload.get("urls") or [], meta)
     else:

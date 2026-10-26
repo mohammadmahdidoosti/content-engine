@@ -363,7 +363,8 @@ def api_settings_update(req, m):
 # =============== کانال‌ها ===============
 CH_FIELDS = ("id", "platform", "username", "title", "description", "members", "avg_views", "view_rate",
              "posts_per_day", "ad_ratio", "last_post_days", "score", "flags", "provinces", "topics",
-             "price_toman", "admin_contact", "notes", "status", "error", "checked_at", "created_at")
+             "price_toman", "admin_contact", "notes", "status", "error", "checked_at", "created_at",
+             "source", "found_via", "cities", "plan_ids", "audience", "scope", "relevant", "tagged_at")
 
 
 def _ch_row(c: Channel) -> dict:
@@ -701,6 +702,32 @@ def api_backup_status(req, m):
     return backup.status()
 
 
+def api_hunter(req, m):
+    from app.channels import hunter
+    return hunter.status()
+
+
+def api_hunter_run(req, m):
+    _bg(_hunter_once, 240)
+    return 202, {"started": True}
+
+
+def api_hunter_pause(req, m):
+    v = bool(req.body().get("paused"))
+    set_setting("hunter.paused", v)
+    return {"paused": v}
+
+
+def api_hunter_coverage(req, m):
+    from app.channels import hunter
+    return hunter.coverage(months_ahead=1, limit=_int(req.q("limit", "20"), "limit", 1, 50))
+
+
+def api_hunter_queries(req, m):
+    from app.channels import hunter
+    return {"queries": hunter.gap_queries(_int(req.q("n", "40"), "n", 1, 120))}
+
+
 def api_ext(req, m):
     from app.tracking import external
     return external.summary()
@@ -802,6 +829,9 @@ ROUTES = [
     ("GET", r"/api/ext", api_ext), ("POST", r"/api/ext/import", api_ext_import),
     ("GET", r"/api/backup", api_backup_download), ("POST", r"/api/backup/restore", api_backup_restore),
     ("GET", r"/api/backup/status", api_backup_status),
+    ("GET", r"/api/hunter", api_hunter), ("POST", r"/api/hunter/run", api_hunter_run),
+    ("POST", r"/api/hunter/pause", api_hunter_pause), ("GET", r"/api/hunter/coverage", api_hunter_coverage),
+    ("GET", r"/api/hunter/queries", api_hunter_queries),
 ]
 _COMPILED = [(meth, re.compile("^" + pat + "$"), fn) for meth, pat, fn in ROUTES]
 _PUBLIC = [("GET", re.compile(r"^/r/([A-Za-z0-9]{3,12})$"), public_redirect),
@@ -950,6 +980,31 @@ def scheduler_loop() -> None:
         time.sleep(600)
 
 
+_hunter_lock = threading.Lock()
+
+
+def _hunter_once(budget: int = 240) -> dict:
+    from app.channels import hunter
+    if not _hunter_lock.acquire(blocking=False):
+        return {"skipped": "در حال اجرا"}
+    try:
+        return hunter.run(budget, mock=MOCK)
+    finally:
+        _hunter_lock.release()
+
+
+def hunter_loop() -> None:
+    """شکارچی کانال: هر ۱۵ دقیقه حدود ۴ دقیقه کار (وقتی همگام‌سازی اصلی در حال اجرا نیست)."""
+    time.sleep(90)
+    while True:
+        try:
+            if not get_setting("hunter.paused") and not sync.is_running():
+                _hunter_once(240)
+        except Exception:  # noqa: BLE001
+            log.exception("خطای شکارچی")
+        time.sleep(900)
+
+
 def main() -> None:
     init_db()
     seed_plan()
@@ -960,6 +1015,7 @@ def main() -> None:
     recover_jobs()
     if not NO_SCHEDULER:
         threading.Thread(target=scheduler_loop, daemon=True, name="scheduler").start()
+        threading.Thread(target=hunter_loop, daemon=True, name="hunter").start()
     if not RUN_TOKEN:
         log.warning("RUN_TOKEN تنظیم نشده؛ API و پنل قابل ورود نیستند.")
     port = int(os.environ.get("PORT", "10000"))

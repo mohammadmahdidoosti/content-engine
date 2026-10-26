@@ -104,6 +104,32 @@ class Channel(Base):
     error: Mapped[str | None] = mapped_column(Text)
     checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    # شکارچی و برچسب‌ها
+    source: Mapped[str | None] = mapped_column(String(20))         # manual | snowball | google | eitaa | bale
+    found_via: Mapped[str | None] = mapped_column(String(200))     # کانال مادر یا عبارت جست‌وجو
+    cities: Mapped[list | None] = mapped_column(JSON)              # شهرهای مخاطب (فارسی)
+    plan_ids: Mapped[list | None] = mapped_column(JSON)            # دسته‌های نقشه‌ی مرتبط
+    audience: Mapped[str | None] = mapped_column(String(30))       # farmer | contractor | industry | technician | local_news | classifieds | general
+    scope: Mapped[str | None] = mapped_column(String(20))          # city | province | national
+    relevant: Mapped[bool | None] = mapped_column(Boolean)
+    sample: Mapped[str | None] = mapped_column(Text)               # چند پست آخر (برای برچسب‌زدن)
+    tagged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    crawled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))   # آخرین گلوله‌برفی
+
+
+class ChannelCandidate(Base):
+    """کانالی که پیدا شده ولی هنوز بررسی نشده (از گلوله‌برفی، گوگل، ایتا…)."""
+    __tablename__ = "channel_candidates"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    platform: Mapped[str] = mapped_column(String(20), default="telegram")
+    username: Mapped[str] = mapped_column(String(120), index=True)
+    source: Mapped[str] = mapped_column(String(20))
+    found_via: Mapped[str | None] = mapped_column(String(200))
+    hits: Mapped[int] = mapped_column(Integer, default=1)          # چند بار دیده شده
+    status: Mapped[str] = mapped_column(String(20), default="new")  # new | added | rejected
+    reason: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Campaign(Base):

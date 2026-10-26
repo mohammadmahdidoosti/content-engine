@@ -4,130 +4,120 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>پنل تولید محتوا</title>
+<title>مدیر بازاریابی کاروان صنعت</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#f4f1ea; --surface:#fffdf8; --surface-2:#f0ebe0; --ink:#1f2a24; --ink-2:#55615a; --ink-3:#8a948e;
-  --line:#e2dccf; --accent:#2f6b4f; --accent-ink:#fff; --accent-soft:#e3efe8;
-  --amber:#b7791f; --amber-soft:#fbf0dc; --red:#b4412f; --red-soft:#f9e4df; --blue:#2c5d8f; --blue-soft:#e2ecf6;
-  --tg:#e9f4ec; --shadow:0 1px 2px rgba(31,42,36,.06),0 6px 20px rgba(31,42,36,.06); --r:14px;
+  --bg:#f3f1ec; --surface:#fffefb; --surface-2:#efebe2; --ink:#1d2621; --ink-2:#526058; --ink-3:#86918a;
+  --line:#e1dccf; --accent:#2c6a4d; --accent-ink:#fff; --accent-soft:#e1eee6;
+  --amber:#a86e12; --amber-soft:#faefd9; --red:#b23f2c; --red-soft:#f8e3de; --blue:#2a5a8c; --blue-soft:#e1ebf5;
+  --tg:#e8f3eb; --shadow:0 1px 2px rgba(29,38,33,.05),0 6px 18px rgba(29,38,33,.06); --r:14px;
 }
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --bg:#121614; --surface:#1a201d; --surface-2:#222a26; --ink:#e8ece9; --ink-2:#a9b3ad; --ink-3:#77827b;
-    --line:#2d3631; --accent:#5fb08a; --accent-ink:#0e1411; --accent-soft:#1f3329;
-    --amber:#e0a84a; --amber-soft:#33291a; --red:#e07a66; --red-soft:#3a221d; --blue:#7fb0e0; --blue-soft:#1c2a38;
-    --tg:#1d2b23; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
-  }
-}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111513; --surface:#191f1c; --surface-2:#212925; --ink:#e7ebe8; --ink-2:#a7b1ab; --ink-3:#76807a;
+  --line:#2c3530; --accent:#5fb08a; --accent-ink:#0d1310; --accent-soft:#1e3228;
+  --amber:#e0a84a; --amber-soft:#33291a; --red:#e27a66; --red-soft:#3a221d; --blue:#82b2e2; --blue-soft:#1c2a38;
+  --tg:#1c2a22; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25)}}
 :root[data-theme="dark"]{
-  --bg:#121614; --surface:#1a201d; --surface-2:#222a26; --ink:#e8ece9; --ink-2:#a9b3ad; --ink-3:#77827b;
-  --line:#2d3631; --accent:#5fb08a; --accent-ink:#0e1411; --accent-soft:#1f3329;
-  --amber:#e0a84a; --amber-soft:#33291a; --red:#e07a66; --red-soft:#3a221d; --blue:#7fb0e0; --blue-soft:#1c2a38;
-  --tg:#1d2b23; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
-}
+  --bg:#111513; --surface:#191f1c; --surface-2:#212925; --ink:#e7ebe8; --ink-2:#a7b1ab; --ink-3:#76807a;
+  --line:#2c3530; --accent:#5fb08a; --accent-ink:#0d1310; --accent-soft:#1e3228;
+  --amber:#e0a84a; --amber-soft:#33291a; --red:#e27a66; --red-soft:#3a221d; --blue:#82b2e2; --blue-soft:#1c2a38;
+  --tg:#1c2a22; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25)}
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font-family:Vazirmatn,Tahoma,sans-serif;font-size:15px;line-height:1.75;
-  -webkit-font-smoothing:antialiased}
+body{background:var(--bg);color:var(--ink);font-family:Vazirmatn,Tahoma,sans-serif;font-size:14.5px;line-height:1.75;-webkit-font-smoothing:antialiased}
 button,input,textarea,select{font:inherit;color:inherit}
-.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
-.brand{display:flex;align-items:center;gap:10px}
-.logo{width:38px;height:38px;border-radius:11px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:800}
-.brand h1{font-size:18px;margin:0;font-weight:800}
+a{color:var(--blue)}
+.wrap{max-width:1240px;margin:0 auto;padding:16px 16px 60px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{width:38px;height:38px;border-radius:11px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:800;flex:none}
+.brand h1{font-size:17px;margin:0;font-weight:800;white-space:nowrap}
 .brand small{display:block;color:var(--ink-3);font-size:12px;margin-top:-4px}
-.ghost{background:transparent;border:1px solid var(--line);border-radius:10px;padding:6px 12px;cursor:pointer;color:var(--ink-2)}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;padding:4px;margin:0 0 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs a{flex:none;text-decoration:none;color:var(--ink-2);padding:6px 13px;border-radius:9px;font-weight:600;font-size:13.5px}
+nav.tabs a.on{background:var(--accent);color:var(--accent-ink)}
+.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:8px 14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn:disabled{opacity:.55;cursor:wait}
+.btn.sm{padding:4px 10px;font-size:12.5px;border-radius:8px}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:9px;padding:5px 11px;cursor:pointer;color:var(--ink-2);white-space:nowrap}
 .ghost:hover{background:var(--surface-2)}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
-.stat b{display:block;font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.ghost.sm{padding:2px 9px;font-size:12px}
+.danger{color:var(--red)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:16px}
+.card>h2,.card>header{font-size:15px;margin:0;padding:12px 16px;border-bottom:1px solid var(--line);font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.pad{padding:14px 16px}
+.muted{color:var(--ink-3)} .small{font-size:12.5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:11px 14px}
+.stat b{display:block;font-size:21px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.5}
 .stat span{color:var(--ink-3);font-size:12.5px}
-.grid{display:grid;grid-template-columns:360px 1fr;gap:18px;align-items:start}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
-.card h2{font-size:15px;margin:0;padding:14px 16px;border-bottom:1px solid var(--line);font-weight:700;display:flex;justify-content:space-between;align-items:center}
-.pad{padding:16px}
-label.f{display:block;font-size:13px;color:var(--ink-2);margin:0 0 6px;font-weight:500}
-textarea,input[type=text],input[type=password]{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none}
-textarea{min-height:84px;resize:vertical}
-textarea:focus,input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.types{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
-.type{position:relative}
-.type input{position:absolute;opacity:0;inset:0;cursor:pointer}
-.type div{border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center;font-size:13px;transition:.15s;background:var(--bg)}
-.type div i{display:block;font-style:normal;font-size:20px;line-height:1.3}
-.type input:checked+div{border-color:var(--accent);background:var(--accent-soft);color:var(--ink);font-weight:700}
-.type input:focus-visible+div{box-shadow:0 0 0 3px var(--accent-soft)}
-.primary{width:100%;background:var(--accent);color:var(--accent-ink);border:0;border-radius:11px;padding:11px;font-weight:700;cursor:pointer;margin-top:14px}
-.primary:disabled{opacity:.55;cursor:wait}
-.hint{color:var(--ink-3);font-size:12px;margin-top:6px}
-.err{background:var(--red-soft);color:var(--red);border-radius:10px;padding:8px 12px;font-size:13px;margin-top:10px;display:none}
-.suggest{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.suggest button{background:var(--surface-2);border:0;border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;color:var(--ink-2)}
-.jobs{list-style:none;margin:0;padding:6px}
-.job{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px;border-radius:11px;cursor:pointer}
-.job:hover,.job.sel{background:var(--surface-2)}
-.ticon{width:34px;height:34px;border-radius:10px;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;font-size:16px}
-.job .t{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.job .m{color:var(--ink-3);font-size:12px}
-.badge{font-size:11.5px;border-radius:999px;padding:2px 9px;font-weight:600;white-space:nowrap}
-.b-generated{background:var(--accent-soft);color:var(--accent)}
-.b-failed{background:var(--red-soft);color:var(--red)}
-.b-pending,.b-generating{background:var(--amber-soft);color:var(--amber)}
-.b-generating::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-left:5px;animation:p 1s infinite}
+label.f{display:block;font-size:12.5px;color:var(--ink-2);margin:10px 0 4px;font-weight:600}
+textarea,input[type=text],input[type=password],input[type=number],select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:7px 10px;outline:none}
+textarea{min-height:80px;resize:vertical}
+textarea:focus,input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.badge{display:inline-block;font-size:11.5px;border-radius:999px;padding:1px 9px;font-weight:600;white-space:nowrap;background:var(--surface-2);color:var(--ink-2)}
+.b-ok{background:var(--accent-soft);color:var(--accent)} .b-warn{background:var(--amber-soft);color:var(--amber)}
+.b-bad{background:var(--red-soft);color:var(--red)} .b-info{background:var(--blue-soft);color:var(--blue)}
+.pulse::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-left:5px;animation:p 1s infinite}
 @keyframes p{50%{opacity:.25}}
-.empty{color:var(--ink-3);text-align:center;padding:30px 10px;font-size:14px}
-.detail{margin-top:18px}
-.meta{display:flex;flex-wrap:wrap;gap:6px 16px;color:var(--ink-3);font-size:12.5px;padding:10px 16px;border-bottom:1px solid var(--line)}
-.meta b{color:var(--ink-2);font-weight:600}
-.tabs{display:flex;gap:4px;padding:10px 16px 0}
-.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:6px 10px;cursor:pointer;color:var(--ink-3);font-weight:600}
-.tabs button.on{color:var(--ink);border-color:var(--accent)}
-.pv{padding:16px}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.phone{background:var(--surface-2);border-radius:18px;padding:14px}
-.phone h4{margin:0 0 8px;font-size:12.5px;color:var(--ink-3);font-weight:600}
-.bubble{background:var(--tg);border-radius:14px 14px 4px 14px;padding:12px 14px;white-space:pre-wrap;font-size:14px;line-height:1.9}
-.bubble .btn{display:block;text-align:center;background:var(--surface);border-radius:9px;margin-top:10px;padding:6px;color:var(--blue);font-weight:600}
-.caption{background:var(--surface);border-radius:12px;padding:12px 14px;white-space:pre-wrap;font-size:14px}
-.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.tag{background:var(--blue-soft);color:var(--blue);border-radius:999px;padding:1px 10px;font-size:12.5px}
-.kw{background:var(--amber-soft);color:var(--amber)}
-.sec-t{font-size:12.5px;color:var(--ink-3);margin:16px 0 6px;font-weight:600}
-.copy{float:left;font-size:12px;padding:2px 9px}
-.ig{aspect-ratio:4/5;max-width:420px;margin:0 auto;border-radius:16px;padding:26px 22px;background:linear-gradient(160deg,var(--accent) 0%,#1d4634 100%);color:#fff;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow)}
-.ig .it{font-size:22px;font-weight:800;line-height:1.5}
-.ig .st{opacity:.85;font-size:13px;margin-top:-6px}
-.ig ul{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:7px;flex:1}
-.ig li{display:grid;grid-template-columns:30px 1fr;gap:8px;align-items:start;background:rgba(255,255,255,.1);border-radius:10px;padding:7px 9px}
-.ig li i{font-style:normal;font-size:17px;line-height:1.6;text-align:center}
-.ig li b{display:block;font-size:13.5px}
-.ig li span{font-size:12px;opacity:.88;line-height:1.6;display:block}
-.ig .tip{background:#fff;color:#1d4634;border-radius:10px;padding:7px 10px;font-size:12.5px;font-weight:600}
-.ig .cta{text-align:center;font-size:12.5px;opacity:.9}
-.warn{color:var(--amber);font-size:12px}
-table{width:100%;border-collapse:collapse;font-size:13.5px}
-th{text-align:right;color:var(--ink-3);font-weight:600;font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line)}
-td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
-td.n{font-variant-numeric:tabular-nums;color:var(--ink-3);white-space:nowrap;direction:ltr;text-align:right}
-td .ost{font-weight:700}
-.vt{font-size:11px;color:var(--ink-3);direction:ltr;text-align:right}
-.timeline{display:flex;height:8px;border-radius:4px;overflow:hidden;margin:4px 0 14px;gap:2px}
-.timeline div{background:var(--accent);opacity:.75}
-.timeline div:nth-child(odd){opacity:.45}
-pre.raw{direction:ltr;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;font-size:12px;max-height:520px;white-space:pre-wrap}
-.errbox{background:var(--red-soft);color:var(--red);border-radius:10px;padding:10px 12px;font-size:13.5px}
-.actions{display:flex;gap:8px}
+.empty{color:var(--ink-3);text-align:center;padding:26px 12px}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:right;color:var(--ink-3);font-weight:600;font-size:12px;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.rec{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--bg);display:flex;flex-direction:column;gap:6px}
+.rec h3{margin:0;font-size:14.5px;line-height:1.6}
+.rec .why{color:var(--accent);font-weight:600;font-size:13px}
+.rec .meta{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--ink-3);font-size:12.5px}
+.rec .meta b{color:var(--ink-2)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{background:var(--surface-2);border-radius:999px;padding:1px 9px;font-size:12px;color:var(--ink-2)}
+.chip.kw{background:var(--blue-soft);color:var(--blue);cursor:pointer;border:0}
+.prods{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.prod{flex:none;width:120px;font-size:11.5px;line-height:1.5;text-decoration:none;color:var(--ink-2)}
+.prod img{width:120px;height:90px;object-fit:contain;background:#fff;border-radius:8px;border:1px solid var(--line);display:block;margin-bottom:3px}
+.bar{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.err{background:var(--red-soft);color:var(--red);border-radius:9px;padding:7px 11px;font-size:13px;margin-top:8px}
+.note{background:var(--blue-soft);color:var(--blue);border-radius:9px;padding:9px 12px;font-size:13px}
+.warnbox{background:var(--amber-soft);color:var(--amber);border-radius:9px;padding:9px 12px;font-size:13px}
+pre.ad{white-space:pre-wrap;background:var(--tg);border-radius:12px;padding:12px 14px;margin:0;font:inherit;font-size:13.5px;line-height:1.9}
+pre.raw{direction:ltr;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;font-size:12px;max-height:480px;white-space:pre-wrap}
+details{border-top:1px solid var(--line)}
+details>summary{cursor:pointer;padding:10px 16px;font-weight:600;list-style:none}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"◂ ";color:var(--ink-3)}
+details[open]>summary::before{content:"▾ "}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:10px;font-size:13.5px;z-index:99;opacity:0;transition:.2s;pointer-events:none}
+.toast.on{opacity:1}
+.ltr{direction:ltr;unicode-bidi:embed}
+.hidden{display:none!important}
 #login{max-width:380px;margin:12vh auto 0}
 #login .logo{margin:0 auto 12px;width:52px;height:52px;font-size:22px}
-#login h1{text-align:center;font-size:18px;margin:0 0 4px}
-#login p{text-align:center;color:var(--ink-3);font-size:13px;margin:0 0 18px}
-.hidden{display:none!important}
-@media (max-width:900px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}}
-@media (max-width:420px){.types div{font-size:12px}.brand small{display:none}}
+/* studio */
+.job{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:9px 10px;border-radius:10px;cursor:pointer}
+.job:hover,.job.sel{background:var(--surface-2)}
+.ticon{width:32px;height:32px;border-radius:9px;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center}
+.types{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.type{position:relative}.type input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.type div{border:1px solid var(--line);border-radius:11px;padding:8px 6px;text-align:center;font-size:13px;background:var(--bg)}
+.type input:checked+div{border-color:var(--accent);background:var(--accent-soft);font-weight:700}
+.bubble{background:var(--tg);border-radius:14px 14px 4px 14px;padding:12px 14px;white-space:pre-wrap;font-size:13.5px;line-height:1.9}
+.caption{background:var(--surface-2);border-radius:12px;padding:12px 14px;white-space:pre-wrap;font-size:13.5px}
+.grid2.studio{grid-template-columns:340px 1fr}
+.chlist{display:flex;flex-direction:column;gap:2px;max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:var(--bg)}
+.chlist label{display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:2px 0}
+.grid2.keep{grid-template-columns:1fr 1fr!important}
+@media (max-width:920px){.grid2.studio{grid-template-columns:1fr}.grid2,.grid3{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
@@ -135,289 +125,403 @@ pre.raw{direction:ltr;text-align:left;background:var(--bg);border:1px solid var(
 <div id="login" class="wrap hidden">
   <div class="card pad">
     <div class="logo">ک</div>
-    <h1>پنل تولید محتوا</h1>
-    <p>برای ورود، مقدار <code>RUN_TOKEN</code> را از بخش Environment سرویس در Render وارد کنید.</p>
+    <h2 style="text-align:center;margin:0 0 4px;font-size:18px">مدیر بازاریابی کاروان صنعت</h2>
+    <p class="muted small" style="text-align:center;margin:0 0 14px">برای ورود، مقدار <code>RUN_TOKEN</code> را از بخش Environment سرویس در Render وارد کنید.</p>
     <form id="loginForm">
       <label class="f" for="tok">رمز ورود</label>
       <input type="password" id="tok" autocomplete="current-password" required>
-      <button class="primary" type="submit">ورود</button>
-      <div class="err" id="loginErr"></div>
+      <button class="btn" style="width:100%;margin-top:12px" type="submit">ورود</button>
+      <div class="err hidden" id="loginErr"></div>
     </form>
   </div>
 </div>
 
 <div id="app" class="wrap hidden">
-  <header>
-    <div class="brand">
-      <div class="logo">ک</div>
-      <div><h1>پنل تولید محتوا</h1><small id="brandName"></small></div>
-    </div>
-    <div class="actions">
-      <button class="ghost" id="themeBtn" title="تغییر تم" aria-label="تغییر تم">🌓</button>
+  <header class="top">
+    <div class="brand"><div class="logo">ک</div>
+      <div><h1>مدیر بازاریابی</h1><small id="today"></small></div></div>
+    <div class="inline">
+      <button class="ghost" id="themeBtn" aria-label="تغییر تم">🌓</button>
       <button class="ghost" id="logoutBtn">خروج</button>
     </div>
   </header>
-
-  <section class="stats">
-    <div class="stat"><b id="sTotal">–</b><span>کل محتواها</span></div>
-    <div class="stat"><b id="sOk">–</b><span>موفق</span></div>
-    <div class="stat"><b id="sCost">–</b><span>هزینه‌ی کل (دلار)</span></div>
-    <div class="stat"><b id="sLat">–</b><span>میانگین زمان تولید (ثانیه)</span></div>
-  </section>
-
-  <div class="grid">
-    <div class="card">
-      <h2>محتوای جدید</h2>
-      <form class="pad" id="genForm">
-        <label class="f" for="topic">موضوع</label>
-        <textarea id="topic" maxlength="300" required placeholder="مثلاً: ۵ اشتباه رایج در اولین سفر با کاراوان"></textarea>
-        <div class="suggest" id="suggest"></div>
-
-        <div class="types">
-          <label class="type"><input type="checkbox" name="type" value="text" checked><div><i>📝</i>متنی</div></label>
-          <label class="type"><input type="checkbox" name="type" value="infographic"><div><i>📊</i>اینفوگرافیک</div></label>
-          <label class="type"><input type="checkbox" name="type" value="video"><div><i>🎬</i>ویدئو</div></label>
-        </div>
-
-        <label class="f" for="model">مدل</label>
-        <input type="text" id="model" list="models" dir="ltr" spellcheck="false">
-        <datalist id="models">
-          <option value="~deepseek/deepseek-pro-latest">
-          <option value="~deepseek/deepseek-flash-latest">
-        </datalist>
-        <div class="hint">خالی بگذارید تا مدل پیش‌فرض استفاده شود. هر نوع محتوا حدود ۳۰ تا ۹۰ ثانیه طول می‌کشد.</div>
-
-        <button class="primary" id="genBtn" type="submit">تولید محتوا</button>
-        <div class="err" id="genErr"></div>
-      </form>
-    </div>
-
-    <div>
-      <div class="card">
-        <h2>محتواها <button class="ghost" id="refreshBtn" style="padding:2px 10px;font-size:12px">به‌روزرسانی</button></h2>
-        <ul class="jobs" id="jobs"><li class="empty">در حال بارگذاری…</li></ul>
-      </div>
-      <div class="card detail hidden" id="detail"></div>
-    </div>
-  </div>
+  <nav class="tabs" id="tabs">
+    <a href="#home">خانه</a><a href="#plan">برنامه‌ی تبلیغ</a><a href="#campaigns">کمپین‌ها</a>
+    <a href="#channels">کانال‌ها</a><a href="#report">گزارش</a><a href="#map">نقشه</a>
+    <a href="#studio">استودیو محتوا</a><a href="#settings">تنظیمات</a>
+  </nav>
+  <main id="view"></main>
 </div>
+<div class="toast" id="toast"></div>
 
 <script>
 (() => {
-  const $ = s => document.querySelector(s);
-  const store = {
-    get(k){ try { return localStorage.getItem(k); } catch { return null; } },
-    set(k,v){ try { localStorage.setItem(k,v); } catch {} },
-    del(k){ try { localStorage.removeItem(k); } catch {} },
-  };
-  let token = store.get("ce_token") || "";
-  let selected = null, detailTab = "preview", pollTimer = null, lastDetail = null;
+"use strict";
+const $ = s => document.querySelector(s);
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch { return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch {} },
+  del(k){ try { localStorage.removeItem(k); } catch {} },
+};
+let token = store.get("ce_token") || "", ME = null, timer = null;
 
-  const TYPE = {text:{i:"📝",n:"متنی"}, infographic:{i:"📊",n:"اینفوگرافیک"}, video:{i:"🎬",n:"ویدئو"}};
-  const STATUS = {pending:"در صف", generating:"در حال تولید", generated:"آماده", failed:"خطا"};
-  const ICON = {check:"✅",warning:"⚠️",tire:"🛞",link:"🔗",light:"💡",weight:"⚖️",box:"📦",gas:"🔥",window:"🪟",
-    tool:"🔧",map:"🗺️",route:"🛣️",tent:"⛺",caravan:"🚐",car:"🚗",water:"💧",battery:"🔋",fire:"🧯",sun:"☀️",
-    moon:"🌙",snow:"❄️",money:"💰",clock:"⏱️",calendar:"📅",star:"⭐",heart:"❤️",shield:"🛡️",phone:"📱",
-    wifi:"📶",food:"🍲",first_aid:"🩹",trash:"🗑️",lock:"🔒",info:"ℹ️"};
-  const SUGGEST = ["چک‌لیست ۷ موردی قبل از حرکت با کاراوان","۵ اشتباه رایج در اولین سفر با کاراوان",
-    "نگهداری کاراوان در زمستان","چطور باتری کاراوان را شارژ نگه داریم"];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fa = n => n == null || n === "" ? "–" : Number(n).toLocaleString("fa-IR");
+const toman = n => n ? fa(n) + " تومان" : "–";
+const mtoman = n => !n ? "–" : (n >= 1e6 ? fa(Math.round(n / 1e5) / 10) + " میلیون" : fa(n));
+const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+const ago = iso => { if (!iso) return "–"; const s = (Date.now() - new Date(iso)) / 1000;
+  if (s < 60) return "همین الان"; if (s < 3600) return fa(Math.floor(s/60)) + " دقیقه پیش";
+  if (s < 86400) return fa(Math.floor(s/3600)) + " ساعت پیش"; return fa(Math.floor(s/86400)) + " روز پیش"; };
+function toast(m){ const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 2200); }
+function copy(text){ (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => toast("کپی شد"), () => toast("کپی نشد؛ دستی انتخاب کنید")); }
 
-  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  const fa = n => n == null ? "–" : Number(n).toLocaleString("fa-IR");
-  const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
-  const ago = iso => {
-    if (!iso) return "";
-    const s = (Date.now() - new Date(iso)) / 1000;
-    if (s < 60) return "همین الان";
-    if (s < 3600) return fa(Math.floor(s/60)) + " دقیقه پیش";
-    if (s < 86400) return fa(Math.floor(s/3600)) + " ساعت پیش";
-    return new Date(iso).toLocaleDateString("fa-IR");
-  };
+async function api(path, opts = {}) {
+  const r = await fetch(path, {...opts, headers: {"Content-Type":"application/json","X-Run-Token":token}});
+  if (r.status === 401) { logout(); throw new Error("unauthorized"); }
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || ("HTTP " + r.status));
+  return d;
+}
+const post = (p, body) => api(p, {method:"POST", body: JSON.stringify(body || {})});
 
-  async function api(path, opts = {}) {
-    const r = await fetch(path, {...opts, headers: {"Content-Type":"application/json","X-Run-Token":token, ...(opts.headers||{})}});
-    if (r.status === 401) { logout(); throw new Error("unauthorized"); }
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(data.error || ("HTTP " + r.status));
-    return data;
-  }
+// ---------------- auth / theme ----------------
+async function login(t){ token = t; ME = await api("/api/me"); store.set("ce_token", t);
+  $("#today").textContent = "امروز " + ME.jalali; $("#login").classList.add("hidden"); $("#app").classList.remove("hidden"); route(); }
+function logout(){ token = ""; store.del("ce_token"); clearTimeout(timer); $("#app").classList.add("hidden"); $("#login").classList.remove("hidden"); }
+$("#loginForm").addEventListener("submit", async e => { e.preventDefault(); const er = $("#loginErr"); er.classList.add("hidden");
+  try { await login($("#tok").value.trim()); } catch { er.textContent = "رمز ورود درست نیست."; er.classList.remove("hidden"); } });
+$("#logoutBtn").onclick = logout;
+const applyTheme = t => t ? document.documentElement.setAttribute("data-theme", t) : document.documentElement.removeAttribute("data-theme");
+applyTheme(store.get("ce_theme"));
+$("#themeBtn").onclick = () => { const cur = document.documentElement.getAttribute("data-theme");
+  const dark = cur === "dark" || (!cur && matchMedia("(prefers-color-scheme: dark)").matches);
+  const t = dark ? "light" : "dark"; store.set("ce_theme", t); applyTheme(t); };
 
-  // ---------- auth ----------
-  async function tryLogin(t) {
-    token = t;
-    const me = await api("/api/me");
-    store.set("ce_token", t);
-    $("#brandName").textContent = me.brand || "";
-    $("#model").placeholder = me.default_model || "";
-    $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
-    refresh();
-  }
-  function logout() {
-    token = ""; store.del("ce_token"); clearTimeout(pollTimer);
-    $("#app").classList.add("hidden"); $("#login").classList.remove("hidden");
-  }
-  $("#loginForm").addEventListener("submit", async e => {
-    e.preventDefault();
-    const err = $("#loginErr"); err.style.display = "none";
-    try { await tryLogin($("#tok").value.trim()); }
-    catch { err.textContent = "رمز ورود درست نیست."; err.style.display = "block"; }
-  });
-  $("#logoutBtn").onclick = logout;
+// ---------------- router ----------------
+const VIEWS = {home, plan, campaigns, channels, report, map, studio, settings};
+window.addEventListener("hashchange", route);
+function route(){ clearTimeout(timer); const v = (location.hash || "#home").slice(1).split("/")[0];
+  document.querySelectorAll("#tabs a").forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + v));
+  const fn = VIEWS[v] || home; $("#view").innerHTML = '<div class="empty">در حال بارگذاری…</div>';
+  fn().catch(e => { if (e.message !== "unauthorized") $("#view").innerHTML = `<div class="err">${esc(e.message)}</div>`; }); }
+const later = (fn, ms) => { clearTimeout(timer); timer = setTimeout(() => fn().catch(() => {}), ms); };
 
-  // ---------- theme ----------
-  const applyTheme = t => t ? document.documentElement.setAttribute("data-theme", t) : document.documentElement.removeAttribute("data-theme");
-  applyTheme(store.get("ce_theme"));
-  $("#themeBtn").onclick = () => {
-    const dark = document.documentElement.getAttribute("data-theme") === "dark" ||
-      (!document.documentElement.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
-    const t = dark ? "light" : "dark"; store.set("ce_theme", t); applyTheme(t);
-  };
+// ---------------- shared pieces ----------------
+function prodStrip(list){ if (!list?.length) return ""; return `<div class="prods">${list.map(p => `<a class="prod" href="${esc(p.url || p.permalink || "#")}" target="_blank" rel="noopener">
+  ${p.image ? `<img src="${esc(p.image)}" alt="" loading="lazy">` : ""}${esc((p.name || "").slice(0, 60))}<br><b>${p.price ? mtoman(p.price) : ""}</b></a>`).join("")}</div>`; }
+function recCard(r, opts = {}){
+  return `<div class="rec">
+    <div class="inline" style="justify-content:space-between"><span class="badge b-info">${esc(r.group_name)}</span>
+      ${r.pilot ? `<span class="badge b-ok">پیشنهاد کمپین آزمایشی</span>` : ""}</div>
+    <h3>${esc(r.name)}</h3>
+    <div class="why">⏱ ${esc(r.why)}</div>
+    <div><b>${esc(r.segment)}</b> <span class="muted small">— ${esc((r.provinces || []).join("، "))}</span></div>
+    <div class="small muted">${esc((r.cities || "").slice(0, 160))}</div>
+    <div class="meta"><span>کالا در سایت: <b>${fa(r.products)}</b> (موجود ${fa(r.in_stock)})</span>
+      ${r.p90_price ? `<span>رده‌ی قیمت: <b>تا ${mtoman(r.p90_price)}</b></span>` : ""}
+      ${r.budget_toman ? `<span>بودجه‌ی پیشنهادی: <b>${mtoman(r.budget_toman)}</b> (~${fa(r.est_placements)} تبلیغ)</span>` : ""}
+      <span>امتیاز: <b>${fa(r.score)}</b></span></div>
+    ${opts.full ? `<div class="small"><b>خریدار:</b> ${esc(r.buyers)}</div><div class="small"><b>پیام:</b> ${esc(r.angle)}</div>
+      <div class="small"><b>زمان انتشار:</b> ${esc(r.time)}</div>${r.note ? `<div class="small muted">💡 ${esc(r.note)}</div>` : ""}` : ""}
+    ${prodStrip(r.examples)}
+    <div class="inline" style="justify-content:space-between;margin-top:4px">
+      <span class="small muted">${opts.full ? "جست‌وجوی کانال: " + (r.keywords || []).slice(0, 4).map(esc).join(" · ") : ""}</span>
+      <button class="btn sm" data-mkcamp="${esc(r.plan_id)}|${r.segment_index}|${r.budget_toman || ""}">ساخت کمپین</button></div>
+  </div>`;
+}
+function bindMakeCampaign(root){
+  root.querySelectorAll("[data-mkcamp]").forEach(b => b.onclick = async () => {
+    const [pid, si, bud] = b.dataset.mkcamp.split("|"); b.disabled = true;
+    try { const c = await post("/api/campaigns", {plan_id: pid, segment_index: +si, budget_toman: bud ? +bud : null});
+      toast("کمپین " + c.code + " ساخته شد"); location.hash = "#campaigns/" + c.id; }
+    catch (e) { toast(e.message); b.disabled = false; } });
+}
+function syncBadge(s){
+  if (s.running) return `<span class="badge b-warn pulse">در حال همگام‌سازی</span>`;
+  if (!s.initial_done_at) return `<span class="badge b-warn">بارگذاری اولیه ناتمام</span>`;
+  return `<span class="badge b-ok">به‌روز · ${ago(s.last_daily_at)}</span>`;
+}
 
-  // ---------- generate ----------
-  $("#suggest").innerHTML = SUGGEST.map(s => `<button type="button">${esc(s)}</button>`).join("");
-  $("#suggest").onclick = e => { if (e.target.tagName === "BUTTON") $("#topic").value = e.target.textContent; };
+// ================= HOME =================
+async function home(){
+  const d = await api("/api/overview"); const s = d.sync, rp = d.report || {};
+  const pct = s.site_total ? Math.min(100, Math.round(100 * s.products / s.site_total)) : 0;
+  $("#view").innerHTML = `
+  <section class="stats">
+    <div class="stat"><b>${fa(s.products)}</b><span>محصول همگام‌شده ${s.site_total ? "از " + fa(s.site_total) : ""}</span></div>
+    <div class="stat"><b>${fa(d.active_campaigns)}</b><span>کمپین فعال</span></div>
+    <div class="stat"><b>${mtoman(rp.spent || 0)}</b><span>هزینه‌ی تبلیغ (تومان)</span></div>
+    <div class="stat"><b>${rp.roas != null ? fa(rp.roas) + "×" : "–"}</b><span>بازگشت هزینه (درآمد ÷ هزینه)</span></div>
+  </section>
+  ${!s.initial_done_at ? `<div class="card pad"><div class="inline" style="justify-content:space-between"><b>بارگذاری محصولات سایت</b>${syncBadge(s)}</div>
+    <div class="bar" style="margin:10px 0 6px"><i style="width:${pct}%"></i></div>
+    <div class="small muted">سرور سایت کند است؛ برای اینکه سایت زیر فشار نرود، محصولات آرام و تکه‌تکه خوانده می‌شوند و بارگذاری اول چند ساعت طول می‌کشد. تا آن موقع برنامه با آمار فایل نقشه کار می‌کند.</div></div>` : ""}
+  <div class="card"><header><span>📅 این هفته چه تبلیغ کنیم؟ <span class="muted small">(${esc(d.month_name)} · بودجه‌ی ماهانه ${mtoman(d.budget_toman)} تومان)</span></span>
+    <a class="ghost sm" href="#plan" style="text-decoration:none">همه‌ی پیشنهادها</a></header>
+    <div class="pad grid3">${d.recommendations.slice(0, 3).map(r => recCard(r)).join("") || '<div class="empty">برای این ماه پیشنهادی نیست.</div>'}</div></div>
+  <div class="grid2">
+    <div class="card"><header>وضعیت داده‌ها ${syncBadge(s)}</header><div class="pad small">
+      <div>دسته‌های نقشه: <b>${fa((d.plan.base || 0) + (d.plan.approved || 0))}</b> فعال${d.plan.proposed ? ` · <a href="#map">${fa(d.plan.proposed)} پیشنهاد جدید منتظر تأیید</a>` : ""}</div>
+      <div>کانال‌های ثبت‌شده: <b>${fa(d.channels)}</b> ${d.channels ? "" : '· <a href="#channels">اولین کانال‌ها را اضافه کنید</a>'}</div>
+      <div>آخرین همگام‌سازی: <b>${ago(s.last_daily_at)}</b> · دسته‌های سایت: <b>${fa(s.categories)}</b></div></div></div>
+    <div class="card"><header>تازه‌ترین محصولات سایت</header><div class="pad">${d.new_products.length ? prodStrip(d.new_products.map(p => ({...p, url: p.permalink}))) : '<div class="muted small">بعد از بارگذاری اولیه نمایش داده می‌شود.</div>'}</div></div>
+  </div>`;
+  bindMakeCampaign($("#view"));
+  if (s.running || !s.initial_done_at) later(home, 30000);
+}
 
-  $("#genForm").addEventListener("submit", async e => {
-    e.preventDefault();
-    const err = $("#genErr"); err.style.display = "none";
-    const types = [...document.querySelectorAll('input[name=type]:checked')].map(i => i.value);
-    if (!types.length) { err.textContent = "حداقل یک نوع محتوا انتخاب کنید."; err.style.display = "block"; return; }
-    const btn = $("#genBtn"); btn.disabled = true; btn.textContent = "در حال ارسال…";
-    try {
-      const r = await api("/api/generate", {method:"POST", body: JSON.stringify({topic: $("#topic").value.trim(), types, model: $("#model").value.trim()})});
-      selected = r.job_ids[0];
-      await refresh();
-    } catch (ex) { err.textContent = ex.message; err.style.display = "block"; }
-    finally { btn.disabled = false; btn.textContent = "تولید محتوا"; }
-  });
+// ================= PLAN =================
+async function plan(){
+  const month = +(store.get("ce_month") || 0) || null;
+  const d = await api("/api/recommendations?limit=30" + (month ? "&month=" + month : ""));
+  const months = ["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
+  $("#view").innerHTML = `<div class="card"><header><span>برنامه‌ی تبلیغ ${esc(d.month_name)} <span class="muted small">بر اساس نقشه + موجودی و قیمت سایت</span></span>
+    <span class="inline"><select id="monthSel" style="width:auto">${months.map((m, i) => `<option value="${i+1}" ${i+1 === d.month ? "selected" : ""}>${m}</option>`).join("")}</select></span></header>
+    <div class="pad"><div class="note">امتیاز = زمان (اوج ماه بعد بیشترین امتیاز را دارد، چون تبلیغ باید ۴ تا ۶ هفته زودتر باشد) × اولویت گروه (کشاورزی و دستگاه‌های بزرگ بالاتر) × رده‌ی قیمت × موجودی. بودجه‌ی ماهانه بین ${fa(d.items.filter(x => x.pilot).length)} پیشنهاد اول تقسیم شده؛ از «تنظیمات» قابل تغییر است.</div></div>
+    <div class="pad grid2" style="padding-top:0">${d.items.map(r => recCard(r, {full:true})).join("") || '<div class="empty">پیشنهادی برای این ماه نیست.</div>'}</div></div>`;
+  $("#monthSel").onchange = e => { const cur = +(ME.jalali || "").split("/")[1]; store.set("ce_month", +e.target.value === cur ? "" : e.target.value); plan(); };
+  bindMakeCampaign($("#view"));
+}
 
-  // ---------- list ----------
-  async function refresh() {
-    clearTimeout(pollTimer);
-    try {
-      const [jobs, stats] = await Promise.all([api("/api/jobs?limit=60"), api("/api/stats")]);
-      renderStats(stats); renderJobs(jobs);
-      if (selected) await loadDetail(selected, true);
-      const busy = jobs.some(j => j.status === "pending" || j.status === "generating");
-      pollTimer = setTimeout(refresh, busy ? 4000 : 30000);
-    } catch (e) { if (e.message !== "unauthorized") pollTimer = setTimeout(refresh, 10000); }
-  }
-  $("#refreshBtn").onclick = refresh;
+// ================= CAMPAIGNS =================
+const PL_ST = {draft:"پیش‌نویس", contacted:"تماس با ادمین", agreed:"توافق شد", paid:"پرداخت شد", published:"منتشر شد", done:"تمام", cancelled:"لغو"};
+const PL_CLS = {paid:"b-warn", published:"b-ok", done:"b-ok", cancelled:"b-bad", agreed:"b-info"};
+async function campaigns(){
+  const [list, chans] = await Promise.all([api("/api/campaigns"), api("/api/channels")]);
+  const openId = +(location.hash.split("/")[1] || 0);
+  if (!list.length) { $("#view").innerHTML = `<div class="card pad empty">هنوز کمپینی نساخته‌اید. از <a href="#plan">برنامه‌ی تبلیغ</a> یک پیشنهاد را انتخاب کنید و «ساخت کمپین» را بزنید.</div>`; return; }
+  $("#view").innerHTML = list.map(c => campCard(c, chans, c.id === openId || list.length === 1)).join("");
+  bindCampaigns(chans);
+  if (list.some(c => c.placements.some(p => p.ad_status === "generating"))) later(campaigns, 5000);
+}
+function campCard(c, chans, open){
+  const b = c.brief || {}; const used = new Set(c.placements.map(p => p.channel_id));
+  const avail = chans.filter(ch => !used.has(ch.id) && ch.status !== "blocked");
+  return `<div class="card" id="camp${c.id}"><header><span>${esc(c.title)} <span class="badge">${esc(c.code)}</span></span>
+    <span class="inline small"><span>بودجه: <b>${mtoman(c.budget_toman)}</b></span><span>خرج‌شده: <b>${mtoman(c.spent)}</b></span>
+    <select data-campst="${c.id}" style="width:auto;padding:3px 8px">${["active","draft","done"].map(s => `<option value="${s}" ${c.status === s ? "selected" : ""}>${({active:"فعال",draft:"پیش‌نویس",done:"تمام‌شده"})[s]}</option>`).join("")}</select></span></header>
+  <details ${open ? "open" : ""}><summary>جزئیات، کالاها و کانال‌ها (${fa(c.placements.length)} تبلیغ)</summary>
+  <div class="pad" style="padding-top:0">
+    <div class="grid2"><div class="small">
+      <div><b>منطقه:</b> ${esc(c.segment)} — ${esc((c.provinces || []).join("، "))}</div>
+      <div class="muted">${esc(c.cities || "")}</div>
+      <div><b>خریدار:</b> ${esc(b.buyers)}</div><div><b>پیام:</b> ${esc(b.angle)}</div>
+      <div><b>بهترین ساعت:</b> ${esc(b.time)}</div><div><b>اوج:</b> ${esc((b.peak || []).join("، "))}</div>
+      <div><b>صفحه‌ی مقصد:</b> <a href="${esc(c.target_url)}" target="_blank" rel="noopener">باز کردن</a></div></div>
+      <div><div class="small"><b>کانال پیدا کنید:</b> این عبارت‌ها را در تلگرام، ایتا و بله جست‌وجو کنید و لینک کانال‌ها را در بخش <a href="#channels">کانال‌ها</a> وارد کنید (روی هر کدام بزنید تا کپی شود):</div>
+        <div class="chips" style="margin-top:6px">${(b.keywords || []).map(k => `<button class="chip kw" data-copy="${esc(k)}">${esc(k)}</button>`).join("")}</div>
+        <div class="small muted" style="margin-top:6px">${esc(b.channels || "")}</div></div></div>
+    <div style="margin-top:10px">${prodStrip(c.products)}</div>
+    <div class="inline" style="margin:14px 0 8px"><b style="font-size:14px">تبلیغ‌ها</b>
+      <button class="ghost sm" data-addpl0="${c.id}">تبلیغ بدون کانال مشخص</button></div>
+    ${avail.length ? `<div class="chlist" data-addch="${c.id}">${avail.map(ch => `<label><input type="checkbox" value="${ch.id}"> <b>${esc(ch.title || ch.username)}</b>
+        <span class="muted small">${ch.score != null ? "امتیاز " + fa(ch.score) : ""}${ch.members ? " · " + fa(ch.members) + " عضو" : ""}${ch.price_toman ? " · " + mtoman(ch.price_toman) : ""}</span></label>`).join("")}</div>
+      <button class="btn sm" data-addpl="${c.id}" style="margin:8px 0 12px">افزودن کانال‌های انتخاب‌شده + ساخت متن تبلیغ</button>`
+      : `<div class="small muted" style="margin-bottom:10px">کانال آزادی نیست؛ اول در بخش <a href="#channels">کانال‌ها</a> اضافه کنید.</div>`}
+    ${c.placements.map(p => plRow(p)).join("") || '<div class="muted small">هنوز تبلیغی ثبت نشده.</div>'}
+  </div></details></div>`;
+}
+function plRow(p){
+  const m = p.metrics || {}; const ad = p.ad || {};
+  return `<div class="card" style="box-shadow:none;margin-bottom:10px"><header style="font-size:13.5px">
+    <span>${p.channel ? `${esc(p.channel.title)} <span class="muted small ltr">@${esc(p.channel.username)}</span> ${p.channel.members ? `<span class="muted small">${fa(p.channel.members)} عضو · ${fa(p.channel.avg_views)} بازدید</span>` : ""}` : "بدون کانال"} <span class="badge">${esc(p.code)}</span></span>
+    <span class="inline small">
+      <select data-plst="${p.id}" style="width:auto;padding:2px 6px">${Object.entries(PL_ST).map(([k, v]) => `<option value="${k}" ${p.status === k ? "selected" : ""}>${v}</option>`).join("")}</select>
+      <span class="badge ${PL_CLS[p.status] || ""}">${PL_ST[p.status]}</span></span></header>
+  <div class="pad grid2">
+    <div>${p.ad_status === "generating" ? '<div class="empty pulse">در حال نوشتن متن تبلیغ…</div>' :
+      p.ad_status === "failed" ? `<div class="err">${esc(p.ad_error || "ساخت تبلیغ ناموفق بود")}</div>` :
+      p.ad_status === "ready" ? `<pre class="ad">${md(ad.full_text)}</pre>
+        <div class="inline" style="margin-top:8px"><button class="ghost sm" data-copy="${esc((ad.full_text || "").replace(/\*\*/g, ""))}">کپی متن کامل</button>
+        <button class="ghost sm" data-copy="${esc(ad.short_text || "")}">کپی نسخه‌ی کوتاه</button>
+        <button class="ghost sm" data-copy="${esc(p.short_url || p.target_url)}">کپی لینک</button>
+        <button class="ghost sm" data-regen="${p.id}">نوشتن دوباره</button></div>
+        ${ad.best_time ? `<div class="small muted" style="margin-top:6px">⏰ ${esc(ad.best_time)}</div>` : ""}
+        ${(ad.images || []).length ? `<div class="small muted" style="margin-top:8px">عکس پیشنهادی (ذخیره و همراه متن بفرستید):</div>${prodStrip(ad.images.map(i => ({...i, price:null})))}` : ""}`
+      : `<button class="btn sm" data-regen="${p.id}">ساخت متن تبلیغ</button>`}</div>
+    <div class="small">
+      <div class="grid2 keep" style="gap:8px">
+        <div><label class="f">هزینه (تومان)</label><input type="text" inputmode="numeric" data-plf="${p.id}" data-k="cost_toman" value="${p.cost_toman ?? ""}"></div>
+        <div><label class="f">زمان انتشار</label><input type="text" data-plf="${p.id}" data-k="publish_at" value="${esc(p.publish_at || "")}" placeholder="مثلاً ۱۲ آذر ساعت ۲۱"></div>
+        <div><label class="f">تماس‌ها (دستی)</label><input type="text" inputmode="numeric" data-plf="${p.id}" data-k="calls" value="${p.calls || 0}"></div>
+        <div><label class="f">سفارش‌ها (دستی)</label><input type="text" inputmode="numeric" data-plf="${p.id}" data-k="orders" value="${p.orders || 0}"></div>
+        <div><label class="f">فروش دستی (تومان)</label><input type="text" inputmode="numeric" data-plf="${p.id}" data-k="revenue_toman" value="${p.revenue_toman || 0}"></div>
+        <div><label class="f">یادداشت</label><input type="text" data-plf="${p.id}" data-k="notes" value="${esc(p.notes || "")}"></div></div>
+      <div class="inline" style="margin-top:10px;gap:4px 14px">
+        <span>کلیک: <b>${fa(m.clicks)}</b></span><span>سفارش خودکار: <b>${fa(m.orders_auto)}</b></span>
+        <span>هزینه هر کلیک: <b>${mtoman(m.cpc)}</b></span><span>هزینه هر مشتری بالقوه: <b>${mtoman(m.cost_per_lead)}</b></span>
+        <span>بازگشت: <b>${m.roas != null ? fa(m.roas) + "×" : "–"}</b></span></div>
+      <div class="muted" style="margin-top:6px">لینک ردیابی: <span class="ltr">${esc(p.short_url || "")}</span></div></div></div></div>`;
+}
+function bindCampaigns(chans){
+  const v = $("#view");
+  v.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => copy(b.dataset.copy));
+  v.querySelectorAll("[data-campst]").forEach(s => s.onchange = async () => { await post("/api/campaigns/" + s.dataset.campst, {status: s.value}); toast("ذخیره شد"); });
+  v.querySelectorAll("[data-addpl]").forEach(b => b.onclick = async () => {
+    const box = v.querySelector(`[data-addch="${b.dataset.addpl}"]`); const ids = [...box.querySelectorAll("input:checked")].map(o => +o.value);
+    if (!ids.length) { toast("یک یا چند کانال را تیک بزنید"); return; }
+    b.disabled = true; await post("/api/placements", {campaign_id: +b.dataset.addpl, channel_ids: ids}); location.hash = "#campaigns/" + b.dataset.addpl; campaigns(); });
+  v.querySelectorAll("[data-addpl0]").forEach(b => b.onclick = async () => { b.disabled = true;
+    await post("/api/placements", {campaign_id: +b.dataset.addpl0, channel_ids: [null]}); location.hash = "#campaigns/" + b.dataset.addpl0; campaigns(); });
+  v.querySelectorAll("[data-regen]").forEach(b => b.onclick = async () => { b.disabled = true; await post(`/api/placements/${b.dataset.regen}/ad`); campaigns(); });
+  v.querySelectorAll("[data-plst]").forEach(s => s.onchange = async () => { await post("/api/placements/" + s.dataset.plst, {status: s.value}); toast("وضعیت ذخیره شد"); campaigns(); });
+  v.querySelectorAll("[data-plf]").forEach(i => i.onchange = async () => {
+    try { await post("/api/placements/" + i.dataset.plf, {[i.dataset.k]: i.value.replace(/[٬,]/g, "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))}); toast("ذخیره شد"); }
+    catch (e) { toast(e.message); } });
+}
 
-  function renderStats(s) {
-    $("#sTotal").textContent = fa(s.total);
-    $("#sOk").textContent = fa(s.by_status?.generated || 0);
-    $("#sCost").textContent = (s.cost_usd || 0).toFixed(4);
-    $("#sLat").textContent = s.avg_latency_sec == null ? "–" : fa(s.avg_latency_sec);
-  }
+// ================= CHANNELS =================
+async function channels(){
+  const list = await api("/api/channels");
+  $("#view").innerHTML = `<div class="card"><h2>افزودن کانال</h2><div class="pad grid2">
+    <div><label class="f">لینک یا @نام کانال‌ها (هر خط یکی؛ از تلگرام، ایتا، بله یا روبیکا)</label>
+      <textarea id="chText" placeholder="https://t.me/keshavarzan_dezful&#10;@agri_jiroft&#10;https://eitaa.com/keshavarzi_khuzestan"></textarea></div>
+    <div><label class="f">استان‌ها (اختیاری)</label><select id="chProv" multiple size="4">${ME.provinces.map(p => `<option>${esc(p)}</option>`).join("")}</select>
+      <label class="f">موضوع (اختیاری)</label><input type="text" id="chTopic" placeholder="مثلاً کشاورزی، اخبار شهر، شهرک صنعتی">
+      <button class="btn" id="chAdd" style="margin-top:12px">افزودن و بررسی خودکار</button></div></div>
+    <div class="pad" style="padding-top:0"><div class="note small">کانال‌های تلگرام خودکار بررسی می‌شوند: عضو، میانگین بازدید ۲۰ پست آخر، نسبت بازدید به عضو (برای تشخیص عضو فیک)، تعداد پست در روز و سهم پست‌های تبلیغاتی. برای ایتا، بله و روبیکا عضو و بازدید را خودتان در جدول وارد کنید. قیمت تبلیغ را که از ادمین گرفتید وارد کنید تا «هزینه به ازای هر ۱۰۰۰ بازدید» حساب شود.</div></div></div>
+  <div class="card"><header>کانال‌ها (${fa(list.length)}) <span class="small muted">مرتب بر اساس امتیاز</span></header>
+  <div class="tbl">${list.length ? `<table><thead><tr><th>کانال</th><th>عضو</th><th>میانگین بازدید</th><th>بازدید/عضو</th><th>پست در روز</th><th>امتیاز</th><th>قیمت تبلیغ (تومان)</th><th>هزینه هر ۱۰۰۰ بازدید</th><th>ادمین</th><th></th></tr></thead><tbody>
+  ${list.map(c => `<tr>
+    <td><a href="${esc(c.url || "#")}" target="_blank" rel="noopener"><b>${esc(c.title || c.username)}</b></a><div class="small muted"><span class="badge">${esc(c.platform)}</span> <span class="ltr">@${esc(c.username)}</span></div>
+      ${c.status === "error" ? `<div class="small danger">${esc(c.error)}</div>` : ""}
+      ${(c.flags || []).map(f => `<div class="small" style="color:var(--amber)">⚠ ${esc(f)}</div>`).join("")}
+      ${(c.provinces || []).length ? `<div class="small muted">${esc(c.provinces.join("، "))}</div>` : ""}</td>
+    <td class="num">${c.platform === "telegram" ? fa(c.members) : `<input type="text" inputmode="numeric" style="width:90px" data-chf="${c.id}" data-k="members" value="${c.members ?? ""}">`}</td>
+    <td class="num">${c.platform === "telegram" ? fa(c.avg_views) : `<input type="text" inputmode="numeric" style="width:80px" data-chf="${c.id}" data-k="avg_views" value="${c.avg_views ?? ""}">`}</td>
+    <td class="num">${c.view_rate != null ? fa(Math.round(c.view_rate * 100)) + "٪" : "–"}</td>
+    <td class="num">${fa(c.posts_per_day)}</td>
+    <td class="num"><span class="badge ${c.score == null ? "" : c.score >= 50 ? "b-ok" : c.score >= 25 ? "b-warn" : "b-bad"}">${fa(c.score)}</span></td>
+    <td><input type="text" inputmode="numeric" style="width:110px" data-chf="${c.id}" data-k="price_toman" value="${c.price_toman ?? ""}"></td>
+    <td class="num">${c.cpm ? mtoman(c.cpm) : "–"}</td>
+    <td><input type="text" style="width:120px" data-chf="${c.id}" data-k="admin_contact" value="${esc(c.admin_contact || "")}" placeholder="@admin"></td>
+    <td class="inline">${c.platform === "telegram" ? `<button class="ghost sm" data-chk="${c.id}">بررسی</button>` : ""}<button class="ghost sm danger" data-chdel="${c.id}">حذف</button></td></tr>`).join("")}
+  </tbody></table>` : '<div class="empty">هنوز کانالی ثبت نشده.</div>'}</div></div>`;
+  $("#chAdd").onclick = async () => { const b = $("#chAdd"); b.disabled = true;
+    try { const r = await post("/api/channels/bulk", {text: $("#chText").value, provinces: [...$("#chProv").selectedOptions].map(o => o.value), topics: $("#chTopic").value});
+      toast(`${fa(r.added)} کانال اضافه شد${r.skipped ? "، " + fa(r.skipped) + " تکراری" : ""}${r.invalid.length ? "، " + fa(r.invalid.length) + " نامعتبر" : ""}`);
+      later(channels, 6000); channels(); } catch (e) { toast(e.message); b.disabled = false; } };
+  const v = $("#view");
+  v.querySelectorAll("[data-chf]").forEach(i => i.onchange = async () => {
+    try { await post("/api/channels/" + i.dataset.chf, {[i.dataset.k]: i.value.replace(/[٬,]/g, "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))}); toast("ذخیره شد"); channels(); } catch (e) { toast(e.message); } });
+  v.querySelectorAll("[data-chk]").forEach(b => b.onclick = async () => { b.disabled = true; b.textContent = "…"; try { await post(`/api/channels/${b.dataset.chk}/check`); } catch (e) { toast(e.message); } channels(); });
+  v.querySelectorAll("[data-chdel]").forEach(b => b.onclick = async () => { await post(`/api/channels/${b.dataset.chdel}/delete`); channels(); });
+  if (list.some(c => c.status === "new")) later(channels, 5000);
+}
 
-  function renderJobs(jobs) {
-    const ul = $("#jobs");
-    if (!jobs.length) { ul.innerHTML = '<li class="empty">هنوز محتوایی تولید نشده. از فرم کنار یک موضوع بدهید.</li>'; return; }
-    ul.innerHTML = jobs.map(j => `
-      <li class="job ${j.id === selected ? "sel" : ""}" data-id="${j.id}">
-        <div class="ticon">${TYPE[j.type]?.i || "•"}</div>
-        <div style="min-width:0">
-          <div class="t">${esc(j.title || j.topic)}</div>
-          <div class="m">${TYPE[j.type]?.n || j.type} · ${ago(j.created_at)}${j.cost_usd ? " · $" + j.cost_usd.toFixed(4) : ""}</div>
-        </div>
-        <span class="badge b-${j.status}">${STATUS[j.status] || j.status}</span>
-      </li>`).join("");
-  }
-  $("#jobs").onclick = e => {
-    const li = e.target.closest(".job"); if (!li) return;
-    selected = li.dataset.id; detailTab = "preview";
-    document.querySelectorAll(".job").forEach(x => x.classList.toggle("sel", x === li));
-    loadDetail(selected);
-  };
+// ================= REPORT =================
+async function report(){
+  const d = await api("/api/report"); const t = d.total || {};
+  const tbl = (rows, title) => `<div class="card"><h2>${title}</h2><div class="tbl">${rows.length ? `<table><thead><tr><th>نام</th><th>تبلیغ</th><th>هزینه</th><th>کلیک</th><th>تماس</th><th>سفارش</th><th>فروش</th><th>هزینه هر مشتری بالقوه</th><th>بازگشت</th></tr></thead><tbody>
+    ${rows.map(r => `<tr><td>${esc(r.title)}</td><td class="num">${fa(r.placements)}</td><td class="num">${mtoman(r.spent)}</td><td class="num">${fa(r.clicks)}</td><td class="num">${fa(r.calls)}</td><td class="num">${fa(r.orders)}</td><td class="num">${mtoman(r.revenue)}</td><td class="num">${mtoman(r.cost_per_lead)}</td><td class="num"><b>${r.roas != null ? fa(r.roas) + "×" : "–"}</b></td></tr>`).join("")}</tbody></table>` : '<div class="empty">هنوز داده‌ای نیست.</div>'}</div></div>`;
+  $("#view").innerHTML = `<section class="stats">
+    <div class="stat"><b>${mtoman(t.spent || 0)}</b><span>هزینه‌ی تبلیغ (تومان)</span></div>
+    <div class="stat"><b>${fa(t.clicks || 0)}</b><span>کلیک روی لینک‌ها</span></div>
+    <div class="stat"><b>${fa((t.orders || 0) + (t.calls || 0))}</b><span>مشتری بالقوه (سفارش + تماس)</span></div>
+    <div class="stat"><b>${t.roas != null ? fa(t.roas) + "×" : "–"}</b><span>بازگشت هزینه</span></div></section>
+    ${ME.orders_enabled ? "" : `<div class="warnbox" style="margin-bottom:16px">سفارش‌ها هنوز خودکار شمرده نمی‌شوند. برای اینکه هر سفارش سایت خودکار به تبلیغی که از آن آمده وصل شود، یک کلید فقط-خواندنی ووکامرس لازم است (راهنما در «تنظیمات»). تا آن موقع تماس و سفارش را دستی در هر تبلیغ وارد کنید.</div>`}
+    ${tbl(d.channels, "بر اساس کانال")}${tbl(d.campaigns, "بر اساس کمپین")}`;
+}
 
-  // ---------- detail ----------
-  async function loadDetail(id, silent) {
-    try {
-      const j = await api("/api/jobs/" + id);
-      const sig = j.status + (j.output ? "1" : "0");
-      if (silent && lastDetail && lastDetail.id === id && lastDetail.sig === sig) return;
-      lastDetail = {id, sig}; renderDetail(j);
-    } catch (e) { if (!silent) console.warn(e); }
-  }
+// ================= MAP =================
+async function map(){
+  const [d, um] = await Promise.all([api("/api/plan"), api("/api/categories/unmapped")]);
+  const G = ME.groups; const items = d.items; const cm = d.category_map || {};
+  const proposed = items.filter(p => p.status === "proposed");
+  const active = items.filter(p => p.status === "base" || p.status === "approved");
+  const mon = m => ["فرو","ارد","خرد","تیر","مرد","شهر","مهر","آبا","آذر","دی","بهم","اسف"][m-1];
+  $("#view").innerHTML = `
+  <div class="note" style="margin-bottom:16px">نقشه هر روز با محصولات سایت به‌روز می‌شود: دسته‌های جدید سایت خودکار به ردیف مناسب نقشه وصل می‌شوند، آمار هر ردیف (تعداد کالا، موجودی، قیمت) از سایت خوانده می‌شود، و اگر گروه کالایی پیدا شود که در نقشه نیست، یک ردیف پیشنهادی برای تأیید شما ساخته می‌شود.
+    <div style="margin-top:6px">دسته‌های سایت: <b>${fa(cm.mapped || 0)}</b> وصل‌شده · <b>${fa(cm.none || 0)}</b> بدون ردیف · <b>${fa(cm.unmapped || 0)}</b> در صف بررسی</div></div>
+  ${proposed.length ? `<div class="card"><h2>ردیف‌های پیشنهادی جدید (${fa(proposed.length)})</h2><div class="pad grid2">${proposed.map(p => `<div class="rec">
+    <h3>${esc(p.name)} <span class="badge b-warn">پیشنهاد</span></h3><div class="small"><b>خریدار:</b> ${esc(p.buyers)}</div><div class="small"><b>پیام:</b> ${esc(p.angle)}</div>
+    ${(p.segments || []).map(s => `<div class="small">• ${esc(s.name)}: ${esc((s.provinces || []).join("، "))} — اوج ${esc((s.peak || []).map(mon).join("، "))}</div>`).join("")}
+    <div class="inline"><button class="btn sm" data-pst="${esc(p.id)}|approved">تأیید</button><button class="ghost sm danger" data-pst="${esc(p.id)}|rejected">رد</button></div></div>`).join("")}</div></div>` : ""}
+  <div class="card"><header>ردیف‌های نقشه (${fa(active.length)})<input type="text" id="mapQ" placeholder="جست‌وجو…" style="width:200px"></header><div class="tbl"><table><thead><tr><th>دسته</th><th>گروه</th><th>کالا</th><th>موجود</th><th>میانه‌ی قیمت</th><th>تازه (۷ روز)</th><th>اوج‌ها</th></tr></thead><tbody id="mapBody">
+  ${active.map(p => `<tr data-name="${esc(p.name)}"><td>${esc(p.name)} ${p.source === "llm" ? '<span class="badge b-info">جدید</span>' : ""}</td><td class="small">${esc(G[p.group] || p.group)}</td><td class="num">${fa(p.product_count)}</td><td class="num">${fa(p.in_stock_count)}</td><td class="num">${mtoman(p.median_price)}</td><td class="num">${p.new_7d ? `<b>${fa(p.new_7d)}</b>` : "–"}</td>
+    <td class="small">${(p.segments || []).map(s => `${esc(s.name.split("—")[0].trim())}: ${(s.peak || []).map(mon).join("،")}`).join("<br>")}</td></tr>`).join("")}</tbody></table></div></div>
+  <div class="card"><h2>دسته‌های سایت بدون ردیف نقشه (${fa(um.length)})</h2><div class="tbl">${um.length ? `<table><thead><tr><th>دسته</th><th>کالا</th><th>وصل به</th></tr></thead><tbody>
+    ${um.map(c => `<tr><td><a href="${esc(c.permalink || "#")}" target="_blank" rel="noopener">${esc(c.path || c.name)}</a></td><td class="num">${fa(c.count)}</td>
+    <td><select data-cmap="${c.id}" style="max-width:280px"><option value="">— انتخاب —</option>${items.filter(p => p.status !== "rejected").map(p => `<option value="${esc(p.id)}">${esc(p.name.slice(0, 60))}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table>` : '<div class="empty">همه‌ی دسته‌ها وصل شده‌اند (یا هنوز بررسی نشده‌اند).</div>'}</div></div>`;
+  $("#mapQ").oninput = e => { const q = e.target.value.trim(); document.querySelectorAll("#mapBody tr").forEach(tr => tr.classList.toggle("hidden", q && !tr.dataset.name.includes(q))); };
+  document.querySelectorAll("[data-pst]").forEach(b => b.onclick = async () => { const [id, st] = b.dataset.pst.split("|"); await post("/api/plan/" + id, {status: st}); toast("ذخیره شد"); map(); });
+  document.querySelectorAll("[data-cmap]").forEach(s => s.onchange = async () => { if (!s.value) return; await post("/api/categories/" + s.dataset.cmap, {plan_id: s.value}); toast("وصل شد"); });
+}
 
-  function renderDetail(j) {
-    const box = $("#detail"); box.classList.remove("hidden");
-    const head = `<h2><span>${TYPE[j.type]?.i} ${esc(j.title || j.topic)}</span>
-      <span class="actions">${j.status === "failed" || j.status === "generated" ? '<button class="ghost" id="retryBtn" style="padding:2px 10px;font-size:12px">تولید دوباره</button>' : ""}
-      <span class="badge b-${j.status}">${STATUS[j.status]}</span></span></h2>
-      <div class="meta"><span>موضوع: <b>${esc(j.topic)}</b></span><span>مدل: <b dir="ltr">${esc(j.model || "–")}</b></span>
-      ${j.latency_sec != null ? `<span>زمان: <b>${fa(j.latency_sec)} ثانیه</b></span>` : ""}
-      ${j.cost_usd != null ? `<span>هزینه: <b dir="ltr">$${j.cost_usd.toFixed(5)}</b></span>` : ""}
-      ${j.attempts ? `<span>تلاش: <b>${fa(j.attempts)}</b></span>` : ""}
-      ${j.completion_tokens ? `<span>توکن: <b>${fa(j.prompt_tokens)} / ${fa(j.completion_tokens)}</b></span>` : ""}</div>`;
+// ================= SETTINGS =================
+async function settings(){
+  const [s, sy] = await Promise.all([api("/api/settings"), api("/api/sync")]);
+  const w = s["planner.weights"] || {};
+  $("#view").innerHTML = `<div class="grid2"><div class="card"><h2>بودجه و اولویت‌ها</h2><div class="pad">
+    <label class="f">بودجه‌ی ماهانه‌ی تبلیغ (تومان)</label><input type="text" inputmode="numeric" id="sBudget" value="${s["budget.monthly_toman"] ?? ""}">
+    <label class="f">میانگین قیمت هر پست تبلیغ (تومان؛ برای تخمین تعداد تبلیغ)</label><input type="text" inputmode="numeric" id="sAvg" value="${s["budget.avg_ad_price_toman"] ?? ""}">
+    <label class="f">تعداد کمپین‌های آزمایشی هم‌زمان</label><input type="number" min="1" max="10" id="sPilot" value="${s["planner.pilot_size"] ?? 3}">
+    <label class="f">وزن هر گروه در برنامه (۱ = عادی؛ بیشتر = مهم‌تر)</label>
+    <div class="grid2" style="gap:6px">${Object.entries(s.groups).map(([k, n]) => `<div class="inline" style="flex-wrap:nowrap"><span class="small" style="flex:1">${esc(n)}</span><input type="number" step="0.05" min="0" max="3" data-w="${k}" value="${w[k] ?? 1}" style="width:80px"></div>`).join("")}</div>
+    <button class="btn" id="sSave" style="margin-top:14px">ذخیره</button></div></div>
+  <div class="card"><h2>همگام‌سازی با سایت ${syncBadge(sy)}</h2><div class="pad small">
+    <div>محصولات: <b>${fa(sy.products)}</b> از ${fa(sy.site_total)} · موجود: <b>${fa(sy.in_stock)}</b> · دسته‌ها: <b>${fa(sy.categories)}</b></div>
+    <div>بارگذاری اولیه: <b>${sy.initial_done_at ? "تمام شده " + ago(sy.initial_done_at) : "در جریان (صفحه‌ی " + fa(sy.full_page) + ")"}</b></div>
+    <div>آخرین اجرای روزانه: <b>${ago(sy.last_daily_at)}</b></div>
+    <button class="btn sm" id="syncNow" style="margin:10px 0" ${sy.running ? "disabled" : ""}>اجرای همگام‌سازی الان</button>
+    <div class="tbl"><table><thead><tr><th>شروع</th><th>نتیجه</th><th>جزئیات</th></tr></thead><tbody>${(sy.runs || []).map(r => `<tr><td class="num">${ago(r.started_at)}</td>
+      <td>${r.ok == null ? '<span class="badge b-warn pulse">در جریان</span>' : r.ok ? '<span class="badge b-ok">موفق</span>' : '<span class="badge b-bad">خطا</span>'}</td>
+      <td class="small"><code class="ltr" style="font-size:11px">${esc(JSON.stringify(r.stats || {}).slice(0, 220))}</code>${r.error ? `<div class="danger">${esc(r.error.slice(0, 200))}</div>` : ""}</td></tr>`).join("")}</tbody></table></div></div></div></div>
+  <div class="card"><h2>اتصال سفارش‌ها ${s.orders_enabled ? '<span class="badge b-ok">فعال</span>' : '<span class="badge b-warn">غیرفعال</span>'}</h2><div class="pad small">
+    ${s.orders_enabled ? "سفارش‌های سایت روزانه خوانده می‌شوند و هر سفارشی که از لینک یک تبلیغ آمده باشد، خودکار به همان تبلیغ وصل می‌شود." :
+    `برای شمارش خودکار سفارش‌ها:<ol style="margin:6px 0;padding-right:20px"><li>در پیشخوان وردپرس: ووکامرس ← پیکربندی ← پیشرفته ← REST API ← افزودن کلید.</li>
+    <li>دسترسی را <b>فقط خواندن (Read)</b> بگذارید.</li><li>دو مقدار Consumer key و Consumer secret را خودتان در Render، سرویس content-engine ← Environment با نام‌های <code>WC_CONSUMER_KEY</code> و <code>WC_CONSUMER_SECRET</code> وارد کنید.</li></ol>
+    ووکامرس منبع هر سفارش را ذخیره می‌کند؛ لینک‌های تبلیغ ما کد تبلیغ را همراه دارند، پس سفارش‌ها خودکار به تبلیغ وصل می‌شوند.`}</div></div>`;
+  $("#sSave").onclick = async () => { const n = v => v.replace(/[٬,]/g, "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+    const weights = {}; document.querySelectorAll("[data-w]").forEach(i => weights[i.dataset.w] = +i.value);
+    try { await post("/api/settings", {"budget.monthly_toman": n($("#sBudget").value), "budget.avg_ad_price_toman": n($("#sAvg").value), "planner.pilot_size": $("#sPilot").value, "planner.weights": weights}); toast("ذخیره شد"); }
+    catch (e) { toast(e.message); } };
+  $("#syncNow").onclick = async () => { try { await post("/api/sync", {}); toast("همگام‌سازی شروع شد"); setTimeout(settings, 1500); } catch (e) { toast(e.message); } };
+  if (sy.running) later(settings, 15000);
+}
 
-    let body = "";
-    if (j.status === "pending" || j.status === "generating") {
-      body = `<div class="pv empty">⏳ ${STATUS[j.status]}… معمولاً ۳۰ تا ۹۰ ثانیه طول می‌کشد.</div>`;
-    } else if (j.status === "failed") {
-      body = `<div class="pv"><div class="errbox">${esc(j.error || "خطای نامشخص")}</div>
-        ${j.output?._raw_last ? `<div class="sec-t">آخرین خروجی خام مدل</div><pre class="raw">${esc(j.output._raw_last)}</pre>` : ""}</div>`;
-    } else {
-      body = `<div class="tabs"><button data-t="preview" class="${detailTab==="preview"?"on":""}">پیش‌نمایش</button>
-        <button data-t="raw" class="${detailTab==="raw"?"on":""}">JSON</button></div>
-        <div class="pv">${detailTab === "raw" ? `<pre class="raw">${esc(JSON.stringify(j.output, null, 2))}</pre>` : preview(j)}</div>`;
-    }
-    box.innerHTML = head + body;
-    box.querySelectorAll(".tabs button").forEach(b => b.onclick = () => { detailTab = b.dataset.t; renderDetail(j); });
-    box.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => {
-      navigator.clipboard?.writeText(b.dataset.copy).then(() => { b.textContent = "کپی شد ✓"; setTimeout(() => b.textContent = "کپی", 1500); });
-    });
-    const rb = $("#retryBtn");
-    if (rb) rb.onclick = async () => { rb.disabled = true; try { await api(`/api/jobs/${j.id}/retry`, {method:"POST"}); lastDetail = null; refresh(); } catch (e) { alertBox(e.message); } };
-  }
-  const alertBox = m => { const e = $("#genErr"); e.textContent = m; e.style.display = "block"; };
+// ================= STUDIO =================
+const TYPE = {text:{i:"📝",n:"متنی"}, infographic:{i:"📊",n:"اینفوگرافیک"}, video:{i:"🎬",n:"ویدئو"}};
+const JST = {pending:"در صف", generating:"در حال تولید", generated:"آماده", failed:"خطا"};
+let selJob = null;
+async function studio(){
+  const jobs = await api("/api/jobs?limit=40");
+  const SUG = ["علت سوختن پمپ شناور چاه و راه جلوگیری", "انتخاب بذر خربزه برای کشت زمستانه جنوب", "۵ نکته‌ی نگهداری الکتروموتور در کارخانه", "راهنمای انتخاب سمپاش باغی"];
+  $("#view").innerHTML = `<div class="grid2 studio"><div class="card"><h2>محتوای جدید</h2><form class="pad" id="genForm">
+    <label class="f" for="topic">موضوع</label><textarea id="topic" maxlength="300" required placeholder="مثلاً: علت سوختن پمپ شناور چاه"></textarea>
+    <div class="chips" style="margin-top:6px">${SUG.map(s => `<button type="button" class="chip kw" data-sug="${esc(s)}">${esc(s)}</button>`).join("")}</div>
+    <div class="types">${Object.entries(TYPE).map(([k, t], i) => `<label class="type"><input type="checkbox" name="type" value="${k}" ${i === 0 ? "checked" : ""}><div>${t.i}<br>${t.n}</div></label>`).join("")}</div>
+    <label class="f">مدل (اختیاری)</label><input type="text" id="model" dir="ltr" placeholder="${esc(ME.default_model)}" list="mdl"><datalist id="mdl"><option value="~deepseek/deepseek-pro-latest"><option value="~deepseek/deepseek-flash-latest"></datalist>
+    <button class="btn" style="width:100%;margin-top:12px" id="genBtn">تولید محتوا</button></form></div>
+    <div><div class="card"><h2>محتواها</h2><div style="padding:6px">${jobs.length ? jobs.map(j => `<div class="job ${j.id === selJob ? "sel" : ""}" data-job="${j.id}"><div class="ticon">${TYPE[j.type]?.i}</div>
+      <div style="min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(j.title || j.topic)}</div><div class="small muted">${TYPE[j.type]?.n} · ${ago(j.created_at)}</div></div>
+      <span class="badge ${j.status === "generated" ? "b-ok" : j.status === "failed" ? "b-bad" : "b-warn pulse"}">${JST[j.status]}</span></div>`).join("") : '<div class="empty">هنوز محتوایی نیست.</div>'}</div></div>
+      <div class="card hidden" id="jobDetail"></div></div></div>`;
+  document.querySelectorAll("[data-sug]").forEach(b => b.onclick = () => $("#topic").value = b.dataset.sug);
+  $("#genForm").onsubmit = async e => { e.preventDefault(); const types = [...document.querySelectorAll("input[name=type]:checked")].map(i => i.value);
+    if (!types.length) { toast("یک نوع انتخاب کنید"); return; } $("#genBtn").disabled = true;
+    try { const r = await post("/api/generate", {topic: $("#topic").value.trim(), types, model: $("#model").value.trim()}); selJob = r.job_ids[0]; studio(); }
+    catch (ex) { toast(ex.message); $("#genBtn").disabled = false; } };
+  document.querySelectorAll("[data-job]").forEach(el => el.onclick = () => { selJob = el.dataset.job; studio(); });
+  if (selJob) showJob(selJob);
+  if (jobs.some(j => j.status === "pending" || j.status === "generating")) later(studio, 5000);
+}
+async function showJob(id){
+  const j = await api("/api/jobs/" + id); const box = $("#jobDetail"); if (!box) return; box.classList.remove("hidden"); const o = j.output || {};
+  let body;
+  if (j.status === "failed") body = `<div class="err">${esc(j.error)}</div>`;
+  else if (j.status !== "generated") body = '<div class="empty pulse">در حال تولید…</div>';
+  else if (j.type === "text") body = `<div class="grid2"><div><div class="small muted">تلگرام</div><div class="bubble">${md(o.telegram_text)}</div><button class="ghost sm" style="margin-top:6px" data-copy2="${esc(o.telegram_text || "")}">کپی</button></div>
+    <div><div class="small muted">اینستاگرام</div><div class="caption">${esc(o.instagram_caption)}</div><div class="chips" style="margin-top:6px">${(o.hashtags || []).map(h => `<span class="chip">${esc(h)}</span>`).join("")}</div></div></div>`;
+  else if (j.type === "infographic") body = `<h3 style="margin:0">${esc(o.title)}</h3><div class="muted">${esc(o.subtitle || "")}</div><ul>${(o.items || []).map(i => `<li><b>${esc(i.title)}</b>: ${esc(i.desc)}</li>`).join("")}</ul>${o.tip ? `<div class="note">💡 ${esc(o.tip)}</div>` : ""}<div class="caption" style="margin-top:8px">${esc(o.caption)}</div>`;
+  else body = `<div class="small muted">${fa(o.duration_sec)} ثانیه · ${fa((o.scenes || []).length)} صحنه</div><div class="tbl"><table><thead><tr><th>#</th><th>روی تصویر</th><th>گوینده</th></tr></thead><tbody>${(o.scenes || []).map(s => `<tr><td class="num">${fa(s.index)}</td><td><b>${esc(s.on_screen_text)}</b><div class="small muted ltr">${esc(s.visual?.query)}</div></td><td>${esc(s.voiceover)}</td></tr>`).join("")}</tbody></table></div>`;
+  box.innerHTML = `<header><span>${TYPE[j.type]?.i} ${esc(j.title || j.topic)}</span><span class="small muted">${esc(j.model || "")} ${j.cost_usd != null ? "· $" + j.cost_usd.toFixed(4) : ""}</span></header><div class="pad">${body}</div>`;
+  box.querySelectorAll("[data-copy2]").forEach(b => b.onclick = () => copy(b.dataset.copy2));
+}
 
-  const tags = o => `${o.hashtags?.length ? `<div class="sec-t">هشتگ‌ها</div><div class="tags">${o.hashtags.map(h => `<span class="tag">${esc(h)}</span>`).join("")}</div>` : ""}
-    ${o.product_keywords?.length ? `<div class="sec-t">کلیدواژه‌ی محصولات مرتبط</div><div class="tags">${o.product_keywords.map(h => `<span class="tag kw">${esc(h)}</span>`).join("")}</div>` : ""}`;
-  const copyBtn = text => `<button class="ghost copy" data-copy="${esc(text)}">کپی</button>`;
-
-  function preview(j) {
-    const o = j.output || {};
-    if (j.type === "text") {
-      const tg = o.telegram_text || "", ig = (o.instagram_caption || "") + "\n\n" + (o.hashtags || []).join(" ");
-      return `<div class="two">
-        <div class="phone"><h4>تلگرام ${copyBtn(tg)}</h4><div class="bubble">${md(tg)}<span class="btn">🛒 مشاهده در سایت</span></div></div>
-        <div class="phone"><h4>اینستاگرام ${copyBtn(ig)}</h4><div class="caption">${esc(o.instagram_caption)}</div></div>
-      </div><div class="sec-t">CTA</div><div>${esc(o.cta)}</div>${tags(o)}`;
-    }
-    if (j.type === "infographic") {
-      const long = (o.items || []).filter(i => (i.desc || "").length > 60).length;
-      return `<div class="two"><div>
-        <div class="ig"><div class="it">${esc(o.title)}</div>${o.subtitle ? `<div class="st">${esc(o.subtitle)}</div>` : ""}
-          <ul>${(o.items || []).map(i => `<li><i>${ICON[i.icon] || "✅"}</i><div><b>${esc(i.title)}</b><span>${esc(i.desc)}</span></div></li>`).join("")}</ul>
-          ${o.tip ? `<div class="tip">💡 ${esc(o.tip)}</div>` : ""}<div class="cta">${esc(o.cta)}</div></div>
-        <div class="hint" style="text-align:center">پیش‌نمایش تقریبی؛ قالب نهایی در مرحله ۴ ساخته می‌شود · قالب: <span dir="ltr">${esc(o.template)}</span>
-        ${long ? `<div class="warn">${fa(long)} مورد توضیح بلندی دارد</div>` : ""}</div>
-      </div><div><div class="sec-t" style="margin-top:0">کپشن ${copyBtn(o.caption || "")}</div><div class="caption" style="background:var(--surface-2)">${esc(o.caption)}</div>${tags(o)}</div></div>`;
-    }
-    if (j.type === "video") {
-      const sc = o.scenes || []; let t = 0;
-      const total = sc.reduce((a, s) => a + s.duration_sec, 0) || 1;
-      const words = s => (s.voiceover || "").trim().split(/\s+/).filter(Boolean).length;
-      const rows = sc.map(s => {
-        const start = t; t += s.duration_sec; const wps = words(s) / s.duration_sec;
-        return `<tr><td class="n">${start.toFixed(1)}–${t.toFixed(1)}s</td>
-          <td><div class="ost">${esc(s.on_screen_text)}</div><div class="vt">${esc(s.visual?.type)} · ${esc(s.visual?.query)}</div></td>
-          <td>${esc(s.voiceover)}${wps > 3.2 ? `<div class="warn">متن برای این مدت زیاد است (${wps.toFixed(1)} کلمه/ثانیه)</div>` : ""}</td></tr>`;
-      }).join("");
-      return `<div class="meta" style="border:0;padding:0 0 6px"><span>مدت: <b>${fa(o.duration_sec)} ثانیه</b></span><span>نسبت: <b dir="ltr">${esc(o.aspect)}</b></span>
-        <span>موسیقی: <b>${esc(o.music_mood)}</b></span><span>صحنه‌ها: <b>${fa(sc.length)}</b></span></div>
-        <div class="sec-t" style="margin-top:4px">قلاب</div><div><b>${esc(o.hook)}</b></div>
-        <div class="timeline">${sc.map(s => `<div style="flex:${s.duration_sec / total}" title="${esc(s.on_screen_text)}"></div>`).join("")}</div>
-        <div style="overflow-x:auto"><table><thead><tr><th>زمان</th><th>متن روی تصویر / تصویر</th><th>متن گوینده</th></tr></thead><tbody>${rows}</tbody></table></div>
-        <div class="sec-t">کپشن ${copyBtn(o.caption || "")}</div><div class="caption" style="background:var(--surface-2)">${esc(o.caption)}</div>${tags(o)}`;
-    }
-    return `<pre class="raw">${esc(JSON.stringify(o, null, 2))}</pre>`;
-  }
-
-  // ---------- boot ----------
-  if (token) tryLogin(token).catch(() => logout()); else logout();
+// ---------------- boot ----------------
+if (token) login(token).catch(() => logout()); else logout();
 })();
 </script>
 </body>

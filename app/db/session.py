@@ -32,4 +32,23 @@ def get_session():
 
 def init_db() -> None:
     """ساخت جدول‌ها (در مراحل بعد به Alembic منتقل می‌شود)."""
+    from app.db import marketing  # noqa: F401  (ثبت جدول‌های بازاریابی)
     Base.metadata.create_all(get_engine())
+
+
+def get_setting(key: str, default=None):
+    from app.db.marketing import Setting
+    with get_session() as db:
+        s = db.get(Setting, key)
+        return s.value if s is not None else default
+
+
+def set_setting(key: str, value) -> None:
+    from app.db.marketing import Setting
+    with get_session() as db:
+        s = db.get(Setting, key)
+        if s is None:
+            db.add(Setting(key=key, value=value))
+        else:
+            s.value = value
+        db.commit()

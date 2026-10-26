@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,6 +11,7 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     llm_model: str = "~deepseek/deepseek-pro-latest"
+    llm_fast_model: str = "~deepseek/deepseek-flash-latest"   # برای کارهای سبک: دسته‌بندی، نگاشت
     llm_reasoning_effort: str = ""
     llm_temperature: float = 0.7
     llm_max_retries: int = 3
@@ -19,10 +21,29 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./content_engine.db"
 
     # Brand
-    brand_name: str = "کاراوان صنعت"
+    brand_name: str = "کاروان صنعت"
     brand_site_url: str = "https://caravansanat.com"
-    brand_niche: str = "کاراوان، کمپینگ، سفر با کاراوان و تجهیزات آن"
-    brand_tone: str = "صمیمی، کاربردی و قابل‌اعتماد؛ محاوره‌ی مؤدبانه، بدون اغراق تبلیغاتی"
+    brand_niche: str = (
+        "فروشگاه آنلاین تجهیزات صنعتی، کشاورزی و ساختمانی با ارسال به کل کشور: بذر و نهاده، آبیاری و پمپ، "
+        "هیدرولیک، پنوماتیک، برق صنعتی و الکتروموتور، لوله و اتصالات و شیرآلات، تاسیسات، ایمنی و ابزار"
+    )
+    brand_tone: str = (
+        "تخصصی و قابل‌اعتماد ولی ساده؛ مثل یک فروشنده‌ی باتجربه که با کشاورز و تعمیرکار صمیمی و فنی حرف می‌زند؛ "
+        "بدون اغراق، با تأکید بر اصل بودن کالا، خرید بدون واسطه، ارسال به شهرستان و مشاوره‌ی رایگان"
+    )
+    brand_phone: str = "09192508938"
+    # فرایند فروش: مشتری در سایت سفارش ثبت می‌کند، فروش تماس می‌گیرد و فاکتور می‌فرستد
+    sales_process: str = (
+        "مشتری باید ابتدا سفارش را در سایت ثبت کند؛ بعد کارشناسان فروش برای تأیید تماس می‌گیرند و فاکتور می‌فرستند. "
+        "قیمت روز روی سایت است. تبلیغ باید مخاطب را به ثبت سفارش در سایت هدایت کند، نه تماس برای پرسیدن قیمت."
+    )
+
+    # WooCommerce REST (اختیاری؛ فقط برای خواندن سفارش‌ها و نسبت دادن آن‌ها به تبلیغ)
+    wc_consumer_key: str = ""
+    wc_consumer_secret: str = ""
+
+    # آدرس عمومی همین سرویس (برای لینک‌های کوتاه)؛ Render خودش RENDER_EXTERNAL_URL را می‌گذارد
+    public_base_url: str = Field("", validation_alias=AliasChoices("PUBLIC_BASE_URL", "RENDER_EXTERNAL_URL"))
 
     log_level: str = "INFO"
 

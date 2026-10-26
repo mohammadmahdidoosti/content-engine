@@ -201,16 +201,24 @@ def placement_metrics(db) -> dict[int, dict]:
             continue
         orders[t.code][0] += 1
         orders[t.code][1] += t.total_toman or 0
+    try:
+        from app.tracking.calls import by_ad_code
+        logged = by_ad_code()
+    except Exception:  # noqa: BLE001
+        logged = {}
     out = {}
     for pl in db.query(Placement).all():
         o_auto, rev_auto = orders.get(pl.code, [0, 0])
+        lg = logged.get(pl.code) or {"calls": 0, "bought": 0, "amount": 0}
         cost = pl.cost_toman or 0
-        o = o_auto + (pl.orders or 0)
-        rev = rev_auto + (pl.revenue_toman or 0)
+        o = o_auto + (pl.orders or 0) + lg["bought"]
+        rev = rev_auto + (pl.revenue_toman or 0) + lg["amount"]
         c = clicks.get(pl.code, 0)
-        leads = o + (pl.calls or 0)
+        n_calls = (pl.calls or 0) + lg["calls"]
+        leads = o_auto + (pl.orders or 0) + n_calls          # تماسی که به خرید رسید یک بار شمرده می‌شود
         out[pl.id] = {
-            "variant": pl.ad_variant, "clicks": c, "orders_auto": o_auto, "orders": o, "revenue": rev, "calls": pl.calls or 0,
+            "variant": pl.ad_variant, "clicks": c, "orders_auto": o_auto, "orders": o, "revenue": rev, "calls": n_calls,
+            "calls_logged": lg["calls"],
             "leads": leads, "cost": cost,
             "cpc": round(cost / c) if c and cost else None,
             "cost_per_lead": round(cost / leads) if leads and cost else None,

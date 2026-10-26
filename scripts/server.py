@@ -108,11 +108,27 @@ def _job_summary(j: Job) -> dict:
             "error": j.error, "created_at": _iso(j.created_at)}
 
 
+_CITY_NAMES: list | None = None
+
+
+def _city_names() -> list[str]:
+    global _CITY_NAMES
+    if _CITY_NAMES is None:
+        try:
+            from types import SimpleNamespace
+            from app.plan.data import plan_file
+            idx = cities.city_index([SimpleNamespace(id=c["id"], segments=c.get("segments") or []) for c in plan_file()["cats"]])
+            _CITY_NAMES = sorted({v["name"] for v in idx.values() if v.get("name")})
+        except Exception:  # noqa: BLE001
+            _CITY_NAMES = []
+    return _CITY_NAMES
+
+
 def api_me(req, m):
     s = get_settings()
     return {"ok": True, "default_model": s.llm_model, "brand": s.brand_name, "types": TYPES,
             "jalali": today_jalali().strftime("%Y/%m/%d"), "groups": groups(), "provinces": province_names(),
-            "orders_enabled": bool(s.wc_consumer_key), "short_links": bool(short_url("X"))}
+            "orders_enabled": bool(s.wc_consumer_key), "short_links": bool(short_url("X")), "cities": _city_names()}
 
 
 def api_stats(req, m):
@@ -728,6 +744,39 @@ def api_hunter_queries(req, m):
     return {"queries": hunter.gap_queries(_int(req.q("n", "40"), "n", 1, 120))}
 
 
+def api_calls(req, m):
+    from app.tracking import calls
+    st = calls.stats()
+    with get_session() as db:
+        cmap = {c.id: c.title for c in db.query(Campaign).all()}
+        chmap = {c.id: (c.title or c.username) for c in db.query(Channel).all()}
+        st["ads"] = [{"code": p.code, "campaign": (cmap.get(p.campaign_id) or "")[:50], "channel": (chmap.get(p.channel_id) or "")[:40]}
+                     for p in db.query(Placement).filter(Placement.status.in_(["paid", "published", "done"])).order_by(Placement.id.desc()).limit(80).all()]
+        st["plans"] = [[k, n, (db.get(PlanCategory, k).name if db.get(PlanCategory, k) else k)[:50]] for k, n in st["plans"]]
+    st["recent"] = calls.recent(80)
+    return st
+
+
+def api_call_add(req, m):
+    from app.tracking import calls
+    planner._hist_cache["at"] = 0.0
+    return 201, calls.add(req.body())
+
+
+def api_call_update(req, m):
+    from app.tracking import calls
+    try:
+        return calls.update(_int(m.group(1), "id"), req.body())
+    except ValueError as e:
+        raise HttpError(404, str(e)) from None
+
+
+def api_call_delete(req, m):
+    from app.tracking import calls
+    calls.delete(_int(m.group(1), "id"))
+    return {"ok": True}
+
+
 def api_ext(req, m):
     from app.tracking import external
     return external.summary()
@@ -832,6 +881,8 @@ ROUTES = [
     ("GET", r"/api/hunter", api_hunter), ("POST", r"/api/hunter/run", api_hunter_run),
     ("POST", r"/api/hunter/pause", api_hunter_pause), ("GET", r"/api/hunter/coverage", api_hunter_coverage),
     ("GET", r"/api/hunter/queries", api_hunter_queries),
+    ("GET", r"/api/calls", api_calls), ("POST", r"/api/calls", api_call_add),
+    ("POST", r"/api/calls/(\d+)", api_call_update), ("POST", r"/api/calls/(\d+)/delete", api_call_delete),
 ]
 _COMPILED = [(meth, re.compile("^" + pat + "$"), fn) for meth, pat, fn in ROUTES]
 _PUBLIC = [("GET", re.compile(r"^/r/([A-Za-z0-9]{3,12})$"), public_redirect),

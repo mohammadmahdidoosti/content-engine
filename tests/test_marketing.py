@@ -163,3 +163,20 @@ def test_hunter_candidates_and_fit(tmp_path, monkeypatch):
     assert hunter._fit(ch2, "PNEU", "PNEU", "گیلان") == 0.6 and hunter._fit(ch2, "PNEU", "PNEU", "تهران") == 0
     g = hunter.ingest_candidates([["https://t.me/new_chan", "site:t.me کشاورزی رشت"], ["https://eitaa.com/rasht_agri", "q"]])
     assert g["added"] == 2
+
+
+def test_call_log(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/c.db")
+    from app.db import session as sess
+    monkeypatch.setattr(sess, "_engine", None)
+    monkeypatch.setattr(sess, "_Session", None)
+    sess.init_db()
+    from app.tracking import calls
+    r = calls.add({"city": "دزفول", "product": "قطره چکان نتافیم", "source": "telegram_ad", "ad_code": "ab12",
+                   "outcome": "bought", "amount_toman": "12,000,000", "note": "تماس از 09121234567 گرفت"})
+    assert r["province"] == "خوزستان" and r["plan_id"] == "IRRIG" and r["ad_code"] == "AB12" and r["amount_toman"] == 12_000_000
+    assert "0912" not in (r["note"] or "")
+    assert calls.by_ad_code()["AB12"]["bought"] == 1
+    assert calls.plan_province_counts()[("IRRIG", "خوزستان")] == 1.0
+    st = calls.stats()
+    assert st["total"] == 1 and st["sources"][0]["conv_pct"] == 100.0

@@ -136,6 +136,11 @@ def history_weight(plan_id: str, provinces: list[str]) -> tuple[float, int]:
             from app.tracking.offline import plan_province_counts
             d = Counter(province_demand())
             d.update(plan_province_counts())   # فاکتورهای تلفنی/آفلاین هم حساب می‌شوند
+            try:
+                from app.tracking.calls import plan_province_counts as call_counts
+                d.update(call_counts())         # دفتر تماس پنل
+            except Exception:  # noqa: BLE001
+                pass
             _hist_cache["data"] = dict(d)
         except Exception:  # noqa: BLE001
             _hist_cache["data"] = {}

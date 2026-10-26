@@ -36,6 +36,7 @@ def init_db() -> None:
     from app.plan import pricing  # noqa: F401  (جدول مقایسه‌ی قیمت)
     from app import assistant  # noqa: F401  (جدول پرسش‌های دستیار)
     from app.tracking import history  # noqa: F401  (جدول تاریخچه‌ی سفارش‌ها)
+    from app.tracking import calls  # noqa: F401  (دفتر تماس)
     Base.metadata.create_all(get_engine())
     _add_missing_columns()
 

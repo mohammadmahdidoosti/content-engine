@@ -227,6 +227,19 @@ def api_plan_update(req, m):
     return {"ok": True}
 
 
+def _run_proposals():
+    created = mapping.propose_new_plans(max_new=8, min_products=5, mock=MOCK)
+    log.info("ردیف‌های پیشنهادی ساخته شد: %s", created)
+    mapping.assign_products_and_stats()
+
+
+def api_plan_propose(req, m):
+    if sync.is_running():
+        raise HttpError(409, "همگام‌سازی در حال اجراست؛ چند دقیقه بعد امتحان کنید")
+    _bg(_run_proposals, pool=_sync_pool)
+    return 202, {"started": True}
+
+
 def api_unmapped(req, m):
     with get_session() as db:
         rows = (db.query(WcCategory).filter(WcCategory.plan_id == mapping.NONE, WcCategory.count > 0)
@@ -538,7 +551,8 @@ ROUTES = [
     ("POST", r"/api/generate", api_generate), ("POST", r"/api/jobs/([0-9a-f-]{36})/retry", api_job_retry),
     ("GET", r"/api/sync", api_sync_status), ("POST", r"/api/sync", api_sync_run),
     ("GET", r"/api/cron", api_cron), ("POST", r"/api/cron", api_cron),
-    ("GET", r"/api/plan", api_plan), ("POST", r"/api/plan/([\w-]+)", api_plan_update),
+    ("GET", r"/api/plan", api_plan), ("POST", r"/api/plan/propose", api_plan_propose),
+    ("POST", r"/api/plan/([\w-]+)", api_plan_update),
     ("GET", r"/api/categories/unmapped", api_unmapped), ("POST", r"/api/categories/(\d+)", api_category_map),
     ("GET", r"/api/products", api_products), ("GET", r"/api/recommendations", api_recommendations),
     ("GET", r"/api/settings", api_settings), ("POST", r"/api/settings", api_settings_update),

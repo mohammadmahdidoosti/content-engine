@@ -187,7 +187,8 @@ class _Proposal(BaseModel):
     segments: list[_Segment] = Field(..., min_length=1, max_length=4)
 
 
-def propose_new_plans(max_new: int = 2, min_products: int = 40, mock: bool = False) -> list[str]:
+def propose_new_plans(max_new: int = 6, min_products: int = 10, mock: bool = False,
+                      deadline: float | None = None) -> list[str]:
     """
     دسته‌هایی از سایت که در نقشه نیستند (NONE) را بر اساس ریشه گروه می‌کند و برای
     بزرگ‌ترین گروه‌ها یک ردیف پیشنهادی نقشه می‌سازد (نیاز به تأیید شما در پنل).
@@ -200,8 +201,9 @@ def propose_new_plans(max_new: int = 2, min_products: int = 40, mock: bool = Fal
             by_root[(c.path or c.name).split(" › ")[0]].append(c)
         ranked = sorted(by_root.items(), key=lambda kv: -sum(c.count for c in kv[1]))
         existing = {p.name for p in db.query(PlanCategory).all()}
+        import time as _t
         for root, cs in ranked:
-            if len(created) >= max_new:
+            if len(created) >= max_new or (deadline and _t.monotonic() > deadline):
                 break
             total = sum(c.count for c in cs)
             if total < min_products or root in existing:

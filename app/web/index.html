@@ -444,11 +444,15 @@ async function map(){
   <div class="card"><header>ردیف‌های نقشه (${fa(active.length)})<input type="text" id="mapQ" placeholder="جست‌وجو…" style="width:200px"></header><div class="tbl"><table><thead><tr><th>دسته</th><th>گروه</th><th>کالا</th><th>موجود</th><th>میانه‌ی قیمت</th><th>تازه (۷ روز)</th><th>اوج‌ها</th></tr></thead><tbody id="mapBody">
   ${active.map(p => `<tr data-name="${esc(p.name)}"><td>${esc(p.name)} ${p.source === "llm" ? '<span class="badge b-info">جدید</span>' : ""}</td><td class="small">${esc(G[p.group] || p.group)}</td><td class="num">${fa(p.product_count)}</td><td class="num">${fa(p.in_stock_count)}</td><td class="num">${mtoman(p.median_price)}</td><td class="num">${p.new_7d ? `<b>${fa(p.new_7d)}</b>` : "–"}</td>
     <td class="small">${(p.segments || []).map(s => `${esc(s.name.split("—")[0].trim())}: ${(s.peak || []).map(mon).join("،")}`).join("<br>")}</td></tr>`).join("")}</tbody></table></div></div>
-  <div class="card"><h2>دسته‌های سایت بدون ردیف نقشه (${fa(um.length)})</h2><div class="tbl">${um.length ? `<table><thead><tr><th>دسته</th><th>کالا</th><th>وصل به</th></tr></thead><tbody>
+  <div class="card"><header>دسته‌های سایت بدون ردیف نقشه (${fa(um.length)})
+    ${um.length ? `<button class="btn sm" id="proposeBtn">ساخت ردیف پیشنهادی (ماه اوج، استان، خریدار) برای این‌ها</button>` : ""}</header>
+    ${um.length ? `<div class="pad small muted" style="padding-bottom:0">هوش مصنوعی این دسته‌ها را بر اساس ریشه گروه می‌کند و برای هر گروه یک ردیف نقشه پیشنهاد می‌دهد. پیشنهادها بالای همین صفحه می‌آیند تا تأیید یا رد کنید؛ تا تأیید نکنید، وارد برنامه‌ی تبلیغ نمی‌شوند. حدود ۳ تا ۶ دقیقه طول می‌کشد.</div>` : ""}<div class="tbl">${um.length ? `<table><thead><tr><th>دسته</th><th>کالا</th><th>وصل به</th></tr></thead><tbody>
     ${um.map(c => `<tr><td><a href="${esc(c.permalink || "#")}" target="_blank" rel="noopener">${esc(c.path || c.name)}</a></td><td class="num">${fa(c.count)}</td>
     <td><select data-cmap="${c.id}" style="max-width:280px"><option value="">— انتخاب —</option>${items.filter(p => p.status !== "rejected").map(p => `<option value="${esc(p.id)}">${esc(p.name.slice(0, 60))}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table>` : '<div class="empty">همه‌ی دسته‌ها وصل شده‌اند (یا هنوز بررسی نشده‌اند).</div>'}</div></div>`;
   $("#mapQ").oninput = e => { const q = e.target.value.trim(); document.querySelectorAll("#mapBody tr").forEach(tr => tr.classList.toggle("hidden", q && !tr.dataset.name.includes(q))); };
   document.querySelectorAll("[data-pst]").forEach(b => b.onclick = async () => { const [id, st] = b.dataset.pst.split("|"); await post("/api/plan/" + id, {status: st}); toast("ذخیره شد"); map(); });
+  const pb = $("#proposeBtn"); if (pb) pb.onclick = async () => { pb.disabled = true; pb.textContent = "در حال ساخت…";
+    try { await post("/api/plan/propose"); toast("شروع شد؛ چند دقیقه بعد صفحه را تازه کنید"); later(map, 120000); } catch (e) { toast(e.message); pb.disabled = false; } };
   document.querySelectorAll("[data-cmap]").forEach(s => s.onchange = async () => { if (!s.value) return; await post("/api/categories/" + s.dataset.cmap, {plan_id: s.value}); toast("وصل شد"); });
 }
 

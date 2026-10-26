@@ -44,6 +44,8 @@ def _check(daily: dict) -> list[dict]:
     tmin = daily.get("temperature_2m_min") or []
     tmax = daily.get("temperature_2m_max") or []
     rain = daily.get("precipitation_sum") or []
+    tmin = [x for x in tmin if x is not None] and tmin
+    tmax = [x for x in tmax if x is not None] and tmax
     if tmin and min(x for x in tmin if x is not None) <= -3:
         v = min(x for x in tmin if x is not None)
         out.append({"kind": "frost", "value": v, "day": days[tmin.index(v)], "text": f"دمای حداقل تا {v:.0f}°"})
@@ -58,6 +60,33 @@ def _check(daily: dict) -> list[dict]:
     return out
 
 
+def _metno_daily(lat: float, lon: float) -> dict:
+    """جایگزین: پیش‌بینی ساعتی met.no (مؤسسه‌ی هواشناسی نروژ، رایگان) ← کمینه/بیشینه/بارش روزانه به وقت تهران."""
+    import time
+    from collections import defaultdict
+    from datetime import timedelta
+    r = httpx.get("https://api.met.no/weatherapi/locationforecast/2.0/compact", timeout=30,
+                  params={"lat": round(lat, 2), "lon": round(lon, 2)},
+                  headers={"User-Agent": "content-engine/1.0 https://caravansanat.com"})
+    r.raise_for_status()
+    time.sleep(0.5)
+    days: dict[str, dict] = defaultdict(lambda: {"min": None, "max": None, "rain": 0.0})
+    for ts in r.json().get("properties", {}).get("timeseries", []):
+        t = datetime.fromisoformat(ts["time"].replace("Z", "+00:00")) + timedelta(hours=3, minutes=30)
+        d = days[t.date().isoformat()]
+        det = ts.get("data", {})
+        temp = det.get("instant", {}).get("details", {}).get("air_temperature")
+        if temp is not None:
+            d["min"] = temp if d["min"] is None else min(d["min"], temp)
+            d["max"] = temp if d["max"] is None else max(d["max"], temp)
+        nxt = det.get("next_1_hours") or {}
+        d["rain"] += (nxt.get("details") or {}).get("precipitation_amount") or 0.0
+    keys = sorted(days)[:7]
+    return {"time": keys, "temperature_2m_min": [days[k]["min"] for k in keys],
+            "temperature_2m_max": [days[k]["max"] for k in keys],
+            "precipitation_sum": [round(days[k]["rain"], 1) for k in keys]}
+
+
 def refresh(timeout: float = 30) -> dict:
     """یک درخواست برای همه‌ی استان‌ها (Open-Meteo چند مختصات را با هم می‌پذیرد)."""
     names = list(PROVINCE_CENTERS)
@@ -67,18 +96,20 @@ def refresh(timeout: float = 30) -> dict:
     params = {"latitude": lat, "longitude": lon, "forecast_days": 7, "timezone": "Asia/Tehran",
               "daily": "temperature_2m_min,temperature_2m_max,precipitation_sum"}
     r = None
-    for attempt in range(4):   # آی‌پی مشترک Render گاهی ۴۲۹ می‌گیرد
+    for attempt in range(2):   # آی‌پی مشترک Render گاهی ۴۲۹ می‌گیرد
         r = httpx.get("https://api.open-meteo.com/v1/forecast", timeout=timeout, params=params,
                       headers={"User-Agent": "content-engine/1.0 (caravansanat)"})
         if r.status_code != 429:
             break
-        time.sleep(10 * (attempt + 1))
+        time.sleep(5)
     if r.status_code == 429:
-        raise RuntimeError("سرویس آب‌وهوا موقتاً محدود کرده (۴۲۹)؛ چند دقیقه بعد دوباره امتحان می‌شود")
-    r.raise_for_status()
-    data = r.json()
-    if isinstance(data, dict):
-        data = [data]
+        log.info("Open-Meteo محدود کرد؛ استفاده از met.no")
+        data = [{"daily": _metno_daily(*PROVINCE_CENTERS[n])} for n in names]
+    else:
+        r.raise_for_status()
+        data = r.json()
+        if isinstance(data, dict):
+            data = [data]
     alerts = []
     for name, d in zip(names, data):
         for a in _check(d.get("daily") or {}):

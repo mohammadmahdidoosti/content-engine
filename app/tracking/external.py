@@ -21,7 +21,7 @@ from app.db.session import get_session, get_setting, set_setting
 
 log = logging.getLogger("tracking.external")
 SOURCES = {"channel_candidates", "torob_clicks", "torob_yearly", "gsc_queries", "ga_cities", "ga_sources"}
-ORIGINS = {"https://panel.torob.com", "https://search.google.com", "https://analytics.google.com"}
+ORIGINS = {"https://panel.torob.com", "https://search.google.com", "https://analytics.google.com", "https://www.google.com"}
 _COMMERCIAL = re.compile(r"قیمت|خرید|فروش|نمایندگی|لیست قیمت|بازار|ارزان|عمده")
 
 

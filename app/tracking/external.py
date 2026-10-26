@@ -107,8 +107,11 @@ def _torob(rows: list, meta: dict) -> dict:
 def _torob_yearly(rows: list, urls: list, meta: dict) -> dict:
     """ردیف: [ماه «1404-08», اندیس لینک در urls, کلیک, هزینه] ← کلیک ماهانه‌ی هر دسته و شاخص فصلی.
 
-    شاخص فصلی = سهم دسته از کلیک‌های آن ماه ÷ سهم دسته از کل سال (با هموارسازی برای عددهای کوچک)،
-    تا رشد کلی فروشگاه در طول سال (که همه‌ی ماه‌ها را بالا می‌برد) با فصل اشتباه گرفته نشود.
+    مشکل اصلی: فروشگاه در طول سال هم بزرگ شده و هم ترکیب کالاهایش عوض شده (مثلاً پارسال بیشتر هیدرولیک و
+    پنوماتیک داشت). پس شاخص فصلی بر اساس «کلیک به ازای هر کالای فعال» ساخته می‌شود:
+      شدت دسته در ماه = کلیک دسته ÷ تعداد کالاهای کلیک‌خورده‌ی دسته
+      نسبت به شدت کل فروشگاه در همان ماه، و بعد نسبت به میانگین خود دسته در ماه‌های معتبر.
+    ماهی که دسته در آن کمتر از ۳۰٪ بیشترین تعداد کالای فعالش را داشته «نامعتبر» است و شاخص ندارد.
     """
     from app.db.marketing import PlanCategory, Product
     with get_session() as db:
@@ -117,33 +120,40 @@ def _torob_yearly(rows: list, urls: list, meta: dict) -> dict:
     by_slug = {_slug(p.permalink): p.plan_id for p in prods if p.permalink}
     plan_of = [by_slug.get(_slug(str(u))) for u in urls[:20000]]
     pm: dict = defaultdict(Counter)            # plan ← {ماه: کلیک}
-    month_tot, month_cost = Counter(), Counter()
+    act: dict = defaultdict(Counter)           # plan ← {ماه: تعداد کالای کلیک‌خورده}
+    month_tot, month_cost, month_act = Counter(), Counter(), Counter()
     for r in rows:
         if not isinstance(r, list) or len(r) < 3:
             continue
         m, i, c = str(r[0])[:7], int(_num(r[1])), int(_num(r[2]))
-        if not re.match(r"^14\d\d-\d\d$", m):
+        if not re.match(r"^14\d\d-\d\d$", m) or c <= 0:
             continue
+        pl = (plan_of[i] if 0 <= i < len(plan_of) else None) or "_unmatched"
         month_tot[m] += c
+        month_act[m] += 1
         month_cost[m] += int(_num(r[3])) if len(r) > 3 else 0
-        pl = plan_of[i] if 0 <= i < len(plan_of) else None
-        pm[pl or "_unmatched"][m] += c
+        pm[pl][m] += c
+        act[pl][m] += 1
     months = sorted(month_tot)
-    year = sum(month_tot.values()) or 1
+    inten = {m: month_tot[m] / month_act[m] for m in months if month_act[m]}
     plans = {}
     for pl, cnt in pm.items():
-        tot = sum(cnt.values())
-        share = tot / year
+        mx = max(act[pl].values() or [0])
+        ok = [m for m in months if mx and act[pl][m] >= max(3, 0.3 * mx)]
+        base = sum(act[pl][m] * inten[m] for m in ok)
+        rbar = (sum(cnt[m] for m in ok) / base) if base else 0
         idx = {}
-        for m in months:
-            exp = share * month_tot[m]
+        for m in ok:
+            exp = act[pl][m] * inten[m] * rbar
             idx[int(m[5:])] = round((cnt[m] + 5) / (exp + 5), 2)      # کلید: شماره‌ی ماه شمسی
+        tot = sum(cnt.values())
         plans[pl] = {"plan_id": pl, "name": re.sub(r"\s*\(.*?\)", "", names.get(pl, pl))[:60], "clicks": tot,
-                     "months_active": sum(1 for m in months if cnt[m]), "by_month": [cnt[m] for m in months],
-                     "season": idx,
+                     "months_active": len(ok), "by_month": [cnt[m] for m in months],
+                     "active_products": [act[pl][m] for m in months], "season": idx,
                      "peak_months": [k for k, v in sorted(idx.items(), key=lambda x: -x[1]) if v >= 1.25][:3]}
     weekly = [[str(w[0])[:10], int(_num(w[1]))] for w in (meta.get("weekly") or []) if isinstance(w, list) and len(w) >= 2]
     return {"months": months, "month_clicks": [month_tot[m] for m in months], "month_cost": [month_cost[m] for m in months],
+            "month_products": [month_act[m] for m in months],
             "clicks": sum(month_tot.values()), "cost": sum(month_cost.values()),
             "plans": sorted(plans.values(), key=lambda x: -x["clicks"]), "weekly": weekly[-60:]}
 
@@ -158,7 +168,7 @@ def season_factor(plan_id: str, month: int) -> tuple[float, float | None]:
     s = {int(k): v for k, v in (p.get("season") or {}).items()}
     nxt = month % 12 + 1
     vals = [s[m] for m in (month, nxt) if m in s]
-    if not vals:
+    if len(vals) < 2:          # این دو ماه در سال گذشته داده‌ی معتبر نداشته‌اند
         return 1.0, None
     raw = sum(vals) / len(vals)
     return round(max(0.85, min(1.2, raw ** 0.4)), 3), round(raw, 2)

@@ -535,9 +535,9 @@ function yearBlock(y){
   const cell = v => { const c = v >= 1.25 ? "var(--accent)" : v <= 0.8 ? "var(--red)" : "var(--ink-3)"; return `<td class="num" style="color:${c};font-weight:${v >= 1.25 || v <= 0.8 ? 700 : 400}">${fa(v)}</td>`; };
   return `<div class="pad small" style="border-top:1px solid var(--line)"><b>یک سال ترب (${esc(y.months[0])} تا ${esc(y.months[y.months.length - 1])}): ${fa(y.clicks)} کلیک · ${mtoman(y.cost)} تومان</b>
     <div style="margin:8px 0">${y.months.map((m, i) => `<div class="inline" style="flex-wrap:nowrap;gap:6px"><span style="width:90px">${MN[+m.slice(5)]} ${fa(m.slice(2, 4))}</span><span style="flex:1;height:8px;border-radius:4px;background:var(--accent);opacity:.75;max-width:${Math.round(100 * y.month_clicks[i] / mx)}%"></span><b class="num">${fa(y.month_clicks[i])}</b></div>`).join("")}</div>
-    <b>شاخص فصلی هر دسته</b> <span class="muted">(۱ یعنی عادی؛ سبز = آن ماه نسبت به بقیه‌ی سال پرتقاضاتر، قرمز = کم‌تقاضاتر؛ رشد کلی فروشگاه حذف شده)</span>
+    <b>شاخص فصلی هر دسته</b> <span class="muted">(۱ یعنی عادی؛ سبز = پرتقاضاتر از بقیه‌ی سال، قرمز = کم‌تقاضاتر. بر اساس کلیک به ازای هر کالای فعال، تا رشد و تغییر کالاهای فروشگاه اشتباهاً فصل حساب نشود. «·» = آن ماه کالای کافی در این دسته نبوده)</span>
     <div class="tbl" style="margin-top:6px"><table><thead><tr><th>دسته</th><th>کلیک سال</th>${y.months.map(m => `<th>${MN[+m.slice(5)]}</th>`).join("")}</tr></thead><tbody>
-      ${plans.map(p => `<tr><td>${esc(p.name)}</td><td class="num">${fa(p.clicks)}</td>${y.months.map(m => cell((p.season || {})[+m.slice(5)] ?? 1)).join("")}</tr>`).join("")}</tbody></table></div>
+      ${plans.map(p => `<tr><td>${esc(p.name)}</td><td class="num">${fa(p.clicks)}</td>${y.months.map(m => (p.season || {})[+m.slice(5)] != null ? cell(p.season[+m.slice(5)]) : '<td class="num muted">·</td>').join("")}</tr>`).join("")}</tbody></table></div>
     <div class="muted" style="margin-top:6px">اثر در برنامه: برای هر دسته، شاخص همین ماه و ماه بعد در سال گذشته امتیاز را بین ×۰٫۸۵ تا ×۱٫۲ تغییر می‌دهد (فقط دسته‌هایی با حداقل ۱۰۰ کلیک و ۶ ماه فعالیت). یک سال داده هنوز کم است؛ برای همین اثرش محدود است و جای تقویم نقشه را نمی‌گیرد، تکمیلش می‌کند.</div></div>`;
 }
 function bindOffline(){

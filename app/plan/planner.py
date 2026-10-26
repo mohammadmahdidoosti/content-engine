@@ -50,6 +50,14 @@ def margin_weight(plan_id: str, group: str | None = None) -> float:
         return 1.0
 
 
+def _torob_w(plan_id: str) -> float:
+    try:
+        from app.tracking.external import torob_weight
+        return torob_weight(plan_id)
+    except Exception:  # noqa: BLE001
+        return 1.0
+
+
 def _unit_economics(plan_id: str) -> dict:
     """از فایل فروش آفلاین: سود هر فروش و سقف هزینه‌ی هر تماس (اگر فایل بارگذاری شده باشد)."""
     try:
@@ -210,7 +218,7 @@ def recommendations(limit: int = 12, month: int | None = None) -> dict:
                 score = (t * weights.get(p.group, 1.0) * _value_weight(p.p90_price, p.median_price)
                          * _stock_weight(p) * _conf_weight(seg) * margin_weight(p.id, p.group)
                          * performance_weight(p.id) * price_w * (1.25 if alerts else 1.0)
-                         * history_weight(p.id, seg.get("provinces", []))[0])
+                         * history_weight(p.id, seg.get("provinces", []))[0] * _torob_w(p.id))
                 if score <= 0:
                     continue
                 if best is None or score > best["score"]:
@@ -226,7 +234,7 @@ def recommendations(limit: int = 12, month: int | None = None) -> dict:
                         "weather": alerts, "margin": margin_weight(p.id, p.group),
                         "performance": performance_weight(p.id), "price_weight": price_w,
                         "past_orders": history_weight(p.id, seg.get("provinces", []))[1],
-                        **_unit_economics(p.id),
+                        **_unit_economics(p.id), "torob_weight": _torob_w(p.id),
                     }
             if best:
                 recs.append(best)

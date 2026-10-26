@@ -436,7 +436,7 @@ async function channels(){
 
 // ================= REPORT =================
 async function report(){
-  const [d, h, off] = await Promise.all([api("/api/report"), api("/api/history").catch(() => null), api("/api/offline").catch(() => null)]); const t = d.total || {};
+  const [d, h, off, ext] = await Promise.all([api("/api/report"), api("/api/history").catch(() => null), api("/api/offline").catch(() => null), api("/api/ext").catch(() => null)]); const t = d.total || {};
   setTimeout(() => bindOffline(), 0);
   const tbl = (rows, title) => `<div class="card"><h2>${title}</h2><div class="tbl">${rows.length ? `<table><thead><tr><th>نام</th><th>تبلیغ</th><th>هزینه</th><th>کلیک</th><th>تماس</th><th>سفارش</th><th>فروش</th><th>هزینه هر مشتری بالقوه</th><th>بازگشت</th><th title="فروش × نرخ سود واقعی آن دسته (فایل فروش) منهای هزینه‌ی تبلیغ">سود خالص</th></tr></thead><tbody>
     ${rows.map(r => `<tr><td>${esc(r.title)}</td><td class="num">${fa(r.placements)}</td><td class="num">${mtoman(r.spent)}</td><td class="num">${fa(r.clicks)}</td><td class="num">${fa(r.calls)}</td><td class="num">${fa(r.orders)}</td><td class="num">${mtoman(r.revenue)}</td><td class="num">${mtoman(r.cost_per_lead)}</td><td class="num"><b>${r.roas != null ? fa(r.roas) + "×" : "–"}</b></td><td class="num">${r.net_profit != null && r.est_profit ? `<b style="color:var(${r.net_profit >= 0 ? "--accent" : "--red"})">${mtoman(r.net_profit)}</b>` : "–"}</td></tr>`).join("")}</tbody></table>` : '<div class="empty">هنوز داده‌ای نیست.</div>'}</div></div>`;
@@ -449,6 +449,7 @@ async function report(){
     ${ME.orders_enabled ? "" : `<div class="warnbox" style="margin-bottom:16px">سفارش‌ها هنوز خودکار شمرده نمی‌شوند. برای اینکه هر سفارش سایت خودکار به تبلیغی که از آن آمده وصل شود، یک کلید فقط-خواندنی ووکامرس لازم است (راهنما در «تنظیمات»). تا آن موقع تماس و سفارش را دستی در هر تبلیغ وارد کنید.</div>`}
     ${tbl(d.channels, "بر اساس کانال")}${tbl(d.campaigns, "بر اساس کمپین")}${tbl(d.variants || [], "نسخه‌ی کامل در برابر کوتاه (A/B)")}
     ${offlineBlock(off)}
+    ${extBlock(ext, off)}
     ${historyBlock(h)}
     <div class="note small">یادگیری خودکار: وقتی یک دسته حداقل ۲ تبلیغ منتشرشده داشته باشد، اگر هزینه‌ی هر مشتری‌اش از میانه‌ی بقیه کمتر باشد امتیازش در برنامه تا ×۱٫۶ بالا می‌رود و اگر بیشتر باشد تا ×۰٫۶ پایین می‌آید؛ پس بودجه‌ی پیشنهادی خودکار به سمت چیزی می‌رود که جواب داده.</div>`;
 }
@@ -491,6 +492,38 @@ function demandBlock(d, files){
       <div><b>استان تماس‌گیرنده‌ها</b>${(d.provinces || []).slice(0, 10).map(([k, v]) => row(esc(k), fa(v))).join("")}</div>
       <div><b>دسته‌های درخواستی</b>${(d.plans || []).slice(0, 10).map(([k, v]) => row(esc(k), fa(v))).join("")}</div></div></div></div>
     ${(files || []).length > 1 ? `<div class="pad small muted" style="padding-top:0">فایل‌های بارگذاری‌شده: ${files.map(f => `${esc((f.sheets || []).slice(0, 3).join("، "))} (${ago(f.at)})`).join(" · ")} — بارگذاری دوباره‌ی همان فایل، نسخه‌ی قبلی‌اش را جایگزین می‌کند.</div>` : ""}`;
+}
+function extBlock(e, off){
+  if (!e) return "";
+  const row = (a, b) => `<div class="inline" style="justify-content:space-between;flex-wrap:nowrap;gap:8px"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a}</span><b class="num">${b}</b></div>`;
+  const t = e.torob_clicks, g = e.gsc_queries, gc = e.ga_cities, gs = e.ga_sources;
+  if (!t && !g && !gc) return `<div class="card"><h2>ترب، سرچ کنسول و آنالیتیکس</h2><div class="pad small muted">هنوز داده‌ای وارد نشده.</div></div>`;
+  const months = (off && off.months || []).slice(-4, -1); const invPerMonth = months.length ? months.reduce((a, m) => a + m[1], 0) / months.length : null;
+  const monthCost = t && t.per_day && t.cpc ? t.per_day * 30 * t.cpc : null;
+  const STATUS = {page_not_available: "ناموجود در سایت", page_deleted_temporary_technical: "حذف موقت (مشکل فنی خواندن صفحه)", base_not_merged: "ادغام‌نشده (در مقایسه‌ی قیمت نیست)", page_not_accessible: "صفحه در دسترس نیست", page_deleted_temporary_content: "حذف موقت (محتوا)", price_not_valid: "قیمت نامعتبر"};
+  return `<div class="card"><header>ترب، سرچ کنسول و آنالیتیکس <span class="small muted">${t ? "ترب " + ago(t.at) : ""}${g ? " · سرچ کنسول " + ago(g.at) : ""}${gc ? " · آنالیتیکس " + ago(gc.at) : ""}</span></header>
+    ${t ? `<section class="stats" style="padding:12px 16px 0;margin:0">
+      <div class="stat"><b>${fa(t.per_day)}</b><span>کلیک ترب در روز (خط مبنا)</span></div>
+      <div class="stat"><b>${mtoman(t.cpc)}</b><span>هزینه‌ی هر کلیک ترب</span></div>
+      <div class="stat"><b>${mtoman(monthCost)}</b><span>هزینه‌ی ماهانه‌ی ترب (تخمین)</span></div>
+      <div class="stat"><b>${monthCost && invPerMonth ? mtoman(monthCost / invPerMonth) : "–"}</b><span title="هزینه‌ی ماهانه‌ی ترب ÷ میانگین فاکتور ماهانه‌ی ۳ ماه اخیر؛ سقف بالا چون همه‌ی فاکتورها از ترب نیست">هزینه‌ی ترب به ازای هر فاکتور (حداکثر)</span></div></section>
+    <div class="pad grid3 small">
+      <div><b>کلیک ترب به تفکیک دسته (${esc(t.from || "")} تا ${esc(t.to || "")})</b>${(t.plans || []).slice(0, 12).map(p => row(esc(p.name), fa(p.clicks) + " · " + mtoman(p.cost))).join("")}
+        ${t.unmatched && t.unmatched.clicks ? row("<span class='muted'>کالاهای بدون دسته</span>", fa(t.unmatched.clicks)) : ""}</div>
+      <div><b>پرکلیک‌ترین کالاها در ترب</b>${(t.top || []).slice(0, 12).map(p => row(esc(p.name), fa(p.clicks))).join("")}</div>
+      <div><b>کالاهایی که در ترب دیده نمی‌شوند</b>${Object.entries(t.status || {}).filter(([k, v]) => v && k !== "no_problem").sort((a, b) => b[1] - a[1]).map(([k, v]) => row(esc(STATUS[k] || k), fa(v))).join("") || "<div class='muted'>–</div>"}
+        <div class="muted" style="margin-top:6px">موجودی حساب ترب: <b>${mtoman(t.balance)}</b></div></div></div>` : ""}
+    ${g ? `<div class="pad grid3 small" style="border-top:1px solid var(--line)">
+      <div><b>گوگل: ${fa(g.clicks)} کلیک از ${fa(g.impr)} نمایش (${fa(g.queries)} عبارت)</b>
+        <div class="muted" style="margin:4px 0">عبارت‌های خرید («قیمت/خرید/فروش»): فقط ${fa(g.commercial.clicks)} کلیک از ${fa(g.commercial.impr)} نمایش — یعنی گوگل الان کانال فروش نیست، کانال آموزش است.</div>
+        <b>کلمه‌های کالا با رتبه‌ی دور (۲۰ به بعد)</b>${(g.far_head_terms || []).slice(0, 8).map(q => row(esc(q.q), fa(q.i) + " · رتبه " + fa(q.p))).join("")}</div>
+      <div><b>فرصت سریع (رتبه ۴ تا ۲۰، کلیک کم)</b>${(g.quick_wins || []).slice(0, 12).map(q => row(esc(q.q), fa(q.i) + " · " + fa(q.p))).join("")}</div>
+      <div><b>عبارت‌های خرید</b>${(g.commercial.top || []).slice(0, 12).map(q => row(esc(q.q), fa(q.i) + " · " + fa(q.p))).join("")}</div></div>` : ""}
+    ${gc ? `<div class="pad grid3 small" style="border-top:1px solid var(--line)">
+      <div><b>کاربران سایت به تفکیک شهر (آنالیتیکس)</b>${(gc.rows || []).slice(0, 12).map(r => row(esc(r[0]), fa(r[1]))).join("")}</div>
+      <div><b>منبع ورود (نشست)</b>${(gs && gs.rows || []).slice(0, 10).map(r => row(esc(r[0]), fa(r[1]))).join("")}</div>
+      <div class="muted">شهر در آنالیتیکس از روی آی‌پی است و برای اینترنت همراه گاهی شهر مرکز اپراتور را نشان می‌دهد؛ برای مقایسه‌ی نسبی خوب است، نه دقیق.</div></div>` : ""}
+    <div class="pad small muted" style="padding-top:0">اثر در برنامه: کلیک ترب به ازای هر کالای یک دسته (نسبت به میانگین) امتیاز را بین ×۰٫۸۵ تا ×۱٫۲۵ تغییر می‌دهد؛ چون کلیک ترب یعنی خریداری که دنبال قیمت است.</div></div>`;
 }
 function bindOffline(){
   const f = $("#offFile"); if (!f) return;

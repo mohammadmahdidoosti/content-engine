@@ -242,6 +242,7 @@ function recCard(r, opts = {}){
       ${r.performance && r.performance !== 1 ? `<span>نتیجه‌ی تبلیغ‌های قبلی: <b>${r.performance > 1 ? "خوب" : "ضعیف"}</b></span>` : ""}
       ${r.past_orders ? `<span>سفارش قبلی از این استان‌ها: <b>${fa(r.past_orders)}</b></span>` : ""}
       ${r.profit_per_sale ? `<span title="از فایل فروش: میانگین سود هر فاکتور${r.past_invoices ? " این دسته" : " (کل فروشگاه)"}">سود هر فروش: <b>${mtoman(r.profit_per_sale)}</b>${r.real_margin_pct ? ` (${fa(r.real_margin_pct)}٪)` : ""}</span>` : ""}
+      ${r.torob_weight && r.torob_weight > 1 ? `<span>تقاضا در ترب: <b>${r.torob_weight >= 1.12 ? "زیاد" : "متوسط"}</b></span>` : ""}
       ${r.max_cost_per_call ? `<span title="سود هر فروش × نرخ تبدیل تماس به خرید؛ تماس گران‌تر از این یعنی ضرر">سقف هزینه‌ی هر تماس: <b>${mtoman(r.max_cost_per_call)}</b></span>` : ""}</div>
     ${opts.full ? `<div class="small"><b>خریدار:</b> ${esc(r.buyers)}</div><div class="small"><b>پیام:</b> ${esc(r.angle)}</div>
       <div class="small"><b>زمان انتشار:</b> ${esc(r.time)}</div>${r.note ? `<div class="small muted">💡 ${esc(r.note)}</div>` : ""}` : ""}
@@ -523,7 +524,7 @@ function extBlock(e, off){
       <div><b>کاربران سایت به تفکیک شهر (آنالیتیکس)</b>${(gc.rows || []).slice(0, 12).map(r => row(esc(r[0]), fa(r[1]))).join("")}</div>
       <div><b>منبع ورود (نشست)</b>${(gs && gs.rows || []).slice(0, 10).map(r => row(esc(r[0]), fa(r[1]))).join("")}</div>
       <div class="muted">شهر در آنالیتیکس از روی آی‌پی است و برای اینترنت همراه گاهی شهر مرکز اپراتور را نشان می‌دهد؛ برای مقایسه‌ی نسبی خوب است، نه دقیق.</div></div>` : ""}
-    <div class="pad small muted" style="padding-top:0">اثر در برنامه: کلیک ترب به ازای هر کالای یک دسته (نسبت به میانگین) امتیاز را بین ×۰٫۸۵ تا ×۱٫۲۵ تغییر می‌دهد؛ چون کلیک ترب یعنی خریداری که دنبال قیمت است.</div></div>`;
+    <div class="pad small muted" style="padding-top:0">اثر در برنامه: هرچه کالاهای یک دسته در ترب کلیک بیشتری بگیرند، امتیازش کمی بالاتر می‌رود (تا ×۱٫۲)؛ چون کلیک ترب یعنی خریداری که دنبال قیمت است.</div></div>`;
 }
 function bindOffline(){
   const f = $("#offFile"); if (!f) return;

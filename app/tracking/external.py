@@ -159,15 +159,11 @@ def summary() -> dict:
 
 
 def torob_weight(plan_id: str) -> float:
-    """تقاضای واقعی خریدار در ترب: کلیک به ازای هر کالای این دسته نسبت به میانگین (حداقل ۳۰ کلیک)."""
+    """تقاضای واقعی خریدار در ترب: هرچه کلیک ماهانه‌ی کالاهای این دسته در ترب بیشتر، امتیاز کمی بیشتر (تا ×۱٫۲).
+    جریمه نمی‌کند، چون بعضی دسته‌ها (مثل پنوماتیک) بیشتر تلفنی فروش می‌روند تا از ترب."""
+    import math
     t = get("torob_clicks") or {}
-    plans = {p["plan_id"]: p for p in t.get("plans") or []}
-    p = plans.get(plan_id)
-    if not p or p["clicks"] < 30:
+    p = next((x for x in t.get("plans") or [] if x["plan_id"] == plan_id), None)
+    if not p or p["clicks"] < 20:
         return 1.0
-    tot_c = sum(x["clicks"] for x in plans.values())
-    tot_n = sum(x["site_products"] for x in plans.values()) or 1
-    avg = tot_c / tot_n
-    if not avg or not p["clicks_per_product"]:
-        return 1.0
-    return round(max(0.85, min(1.25, (p["clicks_per_product"] / avg) ** 0.25)), 3)
+    return round(1 + min(0.2, 0.04 * math.log2(1 + p["clicks"] / 50)), 3)

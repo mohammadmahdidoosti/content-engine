@@ -455,7 +455,7 @@ async function report(){
 
 function offlineBlock(o){
   const up = `<label class="btn sm" style="cursor:pointer">بارگذاری فایل اکسل فروش<input type="file" id="offFile" accept=".xlsx" hidden></label>`;
-  if (!o || !o.invoices && !(o.calls || {}).total) return `<div class="card"><h2>فروش تلفنی و فاکتورها (فایل اکسل خودتان)</h2><div class="pad small">
+  if (!o || !o.invoices && !(o.calls || {}).total && !(o.demand || {}).total) return `<div class="card"><h2>فروش تلفنی و فاکتورها (فایل اکسل خودتان)</h2><div class="pad small">
     فایل اکسل فاکتورها و تماس‌ها را بارگذاری کنید تا سود واقعی هر دسته، نرخ تبدیل تماس و سقف هزینه‌ی مجاز هر آگهی حساب شود.
     فقط آمار جمعی نگه داشته می‌شود؛ نام، تلفن و آدرس مشتری‌ها خوانده و ذخیره نمی‌شود. <div style="margin-top:8px">${up}</div></div></div>`;
   const row = (a, b) => `<div class="inline" style="justify-content:space-between;flex-wrap:nowrap"><span>${a}</span><b class="num">${b}</b></div>`;
@@ -474,15 +474,30 @@ function offlineBlock(o){
       <div><b>ماه به ماه (فاکتور · فروش)</b>${(o.months || []).slice(-10).map(([k, n, r]) => row(esc(k), fa(n) + " · " + mtoman(r))).join("")}</div>
       <div><b>تماس‌ها به تفکیک شیت (تماس · خرید)</b>${(c.by_sheet || []).slice(0, 8).map(([k, n, b]) => row(esc(k), fa(n) + " · " + fa(b))).join("")}
         ${o.petty && o.petty.per_invoice ? `<div style="margin-top:8px">${row("هزینه‌ی ارسال/بسته‌بندی هر فاکتور (تنخواه)", mtoman(o.petty.per_invoice))}</div>` : ""}</div></div>
+    ${demandBlock(o.demand, o.files)}
     <div class="pad small muted" style="padding-top:0">اثر در برنامه: سود هر فاکتور هر دسته (نسبت به میانگین) امتیاز را بین ×۰٫۷۵ تا ×۱٫۴ تغییر می‌دهد، مگر اینکه در «نقشه» سود را دستی تعیین کرده باشید؛ و فاکتورهای هر استان مثل سفارش‌های سایت در «سفارش قبلی از این استان‌ها» حساب می‌شوند.
       برای سنجش تبلیغ، در شیت تماس‌ها ستون «از کجا آشنا شد / کد آگهی» را اضافه کنید.</div></div>`;
+}
+function demandBlock(d, files){
+  if (!d || !d.total) return "";
+  const row = (a, b) => `<div class="inline" style="justify-content:space-between;flex-wrap:nowrap"><span>${a}</span><b class="num">${b}</b></div>`;
+  const mx = Math.max(...(d.by_day || []).map(x => x[1]), 1);
+  return `<div class="pad" style="padding-top:0"><div class="card" style="box-shadow:none;margin:0"><header style="font-size:13.5px">تماس‌های ورودی (دفتر تماس با شهر و درخواست)
+      <span class="small muted">${fa(d.total)} تماس · ${fa(d.days)} روز کاری · ${esc(d.first_day || "")} تا ${esc(d.last_day || "")}</span></header>
+    <div class="pad grid3 small">
+      <div><b>خط مبنا: ${d.per_day != null ? fa(d.per_day) : "–"} تماس در روز</b>
+        <div class="muted" style="margin:4px 0 6px">بعد از هر کمپین، تماس روزانه با این عدد مقایسه می‌شود.</div>
+        ${(d.by_day || []).slice(-14).map(([k, v]) => `<div class="inline" style="flex-wrap:nowrap;gap:6px"><span class="num" style="width:78px">${esc(k.slice(5))}</span><span style="flex:1;height:8px;border-radius:4px;background:var(--accent);opacity:.75;max-width:${Math.round(100 * v / mx)}%"></span><b class="num">${fa(v)}</b></div>`).join("")}</div>
+      <div><b>استان تماس‌گیرنده‌ها</b>${(d.provinces || []).slice(0, 10).map(([k, v]) => row(esc(k), fa(v))).join("")}</div>
+      <div><b>دسته‌های درخواستی</b>${(d.plans || []).slice(0, 10).map(([k, v]) => row(esc(k), fa(v))).join("")}</div></div></div></div>
+    ${(files || []).length > 1 ? `<div class="pad small muted" style="padding-top:0">فایل‌های بارگذاری‌شده: ${files.map(f => `${esc((f.sheets || []).slice(0, 3).join("، "))} (${ago(f.at)})`).join(" · ")} — بارگذاری دوباره‌ی همان فایل، نسخه‌ی قبلی‌اش را جایگزین می‌کند.</div>` : ""}`;
 }
 function bindOffline(){
   const f = $("#offFile"); if (!f) return;
   f.onchange = async () => { const file = f.files[0]; if (!file) return; toast("در حال خواندن فایل…");
     try { const r = await fetch("/api/offline/import", {method: "POST", headers: {"Content-Type": "application/octet-stream", "X-Run-Token": token}, body: file});
       const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || ("HTTP " + r.status));
-      toast(`${fa(d.invoices)} فاکتور و ${fa(d.calls)} تماس خوانده شد`); report(); } catch (e) { toast(e.message); } };
+      toast(`خوانده شد: ${fa(d.invoices)} فاکتور، ${fa(d.calls)} تماس با نتیجه، ${fa(d.demand || 0)} تماس ورودی`); report(); } catch (e) { toast(e.message); } };
 }
 function historyBlock(h){
   if (!ME.orders_enabled) return "";

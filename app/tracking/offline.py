@@ -32,7 +32,12 @@ CITY2PROV = {"کرج": "البرز", "ارومیه": "آذربایجان غرب�
              "بیرجند": "خراسان جنوبی", "بجنورد": "خراسان شمالی", "سنندج": "کردستان", "خرم آباد": "لرستان",
              "شهرکرد": "چهارمحال و بختیاری", "یاسوج": "کهگیلویه و بویراحمد", "گرگان": "گلستان",
              "خراسان": "خراسان رضوی", "آذربایجان": "آذربایجان شرقی", "چهارمحال": "چهارمحال و بختیاری",
-             "کهگیلویه": "کهگیلویه و بویراحمد"}
+             "کهگیلویه": "کهگیلویه و بویراحمد",
+             "رباط کریم": "تهران", "شادآباد": "تهران", "اسلامشهر": "تهران", "شهریار": "تهران", "ورامین": "تهران",
+             "هشتگرد": "البرز", "نظرآباد": "البرز", "قشم": "هرمزگان", "کیش": "هرمزگان", "مراغه": "آذربایجان شرقی",
+             "بهشهر": "مازندران", "آمل": "مازندران", "بابل": "مازندران", "کوهدشت": "لرستان", "بروجرد": "لرستان",
+             "دزفول": "خوزستان", "کاشان": "اصفهان", "نجف آباد": "اصفهان", "نیشابور": "خراسان رضوی",
+             "رفسنجان": "کرمان", "سیرجان": "کرمان", "زابل": "سیستان و بلوچستان"}
 
 # کلیدواژه ← دسته‌ی نقشه (ترتیب مهم است: خاص‌ترها اول)
 KW = [("PNEU", "پنوماتیک|جک |شیر برقی|واحد مراقبت|سنسور جک|سایلنسر|کوپلینگ پنوماتیک|شیلنگ پنوماتیک|کمپرسور|ایرکنترل|مایندمن|سنگ فیلتر"),
@@ -100,6 +105,29 @@ def num(v) -> int:
     return tot
 
 
+_CITY_IDX: dict | None = None
+
+
+def _city_lookup(name: str) -> str | None:
+    """شهرهای نقشه‌ی تبلیغات و پروفایل شهرها ← استان (مثلاً کوهدشت ← لرستان)."""
+    global _CITY_IDX
+    if _CITY_IDX is None:
+        try:
+            from types import SimpleNamespace
+            from app.plan.cities import _norm as cnorm, city_index
+            from app.plan.data import plan_file
+            idx = city_index([SimpleNamespace(id=c["id"], segments=c.get("segments") or []) for c in plan_file()["cats"]])
+            _CITY_IDX = {k: v["province"] for k, v in idx.items() if v.get("province")}
+            _CITY_IDX["__norm__"] = cnorm
+        except Exception as e:  # noqa: BLE001
+            log.info("فهرست شهرها بارگذاری نشد: %s", e)
+            _CITY_IDX = {}
+    f = _CITY_IDX.get("__norm__")
+    v = _CITY_IDX.get(f(name)) if f else None
+    v = v if isinstance(v, str) else None
+    return re.sub(r"\s*\(.*?\)", "", v).strip() if v else None
+
+
 def province(p, city=None) -> str:
     for raw in (p, city):
         x = _norm(raw)
@@ -113,6 +141,9 @@ def province(p, city=None) -> str:
         for q in PROVS:
             if q in x:
                 return q
+        found = _city_lookup(x)
+        if found in PROVS:
+            return found
     return "نامشخص"
 
 
@@ -140,11 +171,19 @@ def _find(headers: list[str], *needles: str) -> int | None:
     return None
 
 
-def parse_workbook(data: bytes) -> dict:
+def _day(v) -> str | None:
+    m = re.search(r"(14\d\d)\s*/\s*(\d\d?)\s*/\s*(\d\d?)", _norm(v).translate(FA))
+    return f"{m.group(1)}/{int(m.group(2)):02d}/{int(m.group(3)):02d}" if m else None
+
+
+def parse_rows(data: bytes) -> dict:
+    """فایل ← ردیف‌های بی‌نام (بدون نام/تلفن/آدرس) به تفکیک نوع شیت."""
     from openpyxl import load_workbook
     wb = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
-    invoices, calls, petty = [], [], []
+    invoices, calls, petty, demand = [], [], [], []
+    sheets = []
     for ws in wb.worksheets:
+        sheets.append(ws.title)
         rows = ws.iter_rows(values_only=True)
         try:
             head = [_norm(h) for h in next(rows)]
@@ -154,7 +193,7 @@ def parse_workbook(data: bytes) -> dict:
               "prov": _find(head, "استان"), "city": _find(head, "شهر"), "product": _find(head, "محصول"),
               "field": _find(head, "زمینه"), "paid_at": _find(head, "تاریخ واریزی"), "call_at": _find(head, "تاریخ تماس"),
               "ship": _find(head, "نحوه ارسال"), "want": _find(head, "محصولی که"), "buy": _find(head, "منجر"),
-              "cost": _find(head, "هزینه"), "date": _find(head, "تاریخ")}
+              "cost": _find(head, "هزینه"), "date": _find(head, "تاریخ"), "req": _find(head, "درخواست")}
 
         def g(r, k):
             i = ix.get(k)
@@ -179,16 +218,32 @@ def parse_workbook(data: bytes) -> dict:
                 calls.append({"sheet": ws.title, "ym": _ym(g(r, "call_at")),
                               "plan": (lambda c: c if c != "OTHER" else classify(ws.title))(classify(want)),
                               "buy": _norm(g(r, "buy")).startswith("بله")})
+        elif ix["req"] is not None and ix["city"] is not None:        # دفتر تماس با شهر و درخواست (بدون نتیجه)
+            for r in rows:
+                d = g(r, "call_at") if ix["call_at"] is not None else g(r, "date")
+                req, city = _norm(g(r, "req")), _norm(g(r, "city"))
+                if not _day(d) and not req and not city:
+                    continue
+                demand.append({"day": _day(d), "ym": _ym(d), "prov": province(None, city) if city not in ("", "-", "None") else "نامشخص",
+                               "plan": classify(req) if req and req != "None" else "OTHER"})
         elif ix["cost"] is not None:                                  # تنخواه
             for r in rows:
                 c = num(g(r, "cost"))
                 if c > 0:
                     petty.append({"ym": _ym(g(r, "date")), "amount": c})
     wb.close()
-    return _summarize(invoices, calls, petty)
+    import hashlib
+    key = hashlib.sha1("|".join(sorted(sheets)).encode()).hexdigest()[:10]
+    return {"key": key, "sheets": sheets, "invoices": invoices, "calls": calls, "petty": petty, "demand": demand}
 
 
-def _summarize(invoices: list[dict], calls: list[dict], petty: list[dict]) -> dict:
+def parse_workbook(data: bytes) -> dict:
+    r = parse_rows(data)
+    return _summarize(r["invoices"], r["calls"], r["petty"], r["demand"])
+
+
+def _summarize(invoices: list[dict], calls: list[dict], petty: list[dict], demand: list[dict] | None = None) -> dict:
+    demand = demand or []
     by_plan: dict[str, dict] = defaultdict(lambda: {"n": 0, "rev": 0, "pn": 0, "prev": 0, "profit": 0})
     plan_prov, by_prov, months, ship = Counter(), Counter(), defaultdict(lambda: {"n": 0, "rev": 0, "profit": 0}), Counter()
     revs = []
@@ -256,17 +311,58 @@ def _summarize(invoices: list[dict], calls: list[dict], petty: list[dict]) -> di
         "calls": {"total": n_calls, "buys": n_buys, "conv_pct": round(100 * cr, 1) if cr else None,
                   "by_sheet": sorted(([k, v["calls"], v["buys"]] for k, v in c_sheet.items()), key=lambda x: -x[1])[:15],
                   "months": sorted([k, v["calls"], v["buys"]] for k, v in c_month.items())[-18:]},
+        "demand": _demand(demand),
         "petty": {"rows": len(petty), "total": sum(p["amount"] for p in petty),
                   "per_invoice": round(sum(p["amount"] for p in petty) / len(invoices)) if invoices and petty else None},
     }
 
 
+def _demand(rows: list[dict]) -> dict:
+    """تماس‌های ورودی با شهر و درخواست: تقاضا به تفکیک استان و دسته + خط مبنای تماس روزانه."""
+    if not rows:
+        return {"total": 0}
+    try:
+        from app.plan.data import today_jalali
+        t = today_jalali()
+        today = f"{t.year}/{t.month:02d}/{t.day:02d}"
+    except Exception:  # noqa: BLE001
+        today = "9999"
+    days = Counter(r["day"] for r in rows if r.get("day") and r["day"] <= today)   # تاریخ‌های اشتباهِ آینده حذف
+    pp = Counter(f"{r['plan']}|{r['prov']}" for r in rows if r["prov"] != "نامشخص" and r["plan"] != "OTHER")
+    return {"total": len(rows), "days": len(days),
+            "per_day": round(sum(days.values()) / len(days), 1) if days else None,
+            "first_day": min(days) if days else None, "last_day": max(days) if days else None,
+            "by_day": sorted(days.items())[-60:],
+            "provinces": Counter(r["prov"] for r in rows).most_common(20),
+            "plans": Counter(r["plan"] for r in rows if r["plan"] != "OTHER").most_common(20),
+            "plan_prov": dict(pp)}
+
+
+SOURCES = "offline.sources"   # {کلید فایل: ردیف‌های بی‌نام}؛ هر فایل جدا نگه داشته و با بقیه جمع می‌شود
+
+
 def import_file(data: bytes) -> dict:
-    s = parse_workbook(data)
-    if not s["invoices"] and not s["calls"]["total"]:
-        raise ValueError("شیت فاکتور یا تماس در فایل پیدا نشد (ستون‌های «مجموع واریزی مشتری» و «استان» یا «به خرید منجر شده» لازم است)")
+    r = parse_rows(data)
+    if not r["invoices"] and not r["calls"] and not r["demand"]:
+        raise ValueError("شیت فاکتور یا تماس در فایل پیدا نشد (ستون‌های «مجموع واریزی مشتری» و «استان»، "
+                         "یا «به خرید منجر شده»، یا «شهر» و «درخواست» لازم است)")
+    src = get_setting(SOURCES) or {}
+    src[r["key"]] = {"at": datetime.now(timezone.utc).isoformat(), "sheets": r["sheets"],
+                     **{k: r[k] for k in ("invoices", "calls", "petty", "demand")}}
+    set_setting(SOURCES, src)
+    s = rebuild()
+    log.info("فروش آفلاین: فایل %s (%d فاکتور، %d تماس، %d درخواست)", r["key"], len(r["invoices"]),
+             len(r["calls"]), len(r["demand"]))
+    return s
+
+
+def rebuild() -> dict:
+    src = get_setting(SOURCES) or {}
+    allr = {k: [x for v in src.values() for x in v.get(k) or []] for k in ("invoices", "calls", "petty", "demand")}
+    s = _summarize(allr["invoices"], allr["calls"], allr["petty"], allr["demand"])
+    s["files"] = [{"key": k, "at": v.get("at"), "sheets": v.get("sheets"), "invoices": len(v.get("invoices") or []),
+                   "calls": len(v.get("calls") or []), "demand": len(v.get("demand") or [])} for k, v in src.items()]
     set_setting(KEY, s)
-    log.info("فروش آفلاین: %d فاکتور، %d تماس بارگذاری شد", s["invoices"], s["calls"]["total"])
     return s
 
 
@@ -281,10 +377,13 @@ def plan_stats(plan_id: str) -> dict | None:
 
 def plan_province_counts() -> dict[tuple[str, str], int]:
     s = summary() or {}
-    out = {}
+    out: dict = {}
     for k, v in (s.get("plan_prov") or {}).items():
         pl, _, pv = k.partition("|")
         out[(pl, pv)] = v
+    for k, v in ((s.get("demand") or {}).get("plan_prov") or {}).items():   # هر تماس بدون فاکتور = نصف فاکتور
+        pl, _, pv = k.partition("|")
+        out[(pl, pv)] = out.get((pl, pv), 0) + 0.5 * v
     return out
 
 

@@ -708,6 +708,10 @@ def api_offline(req, m):
             names = dict(db.query(PlanCategory.id, PlanCategory.name).all())
         for k, v in s["plans"].items():
             v["name"] = names.get(k, "متفرقه" if k == "OTHER" else k)
+    if (s.get("demand") or {}).get("plans"):
+        with get_session() as db:
+            names = dict(db.query(PlanCategory.id, PlanCategory.name).all())
+        s["demand"]["plans"] = [[re.sub(r"\s*\(.*?\)", "", names.get(k, k))[:45], v] for k, v in s["demand"]["plans"]]
     return s
 
 
@@ -723,7 +727,7 @@ def api_offline_import(req, m):
         raise HttpError(400, str(e)) from None
     planner._hist_cache["at"] = 0.0   # امتیازها با داده‌ی تازه دوباره حساب شوند
     return {k: s[k] for k in ("invoices", "revenue", "profit", "margin_pct", "avg_profit", "max_cost_per_call")} | \
-        {"calls": s["calls"]["total"]}
+        {"calls": s["calls"]["total"], "demand": (s.get("demand") or {}).get("total", 0)}
 
 
 # =============== مسیرها ===============

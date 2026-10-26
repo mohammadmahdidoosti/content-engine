@@ -89,3 +89,13 @@ def test_offline_parse_numbers_and_summary():
     assert s["plans"]["PNEU"]["call_conv_pct"] == 20.0
     assert s["plans"]["PNEU"]["max_cost_per_call"] == 200_000
     assert s["plan_prov"]["IRRIG|تهران"] == 4
+
+
+def test_offline_demand_baseline():
+    from app.tracking.offline import _demand, province
+    assert province(None, "کوهدشت") == "لرستان" and province(None, "رباط کریم") == "تهران"
+    rows = [{"day": "1405/07/27", "ym": "1405/07", "prov": "تهران", "plan": "IRRIG"}] * 20
+    rows += [{"day": "1405/07/28", "ym": "1405/07", "prov": "فارس", "plan": "OTHER"}] * 10
+    rows += [{"day": "1499/01/01", "ym": None, "prov": "نامشخص", "plan": "OTHER"}]   # تاریخ اشتباه آینده
+    d = _demand(rows)
+    assert d["days"] == 2 and d["per_day"] == 15.0 and d["plan_prov"] == {"IRRIG|تهران": 20}

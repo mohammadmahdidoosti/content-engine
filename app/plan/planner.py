@@ -8,6 +8,7 @@
 import math
 import re
 import time
+from collections import Counter
 from statistics import median
 
 from app.db.marketing import PlanCategory
@@ -40,7 +41,28 @@ def margin_weight(plan_id: str, group: str | None = None) -> float:
     """حاشیه‌ی سود: اول تنظیم خود دسته، بعد تنظیم گروه."""
     mg = cfg("planner.margins") or {}
     lvl = mg.get(plan_id) or (mg.get(group) if group else None)
-    return MARGIN_FACTORS.get(lvl, 1.0)
+    if lvl in MARGIN_FACTORS:
+        return MARGIN_FACTORS[lvl]
+    try:  # اگر دستی تنظیم نشده: سود واقعی هر فاکتور از فایل فروش آفلاین
+        from app.tracking.offline import profit_factor
+        return profit_factor(plan_id) or 1.0
+    except Exception:  # noqa: BLE001
+        return 1.0
+
+
+def _unit_economics(plan_id: str) -> dict:
+    """از فایل فروش آفلاین: سود هر فروش و سقف هزینه‌ی هر تماس (اگر فایل بارگذاری شده باشد)."""
+    try:
+        from app.tracking.offline import plan_stats, summary
+        st = plan_stats(plan_id) or {}
+        if (st.get("invoices") or 0) < 4:
+            s = summary() or {}
+            st = {"avg_profit": s.get("avg_profit"), "max_cost_per_call": s.get("max_cost_per_call"),
+                  "margin_pct": s.get("margin_pct"), "invoices": 0}
+        return {"profit_per_sale": st.get("avg_profit"), "max_cost_per_call": st.get("max_cost_per_call"),
+                "real_margin_pct": st.get("margin_pct"), "past_invoices": st.get("invoices") or 0}
+    except Exception:  # noqa: BLE001
+        return {}
 
 
 _perf_cache: dict = {"at": 0.0, "data": {}}
@@ -94,7 +116,10 @@ def history_weight(plan_id: str, provinces: list[str]) -> tuple[float, int]:
     if time.monotonic() - _hist_cache["at"] > 300:
         try:
             from app.tracking.history import province_demand
-            _hist_cache["data"] = province_demand()
+            from app.tracking.offline import plan_province_counts
+            d = Counter(province_demand())
+            d.update(plan_province_counts())   # فاکتورهای تلفنی/آفلاین هم حساب می‌شوند
+            _hist_cache["data"] = dict(d)
         except Exception:  # noqa: BLE001
             _hist_cache["data"] = {}
         _hist_cache["at"] = time.monotonic()
@@ -201,6 +226,7 @@ def recommendations(limit: int = 12, month: int | None = None) -> dict:
                         "weather": alerts, "margin": margin_weight(p.id, p.group),
                         "performance": performance_weight(p.id), "price_weight": price_w,
                         "past_orders": history_weight(p.id, seg.get("provinces", []))[1],
+                        **_unit_economics(p.id),
                     }
             if best:
                 recs.append(best)

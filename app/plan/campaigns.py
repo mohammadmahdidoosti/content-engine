@@ -220,6 +220,7 @@ def placement_metrics(db) -> dict[int, dict]:
 
 
 def report() -> dict:
+    from app.tracking.offline import margin_rate
     with get_session() as db:
         m = placement_metrics(db)
         camps = {c.id: c for c in db.query(Campaign).all()}
@@ -231,9 +232,13 @@ def report() -> dict:
         for pl in db.query(Placement).all():
             x = m[pl.id]
             spent = x["cost"] if pl.status in ("paid", "published", "done") else 0
+            camp = camps.get(pl.campaign_id)
+            rate = margin_rate(camp.plan_id if camp else None)
+            est_profit = round(x["revenue"] * rate) if rate and x["revenue"] else 0
             for agg, key in ((by_camp, pl.campaign_id), (by_chan, pl.channel_id), (by_var, pl.ad_variant or "—")):
                 agg[key].update({"spent": spent, "clicks": x["clicks"], "orders": x["orders"],
-                                 "revenue": x["revenue"], "calls": x["calls"], "placements": 1})
+                                 "revenue": x["revenue"], "calls": x["calls"], "placements": 1,
+                                 "est_profit": est_profit})
             ch = chans.get(pl.channel_id)
             rows.append({"id": pl.id, "code": pl.code, "status": pl.status,
                          "campaign": camps[pl.campaign_id].title if pl.campaign_id in camps else None,
@@ -245,6 +250,8 @@ def report() -> dict:
             leads = d.get("orders", 0) + d.get("calls", 0)
             d["roas"] = round(d.get("revenue", 0) / sp, 2) if sp else None
             d["cost_per_lead"] = round(sp / leads) if sp and leads else None
+            # سود واقعی (فروش × نرخ سود همان دسته از فایل فروش) منهای هزینه‌ی تبلیغ
+            d["net_profit"] = d.get("est_profit", 0) - sp if sp else None
             return d
         total = Counter()
         for d in by_camp.values():

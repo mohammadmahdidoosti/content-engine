@@ -700,6 +700,32 @@ def api_bots_setup(req, m):
     return bots.setup_webhooks(base)
 
 
+def api_offline(req, m):
+    from app.tracking.offline import summary
+    s = summary() or {}
+    if s.get("plans"):
+        with get_session() as db:
+            names = dict(db.query(PlanCategory.id, PlanCategory.name).all())
+        for k, v in s["plans"].items():
+            v["name"] = names.get(k, "متفرقه" if k == "OTHER" else k)
+    return s
+
+
+def api_offline_import(req, m):
+    """فایل اکسل فروش (بدنه‌ی خام). فقط آمار جمعی ذخیره می‌شود؛ خود فایل و نام/تلفن‌ها نه."""
+    from app.tracking.offline import import_file
+    data = req.raw(max_bytes=15_000_000)
+    if not data[:2] == b"PK":
+        raise HttpError(400, "فایل باید xlsx باشد")
+    try:
+        s = import_file(data)
+    except ValueError as e:
+        raise HttpError(400, str(e)) from None
+    planner._hist_cache["at"] = 0.0   # امتیازها با داده‌ی تازه دوباره حساب شوند
+    return {k: s[k] for k in ("invoices", "revenue", "profit", "margin_pct", "avg_profit", "max_cost_per_call")} | \
+        {"calls": s["calls"]["total"]}
+
+
 # =============== مسیرها ===============
 ROUTES = [
     ("GET", r"/api/me", api_me), ("GET", r"/api/stats", api_stats), ("GET", r"/api/overview", api_overview),
@@ -727,6 +753,7 @@ ROUTES = [
     ("POST", r"/api/bots/setup", api_bots_setup),
     ("GET", r"/api/history", api_history), ("POST", r"/api/history/run", api_history_run),
     ("GET", r"/api/pricing", api_pricing_status), ("POST", r"/api/pricing/run", api_pricing_run),
+    ("GET", r"/api/offline", api_offline), ("POST", r"/api/offline/import", api_offline_import),
 ]
 _COMPILED = [(meth, re.compile("^" + pat + "$"), fn) for meth, pat, fn in ROUTES]
 _PUBLIC = [("GET", re.compile(r"^/r/([A-Za-z0-9]{3,12})$"), public_redirect),
@@ -756,6 +783,14 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(self._body_cache, dict):
                 raise HttpError(400, "بدنه باید شیء JSON باشد")
         return self._body_cache
+
+    def raw(self, max_bytes: int) -> bytes:
+        n = int(self.headers.get("Content-Length") or 0)
+        if n <= 0:
+            raise HttpError(400, "فایلی ارسال نشد")
+        if n > max_bytes:
+            raise HttpError(413, "فایل خیلی بزرگ است")
+        return self.rfile.read(n)
 
     def client_ip(self) -> str:
         return (self.headers.get("X-Forwarded-For") or self.client_address[0]).split(",")[0].strip()

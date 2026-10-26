@@ -240,7 +240,9 @@ function recCard(r, opts = {}){
       ${r.margin && r.margin !== 1 ? `<span>سود: <b>${r.margin > 1 ? "زیاد" : "کم"}</b></span>` : ""}
       ${r.price_weight && r.price_weight !== 1 ? `<span>قیمت نسبت به بازار: <b>${r.price_weight > 1 ? "رقابتی" : "گران"}</b></span>` : ""}
       ${r.performance && r.performance !== 1 ? `<span>نتیجه‌ی تبلیغ‌های قبلی: <b>${r.performance > 1 ? "خوب" : "ضعیف"}</b></span>` : ""}
-      ${r.past_orders ? `<span>سفارش قبلی از این استان‌ها: <b>${fa(r.past_orders)}</b></span>` : ""}</div>
+      ${r.past_orders ? `<span>سفارش قبلی از این استان‌ها: <b>${fa(r.past_orders)}</b></span>` : ""}
+      ${r.profit_per_sale ? `<span title="از فایل فروش: میانگین سود هر فاکتور${r.past_invoices ? " این دسته" : " (کل فروشگاه)"}">سود هر فروش: <b>${mtoman(r.profit_per_sale)}</b>${r.real_margin_pct ? ` (${fa(r.real_margin_pct)}٪)` : ""}</span>` : ""}
+      ${r.max_cost_per_call ? `<span title="سود هر فروش × نرخ تبدیل تماس به خرید؛ تماس گران‌تر از این یعنی ضرر">سقف هزینه‌ی هر تماس: <b>${mtoman(r.max_cost_per_call)}</b></span>` : ""}</div>
     ${opts.full ? `<div class="small"><b>خریدار:</b> ${esc(r.buyers)}</div><div class="small"><b>پیام:</b> ${esc(r.angle)}</div>
       <div class="small"><b>زمان انتشار:</b> ${esc(r.time)}</div>${r.note ? `<div class="small muted">💡 ${esc(r.note)}</div>` : ""}` : ""}
     ${prodStrip(r.examples)}
@@ -434,9 +436,10 @@ async function channels(){
 
 // ================= REPORT =================
 async function report(){
-  const [d, h] = await Promise.all([api("/api/report"), api("/api/history").catch(() => null)]); const t = d.total || {};
-  const tbl = (rows, title) => `<div class="card"><h2>${title}</h2><div class="tbl">${rows.length ? `<table><thead><tr><th>نام</th><th>تبلیغ</th><th>هزینه</th><th>کلیک</th><th>تماس</th><th>سفارش</th><th>فروش</th><th>هزینه هر مشتری بالقوه</th><th>بازگشت</th></tr></thead><tbody>
-    ${rows.map(r => `<tr><td>${esc(r.title)}</td><td class="num">${fa(r.placements)}</td><td class="num">${mtoman(r.spent)}</td><td class="num">${fa(r.clicks)}</td><td class="num">${fa(r.calls)}</td><td class="num">${fa(r.orders)}</td><td class="num">${mtoman(r.revenue)}</td><td class="num">${mtoman(r.cost_per_lead)}</td><td class="num"><b>${r.roas != null ? fa(r.roas) + "×" : "–"}</b></td></tr>`).join("")}</tbody></table>` : '<div class="empty">هنوز داده‌ای نیست.</div>'}</div></div>`;
+  const [d, h, off] = await Promise.all([api("/api/report"), api("/api/history").catch(() => null), api("/api/offline").catch(() => null)]); const t = d.total || {};
+  setTimeout(() => bindOffline(), 0);
+  const tbl = (rows, title) => `<div class="card"><h2>${title}</h2><div class="tbl">${rows.length ? `<table><thead><tr><th>نام</th><th>تبلیغ</th><th>هزینه</th><th>کلیک</th><th>تماس</th><th>سفارش</th><th>فروش</th><th>هزینه هر مشتری بالقوه</th><th>بازگشت</th><th title="فروش × نرخ سود واقعی آن دسته (فایل فروش) منهای هزینه‌ی تبلیغ">سود خالص</th></tr></thead><tbody>
+    ${rows.map(r => `<tr><td>${esc(r.title)}</td><td class="num">${fa(r.placements)}</td><td class="num">${mtoman(r.spent)}</td><td class="num">${fa(r.clicks)}</td><td class="num">${fa(r.calls)}</td><td class="num">${fa(r.orders)}</td><td class="num">${mtoman(r.revenue)}</td><td class="num">${mtoman(r.cost_per_lead)}</td><td class="num"><b>${r.roas != null ? fa(r.roas) + "×" : "–"}</b></td><td class="num">${r.net_profit != null && r.est_profit ? `<b style="color:var(${r.net_profit >= 0 ? "--accent" : "--red"})">${mtoman(r.net_profit)}</b>` : "–"}</td></tr>`).join("")}</tbody></table>` : '<div class="empty">هنوز داده‌ای نیست.</div>'}</div></div>`;
   setTimeout(() => { const hr = $("#histRun"); if (hr) hr.onclick = async () => { hr.disabled = true; try { await post("/api/history/run"); toast("خواندن سفارش‌ها شروع شد؛ چند دقیقه بعد صفحه را تازه کنید"); } catch (e) { toast(e.message); } }; }, 0);
   $("#view").innerHTML = `<section class="stats">
     <div class="stat"><b>${mtoman(t.spent || 0)}</b><span>هزینه‌ی تبلیغ (تومان)</span></div>
@@ -445,10 +448,42 @@ async function report(){
     <div class="stat"><b>${t.roas != null ? fa(t.roas) + "×" : "–"}</b><span>بازگشت هزینه</span></div></section>
     ${ME.orders_enabled ? "" : `<div class="warnbox" style="margin-bottom:16px">سفارش‌ها هنوز خودکار شمرده نمی‌شوند. برای اینکه هر سفارش سایت خودکار به تبلیغی که از آن آمده وصل شود، یک کلید فقط-خواندنی ووکامرس لازم است (راهنما در «تنظیمات»). تا آن موقع تماس و سفارش را دستی در هر تبلیغ وارد کنید.</div>`}
     ${tbl(d.channels, "بر اساس کانال")}${tbl(d.campaigns, "بر اساس کمپین")}${tbl(d.variants || [], "نسخه‌ی کامل در برابر کوتاه (A/B)")}
+    ${offlineBlock(off)}
     ${historyBlock(h)}
     <div class="note small">یادگیری خودکار: وقتی یک دسته حداقل ۲ تبلیغ منتشرشده داشته باشد، اگر هزینه‌ی هر مشتری‌اش از میانه‌ی بقیه کمتر باشد امتیازش در برنامه تا ×۱٫۶ بالا می‌رود و اگر بیشتر باشد تا ×۰٫۶ پایین می‌آید؛ پس بودجه‌ی پیشنهادی خودکار به سمت چیزی می‌رود که جواب داده.</div>`;
 }
 
+function offlineBlock(o){
+  const up = `<label class="btn sm" style="cursor:pointer">بارگذاری فایل اکسل فروش<input type="file" id="offFile" accept=".xlsx" hidden></label>`;
+  if (!o || !o.invoices && !(o.calls || {}).total) return `<div class="card"><h2>فروش تلفنی و فاکتورها (فایل اکسل خودتان)</h2><div class="pad small">
+    فایل اکسل فاکتورها و تماس‌ها را بارگذاری کنید تا سود واقعی هر دسته، نرخ تبدیل تماس و سقف هزینه‌ی مجاز هر آگهی حساب شود.
+    فقط آمار جمعی نگه داشته می‌شود؛ نام، تلفن و آدرس مشتری‌ها خوانده و ذخیره نمی‌شود. <div style="margin-top:8px">${up}</div></div></div>`;
+  const row = (a, b) => `<div class="inline" style="justify-content:space-between;flex-wrap:nowrap"><span>${a}</span><b class="num">${b}</b></div>`;
+  const plans = Object.entries(o.plans || {}).filter(([k, v]) => v.invoices >= 3).sort((a, b) => (b[1].profit || 0) - (a[1].profit || 0));
+  const c = o.calls || {};
+  return `<div class="card"><header>فروش تلفنی و فاکتورها <span class="small muted">${fa(o.invoices)} فاکتور · ${fa(c.total || 0)} تماس · بارگذاری ${ago(o.imported_at)}</span>${up}</header>
+    <section class="stats" style="padding:12px 16px 0;margin:0">
+      <div class="stat"><b>${fa(o.margin_pct)}٪</b><span>میانگین سود واقعی</span></div>
+      <div class="stat"><b>${mtoman(o.avg_profit)}</b><span>سود هر فاکتور (تومان)</span></div>
+      <div class="stat"><b>${c.conv_pct != null ? fa(c.conv_pct) + "٪" : "–"}</b><span>تماس ← خرید</span></div>
+      <div class="stat"><b>${mtoman(o.max_cost_per_call)}</b><span>سقف هزینه‌ی هر تماس از تبلیغ</span></div></section>
+    <div class="tbl" style="padding:12px 16px"><table><thead><tr><th>دسته</th><th>فاکتور</th><th>فروش</th><th>سود</th><th>نرخ سود</th><th>سود هر فاکتور</th><th>تماس ← خرید</th><th>سقف هزینه هر تماس</th></tr></thead><tbody>
+      ${plans.map(([k, v]) => `<tr><td>${esc((v.name || k).slice(0, 60))}</td><td class="num">${fa(v.invoices)}</td><td class="num">${mtoman(v.revenue)}</td><td class="num">${mtoman(v.profit)}</td><td class="num">${v.margin_pct != null ? fa(v.margin_pct) + "٪" : "–"}</td><td class="num"><b>${mtoman(v.avg_profit)}</b></td><td class="num">${v.calls >= 20 ? fa(v.call_conv_pct) + "٪ <span class='muted'>(" + fa(v.calls) + ")</span>" : "–"}</td><td class="num">${mtoman(v.max_cost_per_call)}</td></tr>`).join("")}</tbody></table></div>
+    <div class="pad grid3 small" style="padding-top:0">
+      <div><b>استان فاکتورها</b>${(o.provinces || []).slice(0, 10).map(([k, v]) => row(esc(k), fa(v))).join("")}</div>
+      <div><b>ماه به ماه (فاکتور · فروش)</b>${(o.months || []).slice(-10).map(([k, n, r]) => row(esc(k), fa(n) + " · " + mtoman(r))).join("")}</div>
+      <div><b>تماس‌ها به تفکیک شیت (تماس · خرید)</b>${(c.by_sheet || []).slice(0, 8).map(([k, n, b]) => row(esc(k), fa(n) + " · " + fa(b))).join("")}
+        ${o.petty && o.petty.per_invoice ? `<div style="margin-top:8px">${row("هزینه‌ی ارسال/بسته‌بندی هر فاکتور (تنخواه)", mtoman(o.petty.per_invoice))}</div>` : ""}</div></div>
+    <div class="pad small muted" style="padding-top:0">اثر در برنامه: سود هر فاکتور هر دسته (نسبت به میانگین) امتیاز را بین ×۰٫۷۵ تا ×۱٫۴ تغییر می‌دهد، مگر اینکه در «نقشه» سود را دستی تعیین کرده باشید؛ و فاکتورهای هر استان مثل سفارش‌های سایت در «سفارش قبلی از این استان‌ها» حساب می‌شوند.
+      برای سنجش تبلیغ، در شیت تماس‌ها ستون «از کجا آشنا شد / کد آگهی» را اضافه کنید.</div></div>`;
+}
+function bindOffline(){
+  const f = $("#offFile"); if (!f) return;
+  f.onchange = async () => { const file = f.files[0]; if (!file) return; toast("در حال خواندن فایل…");
+    try { const r = await fetch("/api/offline/import", {method: "POST", headers: {"Content-Type": "application/octet-stream", "X-Run-Token": token}, body: file});
+      const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || ("HTTP " + r.status));
+      toast(`${fa(d.invoices)} فاکتور و ${fa(d.calls)} تماس خوانده شد`); report(); } catch (e) { toast(e.message); } };
+}
 function historyBlock(h){
   if (!ME.orders_enabled) return "";
   if (!h || !h.all_orders) return `<div class="card"><h2>سفارش‌های قبلی سایت</h2><div class="pad small">هنوز خوانده نشده. <button class="btn sm" id="histRun">خواندن سفارش‌ها</button></div></div>`;

@@ -69,3 +69,23 @@ def test_city_index_alignment():
     idx = city_index([p])
     assert idx["دزفول"]["province"] == "خوزستان" and idx["جیرفت"]["province"] == "کرمان"
     assert idx["کهنوج"]["entries"][0] == ("X", 0, 3)
+
+
+def test_offline_parse_numbers_and_summary():
+    from app.tracking.offline import _summarize, classify, num, province
+    assert num("1.400.000") == 1_400_000
+    assert num("200,000") == 200_000
+    assert num("1) 3.500.000\n2) 4.500.000") == 8_000_000
+    assert num("378.235\n-14%") == 378_235
+    assert num("حدود 70 هزار تومان") == 70_000
+    assert province("کرج") == "البرز" and province("ارومیه") == "آذربایجان غربی" and province(None, "رشت") == "گیلان"
+    assert classify("پمپ دنده ای گروه سه") == "HYD_GEAR_VANE"
+    assert classify("قطره چکان نتافیم") == "IRRIG"
+    inv = [{"ym": "1405/02", "prov": "تهران", "plan": "IRRIG", "rev": 10_000_000, "profit": 1_500_000, "ship": "تیپاکس"}] * 4
+    inv += [{"ym": "1405/03", "prov": "فارس", "plan": "PNEU", "rev": 20_000_000, "profit": 1_000_000, "ship": None}] * 4
+    calls = [{"sheet": "s", "ym": "1404/09", "plan": "PNEU", "buy": i % 5 == 0} for i in range(25)]
+    s = _summarize(inv, calls, [])
+    assert s["invoices"] == 8 and s["plans"]["IRRIG"]["margin_pct"] == 15.0
+    assert s["plans"]["PNEU"]["call_conv_pct"] == 20.0
+    assert s["plans"]["PNEU"]["max_cost_per_call"] == 200_000
+    assert s["plan_prov"]["IRRIG|تهران"] == 4

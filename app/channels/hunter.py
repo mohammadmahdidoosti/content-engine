@@ -143,7 +143,7 @@ def _fetch_eitaa(username: str) -> dict:
             "members": _num(mem.group(1)) if mem else 0, "views": views, "texts": texts}
 
 
-def check_candidates(deadline: float, limit: int = 25) -> dict:
+def check_candidates(deadline: float, limit: int = 60) -> dict:
     from app.channels.telegram import check_channel, fetch_telegram
     with get_session() as db:
         rows = (db.query(ChannelCandidate).filter(ChannelCandidate.status == "new")

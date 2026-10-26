@@ -50,12 +50,21 @@ def margin_weight(plan_id: str, group: str | None = None) -> float:
         return 1.0
 
 
-def _torob_w(plan_id: str) -> float:
+def _torob_w(plan_id: str, month: int | None = None) -> float:
+    """حجم کلیک ماه اخیر ترب × فصلی بودن واقعی همین ماه‌ها در سال گذشته (اگر داده‌ی سالانه هست)."""
     try:
-        from app.tracking.external import torob_weight
-        return torob_weight(plan_id)
+        from app.tracking.external import season_factor, torob_weight
+        return round(torob_weight(plan_id) * (season_factor(plan_id, month)[0] if month else 1.0), 3)
     except Exception:  # noqa: BLE001
         return 1.0
+
+
+def _torob_season(plan_id: str, month: int) -> float | None:
+    try:
+        from app.tracking.external import season_factor
+        return season_factor(plan_id, month)[1]
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def _unit_economics(plan_id: str) -> dict:
@@ -218,7 +227,7 @@ def recommendations(limit: int = 12, month: int | None = None) -> dict:
                 score = (t * weights.get(p.group, 1.0) * _value_weight(p.p90_price, p.median_price)
                          * _stock_weight(p) * _conf_weight(seg) * margin_weight(p.id, p.group)
                          * performance_weight(p.id) * price_w * (1.25 if alerts else 1.0)
-                         * history_weight(p.id, seg.get("provinces", []))[0] * _torob_w(p.id))
+                         * history_weight(p.id, seg.get("provinces", []))[0] * _torob_w(p.id, m))
                 if score <= 0:
                     continue
                 if best is None or score > best["score"]:
@@ -234,7 +243,7 @@ def recommendations(limit: int = 12, month: int | None = None) -> dict:
                         "weather": alerts, "margin": margin_weight(p.id, p.group),
                         "performance": performance_weight(p.id), "price_weight": price_w,
                         "past_orders": history_weight(p.id, seg.get("provinces", []))[1],
-                        **_unit_economics(p.id), "torob_weight": _torob_w(p.id),
+                        **_unit_economics(p.id), "torob_weight": _torob_w(p.id, m), "torob_season": _torob_season(p.id, m),
                     }
             if best:
                 recs.append(best)

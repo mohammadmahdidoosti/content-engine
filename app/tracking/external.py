@@ -20,7 +20,7 @@ from urllib.parse import unquote, urlparse
 from app.db.session import get_session, get_setting, set_setting
 
 log = logging.getLogger("tracking.external")
-SOURCES = {"torob_clicks", "gsc_queries", "ga_cities", "ga_sources"}
+SOURCES = {"torob_clicks", "torob_yearly", "gsc_queries", "ga_cities", "ga_sources"}
 ORIGINS = {"https://panel.torob.com", "https://search.google.com", "https://analytics.google.com"}
 _COMMERCIAL = re.compile(r"قیمت|خرید|فروش|نمایندگی|لیست قیمت|بازار|ارزان|عمده")
 
@@ -36,11 +36,14 @@ def ingest(payload: dict) -> dict:
     if src not in SOURCES:
         raise ValueError("منبع نامعتبر")
     rows = payload.get("rows") or []
-    if not isinstance(rows, list) or len(rows) > 20000:
+    if not isinstance(rows, list) or len(rows) > 60000:
         raise ValueError("ردیف‌ها نامعتبر")
     meta = payload.get("meta") or {}
-    fn = {"torob_clicks": _torob, "gsc_queries": _gsc, "ga_cities": _simple, "ga_sources": _simple}[src]
-    data = fn(rows, meta)
+    if src == "torob_yearly":
+        data = _torob_yearly(rows, payload.get("urls") or [], meta)
+    else:
+        fn = {"torob_clicks": _torob, "gsc_queries": _gsc, "ga_cities": _simple, "ga_sources": _simple}[src]
+        data = fn(rows, meta)
     data.update({"source": src, "at": datetime.now(timezone.utc).isoformat(),
                  "from": str(meta.get("from") or "")[:20] or None, "to": str(meta.get("to") or "")[:20] or None})
     set_setting(f"ext.{src}", data)
@@ -99,6 +102,66 @@ def _torob(rows: list, meta: dict) -> dict:
             "daily": daily, "plans": plans, "unmatched": unmatched, "top": top,
             "balance": int(_num(meta.get("balance"))) if meta.get("balance") is not None else None,
             "status": {str(k)[:40]: int(_num(v)) for k, v in status.items()} if isinstance(status, dict) else {}}
+
+
+def _torob_yearly(rows: list, urls: list, meta: dict) -> dict:
+    """ردیف: [ماه «1404-08», اندیس لینک در urls, کلیک, هزینه] ← کلیک ماهانه‌ی هر دسته و شاخص فصلی.
+
+    شاخص فصلی = سهم دسته از کلیک‌های آن ماه ÷ سهم دسته از کل سال (با هموارسازی برای عددهای کوچک)،
+    تا رشد کلی فروشگاه در طول سال (که همه‌ی ماه‌ها را بالا می‌برد) با فصل اشتباه گرفته نشود.
+    """
+    from app.db.marketing import PlanCategory, Product
+    with get_session() as db:
+        prods = db.query(Product.permalink, Product.plan_id).all()
+        names = dict(db.query(PlanCategory.id, PlanCategory.name).all())
+    by_slug = {_slug(p.permalink): p.plan_id for p in prods if p.permalink}
+    plan_of = [by_slug.get(_slug(str(u))) for u in urls[:20000]]
+    pm: dict = defaultdict(Counter)            # plan ← {ماه: کلیک}
+    month_tot, month_cost = Counter(), Counter()
+    for r in rows:
+        if not isinstance(r, list) or len(r) < 3:
+            continue
+        m, i, c = str(r[0])[:7], int(_num(r[1])), int(_num(r[2]))
+        if not re.match(r"^14\d\d-\d\d$", m):
+            continue
+        month_tot[m] += c
+        month_cost[m] += int(_num(r[3])) if len(r) > 3 else 0
+        pl = plan_of[i] if 0 <= i < len(plan_of) else None
+        pm[pl or "_unmatched"][m] += c
+    months = sorted(month_tot)
+    year = sum(month_tot.values()) or 1
+    plans = {}
+    for pl, cnt in pm.items():
+        tot = sum(cnt.values())
+        share = tot / year
+        idx = {}
+        for m in months:
+            exp = share * month_tot[m]
+            idx[int(m[5:])] = round((cnt[m] + 5) / (exp + 5), 2)      # کلید: شماره‌ی ماه شمسی
+        plans[pl] = {"plan_id": pl, "name": re.sub(r"\s*\(.*?\)", "", names.get(pl, pl))[:60], "clicks": tot,
+                     "months_active": sum(1 for m in months if cnt[m]), "by_month": [cnt[m] for m in months],
+                     "season": idx,
+                     "peak_months": [k for k, v in sorted(idx.items(), key=lambda x: -x[1]) if v >= 1.25][:3]}
+    weekly = [[str(w[0])[:10], int(_num(w[1]))] for w in (meta.get("weekly") or []) if isinstance(w, list) and len(w) >= 2]
+    return {"months": months, "month_clicks": [month_tot[m] for m in months], "month_cost": [month_cost[m] for m in months],
+            "clicks": sum(month_tot.values()), "cost": sum(month_cost.values()),
+            "plans": sorted(plans.values(), key=lambda x: -x["clicks"]), "weekly": weekly[-60:]}
+
+
+def season_factor(plan_id: str, month: int) -> tuple[float, float | None]:
+    """تقاضای فصلی واقعی در ترب برای این ماه و ماه بعد (همین ماه‌ها در سال گذشته).
+    خروجی: (ضریب بین ۰٫۸۵ و ۱٫۲, شاخص خام). فقط اگر دسته در سال حداقل ۱۰۰ کلیک و ۶ ماه فعال داشته باشد."""
+    y = get("torob_yearly") or {}
+    p = next((x for x in y.get("plans") or [] if x["plan_id"] == plan_id), None)
+    if not p or p["clicks"] < 100 or p["months_active"] < 6:
+        return 1.0, None
+    s = {int(k): v for k, v in (p.get("season") or {}).items()}
+    nxt = month % 12 + 1
+    vals = [s[m] for m in (month, nxt) if m in s]
+    if not vals:
+        return 1.0, None
+    raw = sum(vals) / len(vals)
+    return round(max(0.85, min(1.2, raw ** 0.4)), 3), round(raw, 2)
 
 
 def _gsc(rows: list, meta: dict) -> dict:

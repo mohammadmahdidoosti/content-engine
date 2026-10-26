@@ -106,3 +106,27 @@ def test_external_gsc():
     g = external._gsc([["قیمت شیر پروانه ای", 0, 120, "0%", 12.0], ["تست شیر برقی کنیستر", 35, 2535, "1.4%", 7.7]], {})
     assert g["commercial"]["queries"] == 1 and g["quick_wins"][0]["q"] == "تست شیر برقی کنیستر"
     assert external._slug("https://caravansanat.com/product/%D9%88%D8%A7%D9%86/") == "وان"
+
+
+def test_torob_season_index_removes_growth(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/t.db")
+    from app.config import get_settings
+    from app.db import session as sess
+    get_settings.cache_clear() if hasattr(get_settings, "cache_clear") else None
+    for attr in ("_engine", "_Session", "_session_factory"):
+        if hasattr(sess, attr):
+            monkeypatch.setattr(sess, attr, None)
+    if hasattr(sess.get_engine, "cache_clear"):
+        sess.get_engine.cache_clear()
+    sess.init_db()
+    from app.tracking.external import _torob_yearly
+    urls = ["https://caravansanat.com/product/a", "https://caravansanat.com/product/b"]
+    rows = []
+    for i, m in enumerate(["1404-08", "1404-09", "1404-10", "1404-11"]):
+        grow = (i + 1) * 100                       # فروشگاه رشد می‌کند
+        rows.append([m, 0, grow, 0])               # a: ثابت نسبت به رشد
+        rows.append([m, 1, grow * (3 if m == "1404-10" else 1), 0])   # b: دی پرتقاضا
+    y = _torob_yearly(rows, urls, {})
+    un = y["plans"][0]
+    assert y["months"] == ["1404-08", "1404-09", "1404-10", "1404-11"] and un["plan_id"] == "_unmatched"
+    assert y["month_clicks"][2] == 300 + 900

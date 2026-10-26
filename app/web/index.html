@@ -242,7 +242,7 @@ function recCard(r, opts = {}){
       ${r.performance && r.performance !== 1 ? `<span>نتیجه‌ی تبلیغ‌های قبلی: <b>${r.performance > 1 ? "خوب" : "ضعیف"}</b></span>` : ""}
       ${r.past_orders ? `<span>سفارش قبلی از این استان‌ها: <b>${fa(r.past_orders)}</b></span>` : ""}
       ${r.profit_per_sale ? `<span title="از فایل فروش: میانگین سود هر فاکتور${r.past_invoices ? " این دسته" : " (کل فروشگاه)"}">سود هر فروش: <b>${mtoman(r.profit_per_sale)}</b>${r.real_margin_pct ? ` (${fa(r.real_margin_pct)}٪)` : ""}</span>` : ""}
-      ${r.torob_weight && r.torob_weight > 1 ? `<span>تقاضا در ترب: <b>${r.torob_weight >= 1.12 ? "زیاد" : "متوسط"}</b></span>` : ""}
+      ${r.torob_season != null ? `<span title="سهم این دسته از کلیک‌های ترب در همین ماه و ماه بعدِ سال گذشته، نسبت به میانگین سالش">ترب، همین فصل پارسال: <b>${r.torob_season >= 1.25 ? "پرتقاضا" : r.torob_season <= 0.8 ? "کم‌تقاضا" : "عادی"}</b> (×${fa(r.torob_season)})</span>` : ""}
       ${r.max_cost_per_call ? `<span title="سود هر فروش × نرخ تبدیل تماس به خرید؛ تماس گران‌تر از این یعنی ضرر">سقف هزینه‌ی هر تماس: <b>${mtoman(r.max_cost_per_call)}</b></span>` : ""}</div>
     ${opts.full ? `<div class="small"><b>خریدار:</b> ${esc(r.buyers)}</div><div class="small"><b>پیام:</b> ${esc(r.angle)}</div>
       <div class="small"><b>زمان انتشار:</b> ${esc(r.time)}</div>${r.note ? `<div class="small muted">💡 ${esc(r.note)}</div>` : ""}` : ""}
@@ -514,6 +514,7 @@ function extBlock(e, off){
       <div><b>پرکلیک‌ترین کالاها در ترب</b>${(t.top || []).slice(0, 12).map(p => row(esc(p.name), fa(p.clicks))).join("")}</div>
       <div><b>کالاهایی که در ترب دیده نمی‌شوند</b>${Object.entries(t.status || {}).filter(([k, v]) => v && k !== "no_problem" && STATUS[k] !== "").sort((a, b) => b[1] - a[1]).map(([k, v]) => row(esc(STATUS[k] || k), fa(v))).join("") || "<div class='muted'>–</div>"}
         <div class="muted" style="margin-top:6px">موجودی حساب ترب: <b>${mtoman(t.balance)}</b></div></div></div>` : ""}
+    ${yearBlock(e.torob_yearly)}
     ${g ? `<div class="pad grid3 small" style="border-top:1px solid var(--line)">
       <div><b>گوگل: ${fa(g.clicks)} کلیک از ${fa(g.impr)} نمایش (${fa(g.queries)} عبارت)</b>
         <div class="muted" style="margin:4px 0">عبارت‌های خرید («قیمت/خرید/فروش»): فقط ${fa(g.commercial.clicks)} کلیک از ${fa(g.commercial.impr)} نمایش — یعنی گوگل الان کانال فروش نیست، کانال آموزش است.</div>
@@ -525,6 +526,19 @@ function extBlock(e, off){
       <div><b>منبع ورود (نشست)</b>${(gs && gs.rows || []).slice(0, 10).map(r => row(esc(r[0]), fa(r[1]))).join("")}</div>
       <div class="muted">شهر در آنالیتیکس از روی آی‌پی است و برای اینترنت همراه گاهی شهر مرکز اپراتور را نشان می‌دهد؛ برای مقایسه‌ی نسبی خوب است، نه دقیق.</div></div>` : ""}
     <div class="pad small muted" style="padding-top:0">اثر در برنامه: هرچه کالاهای یک دسته در ترب کلیک بیشتری بگیرند، امتیازش کمی بالاتر می‌رود (تا ×۱٫۲)؛ چون کلیک ترب یعنی خریداری که دنبال قیمت است.</div></div>`;
+}
+function yearBlock(y){
+  if (!y || !y.months) return "";
+  const MN = ["", "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
+  const mx = Math.max(...y.month_clicks, 1);
+  const plans = (y.plans || []).filter(p => p.plan_id !== "_unmatched" && p.clicks >= 100 && p.months_active >= 6).slice(0, 18);
+  const cell = v => { const c = v >= 1.25 ? "var(--accent)" : v <= 0.8 ? "var(--red)" : "var(--ink-3)"; return `<td class="num" style="color:${c};font-weight:${v >= 1.25 || v <= 0.8 ? 700 : 400}">${fa(v)}</td>`; };
+  return `<div class="pad small" style="border-top:1px solid var(--line)"><b>یک سال ترب (${esc(y.months[0])} تا ${esc(y.months[y.months.length - 1])}): ${fa(y.clicks)} کلیک · ${mtoman(y.cost)} تومان</b>
+    <div style="margin:8px 0">${y.months.map((m, i) => `<div class="inline" style="flex-wrap:nowrap;gap:6px"><span style="width:90px">${MN[+m.slice(5)]} ${fa(m.slice(2, 4))}</span><span style="flex:1;height:8px;border-radius:4px;background:var(--accent);opacity:.75;max-width:${Math.round(100 * y.month_clicks[i] / mx)}%"></span><b class="num">${fa(y.month_clicks[i])}</b></div>`).join("")}</div>
+    <b>شاخص فصلی هر دسته</b> <span class="muted">(۱ یعنی عادی؛ سبز = آن ماه نسبت به بقیه‌ی سال پرتقاضاتر، قرمز = کم‌تقاضاتر؛ رشد کلی فروشگاه حذف شده)</span>
+    <div class="tbl" style="margin-top:6px"><table><thead><tr><th>دسته</th><th>کلیک سال</th>${y.months.map(m => `<th>${MN[+m.slice(5)]}</th>`).join("")}</tr></thead><tbody>
+      ${plans.map(p => `<tr><td>${esc(p.name)}</td><td class="num">${fa(p.clicks)}</td>${y.months.map(m => cell((p.season || {})[+m.slice(5)] ?? 1)).join("")}</tr>`).join("")}</tbody></table></div>
+    <div class="muted" style="margin-top:6px">اثر در برنامه: برای هر دسته، شاخص همین ماه و ماه بعد در سال گذشته امتیاز را بین ×۰٫۸۵ تا ×۱٫۲ تغییر می‌دهد (فقط دسته‌هایی با حداقل ۱۰۰ کلیک و ۶ ماه فعالیت). یک سال داده هنوز کم است؛ برای همین اثرش محدود است و جای تقویم نقشه را نمی‌گیرد، تکمیلش می‌کند.</div></div>`;
 }
 function bindOffline(){
   const f = $("#offFile"); if (!f) return;

@@ -162,7 +162,7 @@ def run_daily(budget_sec: int = 720, mock_llm: bool = False, force: bool = False
             stats["refresh"] = sync_products_full_pass(client, deadline, max_pages=40)
 
         if time.monotonic() < deadline:
-            stats["mapping"] = mapping.map_unmapped_categories(deadline=deadline - 60, mock=mock_llm)
+            stats["mapping"] = mapping.map_unmapped_categories(max_batches=60, deadline=deadline - 60, mock=mock_llm)
         stats["assign"] = mapping.assign_products_and_stats()
         if get_setting("sync.initial_done_at") and time.monotonic() < deadline - 120:
             stats["proposals"] = mapping.propose_new_plans(mock=mock_llm)

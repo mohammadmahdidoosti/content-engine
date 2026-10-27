@@ -107,10 +107,12 @@ def _fix_sequences(conn, tables) -> None:
 
 def status() -> dict:
     import os
-    exp = os.environ.get("DB_EXPIRES_AT") or get_setting("db.expires_at") or "2026-11-22T16:43:14+00:00"
+    # تاریخ انقضا فقط برای دیتابیس رایگان Render معنی دارد (Render متغیر RENDER را می‌گذارد)؛
+    # روی VPS یا هر جای دیگر، فقط اگر DB_EXPIRES_AT صریحاً تنظیم شده باشد.
+    exp = os.environ.get("DB_EXPIRES_AT") or ("2026-11-22T16:43:14+00:00" if os.environ.get("RENDER") else None)
     days = None
     try:
-        days = (datetime.fromisoformat(exp) - datetime.now(timezone.utc)).days
+        days = (datetime.fromisoformat(exp) - datetime.now(timezone.utc)).days if exp else None
     except ValueError:
         pass
     return {"last": get_setting("backup.last"), "db_expires_at": exp, "db_days_left": days}

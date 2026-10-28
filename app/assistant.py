@@ -110,7 +110,7 @@ def ask(question: str, channel: str = "site", user_id: str | None = None, mock: 
         f"{'موجود' if p.in_stock else 'ناموجود'} | {p.permalink}" for p in prods) or "(کالای مرتبطی پیدا نشد)"
     system = (
         f"تو دستیار فروش «{s.brand_name}» ({s.brand_site_url}) هستی؛ {s.brand_niche}.\n"
-        f"لحن: {s.brand_tone}\nفرایند فروش: {s.sales_process}\n"
+        f"لحن: {s.brand_tone}\nفرایند فروش: {s.sales_process}\nشرایط واقعی فروشگاه: {s.brand_facts}\n"
         "قوانین:\n- فقط از کالاها و قیمت‌های لیست زیر استفاده کن؛ قیمت یا مشخصات نساز.\n"
         "- جواب کوتاه بده (حداکثر ۶ خط)، مناسب پیام‌رسان.\n"
         "- اگر کالای مناسب هست: نام و قیمت روز را بگو و بگو «سفارش را در سایت ثبت کنید؛ کارشناس ما برای تأیید و "

@@ -27,7 +27,7 @@ def utm_url(target: str, source: str, campaign: str, content: str, medium: str =
 
 
 def short_url(code: str) -> str | None:
-    base = (get_settings().public_base_url or os.environ.get("RENDER_EXTERNAL_URL") or "").rstrip("/")
+    base = (get_settings().public_base_url or "").rstrip("/")
     return f"{base}/r/{code}" if base else None
 
 

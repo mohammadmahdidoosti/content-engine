@@ -1,9 +1,7 @@
-# هر ساعت سرویس Render را بیدار می‌کند تا همگام‌سازی روزانه (و بارگذاری اولیه‌ی تکه‌تکه) انجام شود.
+# اجرای دستی /api/cron (زمان‌بند اصلی داخل خود برنامه روی VPS است و سرور نمی‌خوابد).
 # نیاز به دو Secret در تنظیمات ریپو: RUN_TOKEN و SERVICE_URL
 name: hourly-sync
 on:
-  schedule:
-    - cron: "17 * * * *"
   workflow_dispatch:
 jobs:
   ping:

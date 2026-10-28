@@ -96,7 +96,7 @@ def refresh(timeout: float = 30) -> dict:
     params = {"latitude": lat, "longitude": lon, "forecast_days": 7, "timezone": "Asia/Tehran",
               "daily": "temperature_2m_min,temperature_2m_max,precipitation_sum"}
     r = None
-    for attempt in range(2):   # آی‌پی مشترک Render گاهی ۴۲۹ می‌گیرد
+    for attempt in range(2):   # آی‌پی سرور گاهی ۴۲۹ می‌گیرد
         r = httpx.get("https://api.open-meteo.com/v1/forecast", timeout=timeout, params=params,
                       headers={"User-Agent": "content-engine/1.0 (caravansanat)"})
         if r.status_code != 429:

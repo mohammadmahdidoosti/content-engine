@@ -30,10 +30,7 @@ def collect() -> list[dict]:
         dl = b.get("db_days_left")
         if dl is not None and dl <= 10:
             add("critical" if dl <= 3 else "warn",
-                f"دیتابیس رایگان Render {dl} روز دیگر منقضی می‌شود؛ پشتیبان بگیرید و برای انتقال (دیتابیس تازه یا VPS) اقدام کنید.", "#settings")
-        age = _age_days((b.get("last") or {}).get("at"))
-        if age is None or age > 7:
-            add("warn", "بیش از یک هفته پشتیبان گرفته نشده" if age else "هنوز پشتیبانی از داده‌ها گرفته نشده", "#settings")
+                f"دیتابیس {dl} روز دیگر منقضی می‌شود؛ پشتیبان بگیرید و منتقل کنید.", "#settings")
     except Exception:  # noqa: BLE001
         pass
 
@@ -63,7 +60,7 @@ def collect() -> list[dict]:
     # همگام‌سازی سایت
     last = _age_days(get_setting("sync.last_daily_at"))
     if last is not None and last > 2:
-        add("warn", f"همگام‌سازی محصولات سایت {last:.0f} روز است اجرا نشده (سرویس خواب بوده یا زمان‌بند ساعتی گیت‌هاب تنظیم نیست).", "#settings")
+        add("warn", f"همگام‌سازی محصولات سایت {last:.0f} روز است اجرا نشده (سرویس روی سرور متوقف بوده یا زمان‌بند خاموش است؛ NO_SCHEDULER در Coolify).", "#settings")
 
     # تماس‌ها
     try:

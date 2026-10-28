@@ -42,8 +42,8 @@ class Settings(BaseSettings):
     wc_consumer_key: str = ""
     wc_consumer_secret: str = ""
 
-    # آدرس عمومی همین سرویس (برای لینک‌های کوتاه)؛ Render خودش RENDER_EXTERNAL_URL را می‌گذارد
-    public_base_url: str = Field("", validation_alias=AliasChoices("PUBLIC_BASE_URL", "RENDER_EXTERNAL_URL"))
+    # آدرس عمومی همین سرویس (لینک‌های کوتاه، webhook ربات‌ها)، مثلاً https://content.caravansanat.com
+    public_base_url: str = Field("", validation_alias=AliasChoices("PUBLIC_BASE_URL"))
 
     log_level: str = "INFO"
 

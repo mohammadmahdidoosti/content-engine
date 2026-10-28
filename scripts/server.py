@@ -1,5 +1,5 @@
 """
-سرور پنل و API (Web Service روی Render). فقط کتابخانه‌ی استاندارد + SQLAlchemy.
+سرور پنل و API (روی VPS با Coolify). فقط کتابخانه‌ی استاندارد + SQLAlchemy.
 
 عمومی:   GET /  (پنل)   GET /health   GET /r/<کد>  (لینک کوتاه تبلیغ)
 محافظت‌شده با هدر X-Run-Token: همه‌ی /api/...  (فهرست کامل در ROUTES پایین فایل)
@@ -828,7 +828,7 @@ def api_assistant_stats(req, m):
 
 
 def api_bots_setup(req, m):
-    base = get_settings().public_base_url or os.environ.get("RENDER_EXTERNAL_URL", "")
+    base = get_settings().public_base_url
     if not base:
         raise HttpError(400, "آدرس عمومی سرویس معلوم نیست")
     return bots.setup_webhooks(base)

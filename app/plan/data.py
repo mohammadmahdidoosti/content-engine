@@ -39,7 +39,7 @@ def _tehran_today():
 
 
 def today_jalali() -> jdatetime.date:
-    """تاریخ امروز به وقت تهران (سرور Render روی UTC است)."""
+    """تاریخ امروز به وقت تهران (سرور روی UTC است)."""
     return jdatetime.date.fromgregorian(date=_tehran_today())
 
 

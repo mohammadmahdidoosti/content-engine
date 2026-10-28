@@ -129,7 +129,7 @@ details[open]>summary::before{content:"▾ "}
   <div class="card pad">
     <div class="logo">ک</div>
     <h2 style="text-align:center;margin:0 0 4px;font-size:18px">مدیر بازاریابی کاروان صنعت</h2>
-    <p class="muted small" style="text-align:center;margin:0 0 14px">برای ورود، مقدار <code>RUN_TOKEN</code> را از بخش Environment سرویس در Render وارد کنید.</p>
+    <p class="muted small" style="text-align:center;margin:0 0 14px">برای ورود، مقدار <code>RUN_TOKEN</code> را (از متغیرهای محیطی سرویس در Coolify) وارد کنید.</p>
     <form id="loginForm">
       <label class="f" for="tok">رمز ورود</label>
       <input type="password" id="tok" autocomplete="current-password" required>
@@ -708,7 +708,7 @@ async function settings(){
   <div class="card"><h2>اتصال سفارش‌ها ${s.orders_enabled ? '<span class="badge b-ok">فعال</span>' : '<span class="badge b-warn">غیرفعال</span>'}</h2><div class="pad small">
     ${s.orders_enabled ? "سفارش‌های سایت روزانه خوانده می‌شوند و هر سفارشی که از لینک یک تبلیغ آمده باشد، خودکار به همان تبلیغ وصل می‌شود." :
     `برای شمارش خودکار سفارش‌ها:<ol style="margin:6px 0;padding-right:20px"><li>در پیشخوان وردپرس: ووکامرس ← پیکربندی ← پیشرفته ← REST API ← افزودن کلید.</li>
-    <li>دسترسی را <b>فقط خواندن (Read)</b> بگذارید.</li><li>دو مقدار Consumer key و Consumer secret را خودتان در Render، سرویس content-engine ← Environment با نام‌های <code>WC_CONSUMER_KEY</code> و <code>WC_CONSUMER_SECRET</code> وارد کنید.</li></ol>
+    <li>دسترسی را <b>فقط خواندن (Read)</b> بگذارید.</li><li>دو مقدار Consumer key و Consumer secret را خودتان در Coolify، سرویس content-engine ← Environment با نام‌های <code>WC_CONSUMER_KEY</code> و <code>WC_CONSUMER_SECRET</code> وارد کنید.</li></ol>
     ووکامرس منبع هر سفارش را ذخیره می‌کند؛ لینک‌های تبلیغ ما کد تبلیغ را همراه دارند، پس سفارش‌ها خودکار به تبلیغ وصل می‌شوند.`}</div></div>`;
   $("#sSave").onclick = async () => { const n = v => v.replace(/[٬,]/g, "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
     const weights = {}; document.querySelectorAll("[data-w]").forEach(i => weights[i.dataset.w] = +i.value);
@@ -728,10 +728,10 @@ async function settings(){
   api("/api/backup/status").then(b => {
     const v = $("#view"); if (!v || !$("#syncNow")) return;
     const last = b.last; const warn = b.db_days_left != null && b.db_days_left <= 10;
-    v.insertAdjacentHTML("afterbegin", `<div class="card"><header>پشتیبان داده‌ها <span class="small muted">دیتابیس رایگان Render: ${b.db_days_left != null ? fa(b.db_days_left) + " روز تا انقضا" : "–"}</span></header><div class="pad small">
+    v.insertAdjacentHTML("afterbegin", `<div class="card"><header>پشتیبان داده‌ها <span class="small muted">${b.db_days_left != null ? "دیتابیس: " + fa(b.db_days_left) + " روز تا انقضا" : "پشتیبان کامل Postgres هر شب ساعت ۴ روی سرور و گوگل‌درایو گرفته می‌شود"}</span></header><div class="pad small">
       <div>آخرین پشتیبان: <b>${last ? ago(last.at) + " · " + fa(Math.round(last.bytes / 1024)) + " کیلوبایت" : "هنوز گرفته نشده"}</b></div>
       ${warn ? `<div class="danger" style="margin-top:6px">دیتابیس به‌زودی منقضی می‌شود؛ پشتیبان بگیرید و برای انتقال اقدام کنید.</div>` : ""}
-      <div class="muted" style="margin:6px 0">همه‌ی داده‌ها (کالاها، نقشه، کانال‌ها، کمپین‌ها، سفارش‌ها، آمار اکسل، داده‌ی ترب و گوگل) در یک فایل. اطلاعات شخصی مشتری در آن نیست، ولی داده‌ی تجاری هست؛ فایل را جایی امن نگه دارید و هفته‌ای یک بار بگیرید.</div>
+      <div class="muted" style="margin:6px 0">همه‌ی داده‌ها (کالاها، نقشه، کانال‌ها، کمپین‌ها، سفارش‌ها، آمار اکسل، داده‌ی ترب و گوگل) در یک فایل. اطلاعات شخصی مشتری در آن نیست، ولی داده‌ی تجاری هست؛ این دکمه برای انتقال دستی است؛ پشتیبان شبانه جدا و خودکار است.</div>
       <div class="inline"><button class="btn sm" id="bkDown">دانلود پشتیبان</button>
         <label class="ghost sm" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:5px 10px">بازگردانی از فایل<input type="file" id="bkUp" accept=".gz,.json" hidden></label></div></div></div>`);
     $("#bkDown").onclick = async () => { const bt = $("#bkDown"); bt.disabled = true; toast("در حال ساخت پشتیبان…");
@@ -850,9 +850,8 @@ async function assistant(){
         <button class="ghost sm" data-copy3='&lt;script src="${esc(base)}/widget.js" defer&gt;&lt;\/script&gt;'>کپی</button></div>
       <div style="margin-top:12px"><b>ربات تلگرام:</b> ${s.bots.telegram ? '<span class="badge b-ok">توکن تنظیم شده</span>' : '<span class="badge b-warn">توکن ندارد</span>'}
         · <b>ربات بله:</b> ${s.bots.bale ? '<span class="badge b-ok">توکن تنظیم شده</span>' : '<span class="badge b-warn">توکن ندارد</span>'}</div>
-      <div class="muted" style="margin-top:4px">ربات را با @BotFather (تلگرام) یا @botfather (بله) بسازید و توکنش را خودتان در Render با نام <code>TELEGRAM_BOT_TOKEN</code> یا <code>BALE_BOT_TOKEN</code> بگذارید؛ بعد این دکمه را بزنید:</div>
-      <button class="btn sm" id="botSetup" style="margin-top:6px" ${s.bots.telegram || s.bots.bale ? "" : "disabled"}>اتصال ربات‌ها</button><div id="botOut" class="small"></div>
-      <div class="warnbox" style="margin-top:10px">روی پلن رایگان Render، اولین پیام بعد از خواب سرویس حدود یک دقیقه طول می‌کشد. برای استفاده‌ی واقعی، سرویس باید همیشه بیدار باشد (Starter یا VPS).</div></div></div></div>
+      <div class="muted" style="margin-top:4px">ربات را با @BotFather (تلگرام) یا @botfather (بله) بسازید و توکنش را خودتان در Coolify (متغیرهای محیطی) با نام <code>TELEGRAM_BOT_TOKEN</code> یا <code>BALE_BOT_TOKEN</code> بگذارید؛ بعد این دکمه را بزنید:</div>
+      <button class="btn sm" id="botSetup" style="margin-top:6px" ${s.bots.telegram || s.bots.bale ? "" : "disabled"}>اتصال ربات‌ها</button><div id="botOut" class="small"></div></div></div></div>
     <div class="grid2"><div class="card"><h2>بیشترین کالاهای پرسیده‌شده</h2><div class="pad small">${(s.top_products || []).map(p => `<div>${esc(p.name || p.id)} — <b>${fa(p.count)}</b></div>`).join("") || '<div class="muted">هنوز پرسشی نیست.</div>'}</div></div>
       <div class="card"><h2>شهرهای پرسش‌کنندگان</h2><div class="pad small">${(s.top_cities || []).map(([c, n]) => `<div>${esc(c)} — <b>${fa(n)}</b></div>`).join("") || '<div class="muted">هنوز شهری گفته نشده.</div>'}</div></div></div>
     <div class="card"><header>آخرین پرسش‌ها <span class="small muted">${fa(s.total)} پرسش · ${Object.entries(s.by_channel || {}).map(([k, v]) => esc(k) + " " + fa(v)).join(" · ")}</span></header><div class="tbl"><table><thead><tr><th>زمان</th><th>کانال</th><th>پرسش</th><th>شهر</th><th>جواب</th></tr></thead><tbody>

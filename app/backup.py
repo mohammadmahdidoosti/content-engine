@@ -1,8 +1,7 @@
 """
 پشتیبان کامل دیتابیس (همه‌ی جدول‌ها) به یک فایل JSON فشرده و بازگردانی آن.
 
-دیتابیس رایگان Render ۳۰ روز بعد از ساخت منقضی می‌شود؛ با این فایل، داده‌ها در چند دقیقه به دیتابیس تازه
-یا VPS منتقل می‌شوند. اطلاعات شخصی در دیتابیس نیست (نه نام، نه تلفن)؛ ولی داده‌ی تجاری هست، پس فایل را
+با این فایل، داده‌ها در چند دقیقه به سرور یا دیتابیس تازه منتقل می‌شوند (جدا از پشتیبان شبانه‌ی Postgres روی سرور). اطلاعات شخصی در دیتابیس نیست (نه نام، نه تلفن)؛ ولی داده‌ی تجاری هست، پس فایل را
 فقط خودتان نگه دارید.
 """
 import gzip
@@ -107,9 +106,8 @@ def _fix_sequences(conn, tables) -> None:
 
 def status() -> dict:
     import os
-    # تاریخ انقضا فقط برای دیتابیس رایگان Render معنی دارد (Render متغیر RENDER را می‌گذارد)؛
-    # روی VPS یا هر جای دیگر، فقط اگر DB_EXPIRES_AT صریحاً تنظیم شده باشد.
-    exp = os.environ.get("DB_EXPIRES_AT") or ("2026-11-22T16:43:14+00:00" if os.environ.get("RENDER") else None)
+    # فقط اگر دیتابیس تاریخ انقضا دارد (مثلاً یک دیتابیس آزمایشی)، با DB_EXPIRES_AT اعلام می‌شود.
+    exp = os.environ.get("DB_EXPIRES_AT") or None
     days = None
     try:
         days = (datetime.fromisoformat(exp) - datetime.now(timezone.utc)).days if exp else None

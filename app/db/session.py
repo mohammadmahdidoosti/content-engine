@@ -9,7 +9,7 @@ _Session = None
 
 
 def _normalize_url(url: str) -> str:
-    """آدرس Render (postgres:// یا postgresql://) را به درایور psycopg3 تبدیل می‌کند."""
+    """آدرس دیتابیس (postgres:// یا postgresql://) را به درایور psycopg3 تبدیل می‌کند."""
     for prefix in ("postgres://", "postgresql://"):
         if url.startswith(prefix):
             return "postgresql+psycopg://" + url[len(prefix):]

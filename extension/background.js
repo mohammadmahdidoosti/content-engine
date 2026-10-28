@@ -71,7 +71,8 @@ async function pageEitaaQuery(q, limit, minMembers, seen) {
     if (!members || members < minMembers) continue;
     const sc = c.querySelector(".bubbles .scrollable");
     for (let i = 0; i < 3 && sc; i++) { sc.scrollTop = 0; await sleep(1600); }
-    if (sc) { for (let y = 0; y <= sc.scrollHeight; y += Math.max(300, sc.clientHeight * 0.8)) { sc.scrollTop = y; await sleep(650); } await sleep(1200); }
+    if (sc) { const step = Math.max(300, sc.clientHeight * 0.8), end = sc.scrollHeight;   // حداکثر ۲۵ قدم تا بازدیدها بارگذاری شوند
+      for (let i = 0, y = 0; i < 25 && y <= end; i++, y += step) { sc.scrollTop = y; await sleep(650); } await sleep(1200); }
     const user = (location.hash.match(/#@([A-Za-z0-9_]+)/) || [])[1];
     if (!user) continue;
     const posts = [...c.querySelectorAll(".bubble[data-timestamp]")].filter(b => !b.classList.contains("service")).map(b => {

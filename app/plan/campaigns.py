@@ -1,5 +1,6 @@
 """کمپین‌ها، جایگاه‌های تبلیغ (کمپین × کانال)، ساخت متن تبلیغ با LLM و گزارش بازده."""
 import logging
+import re
 from collections import Counter, defaultdict
 
 from pydantic import BaseModel, Field
@@ -153,6 +154,18 @@ def build_ad_prompt(db, pl: Placement) -> tuple[str, str]:
     return system, user
 
 
+_BANNED = re.compile(r"تخفیف|ارسال\s*رایگان|گارانتی|ارزان[‌ ]?ترین|حراج|رایگان\s*ارسال")
+
+
+def ad_problems(text: str) -> list[str]:
+    """ادعاهایی که در «شرایط واقعی فروشگاه» نیست، یا اقساط بدون قید «برخی کالاها»."""
+    out = [f"ادعای ساختگی: «{m.group(0)}»" for m in _BANNED.finditer(text or "")]
+    for sent in re.split(r"[.!؟\n،؛]", text or ""):
+        if re.search(r"قسط|اقساط", sent) and not re.search(r"برخی|بعضی", sent):
+            out.append("اقساط بدون قید «برای برخی کالاها»")
+    return out
+
+
 def generate_ad(placement_id: int, mock: bool = False) -> None:
     with get_session() as db:
         pl = db.get(Placement, placement_id)
@@ -167,7 +180,14 @@ def generate_ad(placement_id: int, mock: bool = False) -> None:
         else:
             r = get_llm().generate_json(system, user, AdPost)
             data, cost = r.data, r.cost_usd
+            probs = ad_problems(" ".join([data.headline, data.body, data.cta, data.short_version]))
+            if probs:   # یک بار دیگر با تذکر مشخص
+                r = get_llm().generate_json(system, user + "\n\nنسخه‌ی قبلی رد شد چون: " + "؛ ".join(probs)
+                                            + ". دوباره بنویس و این‌ها را تکرار نکن.", AdPost)
+                data, cost = r.data, cost + (r.cost_usd or 0)
         ad = normalize_obj(data.model_dump())
+        ad["warnings"] = ad_problems(" ".join([ad.get("headline", ""), ad.get("body", ""), ad.get("cta", ""),
+                                               ad.get("short_version", "")]))
         with get_session() as db:
             pl = db.get(Placement, placement_id)
             link = short_url(pl.code) or pl.target_url

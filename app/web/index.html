@@ -366,6 +366,7 @@ function plRow(p){
         <button class="ghost sm" data-copy="${esc(ad.short_text || "")}">کپی نسخه‌ی کوتاه</button>
         <button class="ghost sm" data-copy="${esc(p.short_url || p.target_url)}">کپی لینک</button>
         <button class="ghost sm" data-regen="${p.id}">نوشتن دوباره</button></div>
+        ${(ad.warnings || []).length ? `<div class="danger small" style="margin-top:6px">⚠ قبل از انتشار اصلاح کنید: ${ad.warnings.map(esc).join("، ")}</div>` : ""}
         ${ad.best_time ? `<div class="small muted" style="margin-top:6px">⏰ ${esc(ad.best_time)}</div>` : ""}
         ${(ad.images || []).length ? `<div class="small muted" style="margin-top:8px">عکس پیشنهادی (ذخیره و همراه متن بفرستید):</div>${prodStrip(ad.images.map(i => ({...i, price:null})))}` : ""}`
       : `<button class="btn sm" data-regen="${p.id}">ساخت متن تبلیغ</button>`}</div>

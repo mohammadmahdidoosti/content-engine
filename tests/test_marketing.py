@@ -247,3 +247,9 @@ def test_pricing_browser_ingest(tmp_path, monkeypatch):
             "web_client_absolute_url": "/p/x"}]
     st = pricing.ingest_browser([[7, res], ["bad", []]])
     assert st["checked"] == 1 and st["cheaper"] == 1 and st["skipped"] == 1
+
+
+def test_ad_problems():
+    from app.plan.campaigns import ad_problems
+    assert ad_problems("برای برخی کالاها خرید اقساطی هم داریم؛ ضمانت اصالت") == []
+    assert len(ad_problems("خرید نقدی تخفیف دارد، اقساطی هم موجوده")) == 2

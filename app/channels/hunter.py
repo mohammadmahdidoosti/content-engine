@@ -395,3 +395,52 @@ def status() -> dict:
             "tagged": tagged, "relevant": relevant, "audience": {str(k): v for k, v in aud.items()},
             "provinces": provs.most_common(31), "runs": (get_setting("hunter.runs") or [])[-5:],
             "paused": bool(get_setting("hunter.paused"))}
+
+
+def ingest_channel_posts(rows: list, source: str = "eitaa") -> dict:
+    """از پل پنل (مرورگر صاحب فروشگاه): [{platform, username, title, description, members, posts:[{views, ts, text,
+    reactions}], query}] ← کانال ساخته/به‌روز و با همان فرمول تلگرام سنجیده می‌شود."""
+    from app.channels.metrics import score as mscore
+    from app.channels.telegram import apply_metrics
+    added = updated = skipped = 0
+    for r in rows[:300]:
+        if not isinstance(r, dict):
+            skipped += 1
+            continue
+        plat = r.get("platform") if r.get("platform") in ("eitaa", "telegram", "bale", "rubika") else None
+        user = re.sub(r"[^A-Za-z0-9_]", "", str(r.get("username") or ""))[:64]
+        if not plat or len(user) < 3:
+            skipped += 1
+            continue
+        posts = []
+        for p in (r.get("posts") or [])[:80]:
+            try:
+                ts = datetime.fromtimestamp(int(p["ts"]), tz=timezone.utc) if str(p.get("ts") or "").isdigit() \
+                    else (datetime.fromisoformat(p["ts"]) if p.get("ts") else None)
+            except (ValueError, KeyError, OSError):
+                ts = None
+            posts.append({"views": int(p["views"]) if str(p.get("views", "")).isdigit() else None, "ts": ts,
+                          "text": str(p.get("text") or "")[:1500], "reactions": int(p.get("reactions") or 0)})
+        with get_session() as db:
+            ch = (db.query(Channel).filter(Channel.platform == plat, func.lower(Channel.username) == user.lower()).first())
+            new = ch is None
+            if new:
+                ch = Channel(platform=plat, username=user, source=source, found_via=str(r.get("query") or "")[:200] or None)
+                db.add(ch)
+            ch.title = str(r.get("title") or ch.title or "")[:300] or None
+            ch.description = str(r.get("description") or ch.description or "")[:1000] or None
+            if str(r.get("members") or "").isdigit():
+                ch.members = int(r["members"])
+            if posts:
+                apply_metrics(ch, posts)
+                ch.sample = "\n".join(p["text"][:400] for p in posts[-8:])[:3000]
+                ch.view_rate = round(ch.avg_views / ch.members, 3) if ch.avg_views and ch.members else None
+                ch.score, ch.flags, _ = mscore(ch.metrics or {}, ch.members, ch.price_toman)
+            ch.status, ch.error, ch.checked_at = "checked", None, _now()
+            if (ch.members or 0) < MIN_MEMBERS and new:
+                ch.status = "blocked"
+                ch.error = f"عضو کم ({ch.members or 0})"
+            db.commit()
+        added += new
+        updated += not new
+    return {"added": added, "updated": updated, "skipped": skipped}

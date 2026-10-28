@@ -20,8 +20,8 @@ from urllib.parse import unquote, urlparse
 from app.db.session import get_session, get_setting, set_setting
 
 log = logging.getLogger("tracking.external")
-SOURCES = {"torob_prices", "channel_candidates", "torob_clicks", "torob_yearly", "gsc_queries", "ga_cities", "ga_sources"}
-ORIGINS = {"https://torob.com", "https://panel.torob.com", "https://search.google.com", "https://analytics.google.com", "https://www.google.com"}
+SOURCES = {"channel_posts", "torob_prices", "channel_candidates", "torob_clicks", "torob_yearly", "gsc_queries", "ga_cities", "ga_sources"}
+ORIGINS = {"https://web.eitaa.com", "https://web.telegram.org", "https://torob.com", "https://panel.torob.com", "https://search.google.com", "https://analytics.google.com", "https://www.google.com"}
 _COMMERCIAL = re.compile(r"قیمت|خرید|فروش|نمایندگی|لیست قیمت|بازار|ارزان|عمده")
 
 
@@ -42,6 +42,9 @@ def ingest(payload: dict) -> dict:
     if src == "torob_prices":                           # جست‌وجوی ترب از مرورگر (آی‌پی ایران)
         from app.plan.pricing import ingest_browser
         return {"source": src, "rows": len(rows), **ingest_browser(rows)}
+    if src == "channel_posts":                          # کانال + پست‌ها از نسخه‌ی وب ایتا/تلگرام در مرورگر
+        from app.channels.hunter import ingest_channel_posts
+        return {"source": src, "rows": len(rows), **ingest_channel_posts(rows, (meta.get("platform") or "eitaa")[:20])}
     if src == "channel_candidates":                     # لینک کانال‌ها از نتیجه‌ی جست‌وجوی گوگل
         from app.channels.hunter import ingest_candidates
         res = ingest_candidates(rows, "google")

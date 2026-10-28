@@ -867,7 +867,7 @@ async function assistant(){
 
 // ---------------- bridge: داده‌ی پنل‌های بیرونی (ترب، سرچ کنسول، آنالیتیکس) ----------------
 // صفحه‌ی منبع این پنل را با #bridge باز می‌کند و داده را با postMessage می‌دهد؛ فقط این مبدأها پذیرفته می‌شوند.
-const BRIDGE_ORIGINS = ["https://torob.com", "https://panel.torob.com", "https://search.google.com", "https://analytics.google.com", "https://www.google.com"];
+const BRIDGE_ORIGINS = ["https://web.eitaa.com", "https://web.telegram.org", "https://torob.com", "https://panel.torob.com", "https://search.google.com", "https://analytics.google.com", "https://www.google.com"];
 if (location.hash === "#bridge" && window.opener) {
   document.title = "پل داده — مدیر بازاریابی";
   window.addEventListener("message", async e => {

@@ -283,3 +283,20 @@ def test_channel_metrics():
     assert 0 < s <= 100 and cpm and any("تبلیغاتی" in f for f in flags)
     assert parse_count("1.39K") == 1390 and parse_count("1.6میلیون") == 1_600_000 and parse_count("۱۸٫۸K") == 18800
     assert ad_contacts("سفارش تبلیغ: @Newsadmin1 09018373801") == ["@Newsadmin1", "09018373801"]
+
+
+def test_ingest_channel_posts(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/ip.db")
+    from app.db import session as sess
+    monkeypatch.setattr(sess, "_engine", None)
+    monkeypatch.setattr(sess, "_Session", None)
+    sess.init_db()
+    from app.channels.hunter import ingest_channel_posts
+    from app.db.marketing import Channel
+    posts = [{"views": str(900 + i), "ts": str(1793000000 + 3600 * 6 * i), "text": "خبر"} for i in range(12)]
+    r = ingest_channel_posts([{"platform": "eitaa", "username": "dez_news", "title": "اخبار دزفول", "members": "5000",
+                               "posts": posts, "query": "کشاورزی دزفول"}, {"platform": "x"}])
+    assert r == {"added": 1, "updated": 0, "skipped": 1}
+    with sess.get_session() as db:
+        ch = db.query(Channel).one()
+        assert ch.platform == "eitaa" and ch.expected_ad_views and ch.score > 0 and ch.status == "checked"

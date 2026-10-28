@@ -230,3 +230,20 @@ def test_pricing_stops_on_rate_limit(tmp_path, monkeypatch):
     assert len(calls) == 1 and "490" in st["stopped"]
     with sess.get_session() as db:
         assert db.query(pricing.PriceCheck).count() == 0      # خطا نتیجه‌ی قبلی را خراب نمی‌کند
+
+
+def test_pricing_browser_ingest(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/pb.db")
+    from app.db import session as sess
+    monkeypatch.setattr(sess, "_engine", None)
+    monkeypatch.setattr(sess, "_Session", None)
+    sess.init_db()
+    from app.db.marketing import Product
+    from app.plan import pricing
+    with sess.get_session() as db:
+        db.add(Product(id=7, name="پمپ شناور 3 اسب لئو 4XRM4/24", price=50_000_000, in_stock=True))
+        db.commit()
+    res = [{"name1": "پمپ شناور 3 اسب لئو 4XRM4/24", "price": 60_000_000, "shop_text": "در ۵ فروشگاه",
+            "web_client_absolute_url": "/p/x"}]
+    st = pricing.ingest_browser([[7, res], ["bad", []]])
+    assert st["checked"] == 1 and st["cheaper"] == 1 and st["skipped"] == 1

@@ -161,6 +161,58 @@ def check_products(product_ids: list[int], max_checks: int = 60, max_age_days: i
     return stats
 
 
+def todo(limit: int = 60, max_age_days: int = 3) -> list[dict]:
+    """کالاهایی که باید با ترب مقایسه شوند (برای اجرا از مرورگر صاحب فروشگاه با آی‌پی ایران)."""
+    from app.db.marketing import Product
+    ids = candidates()
+    cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
+    with get_session() as db:
+        fresh = {pc.product_id for pc in db.query(PriceCheck).filter(PriceCheck.product_id.in_(ids)).all()
+                 if pc.status != "error" and pc.checked_at
+                 and (pc.checked_at if pc.checked_at.tzinfo else pc.checked_at.replace(tzinfo=timezone.utc)) > cutoff}
+        out = []
+        for i in ids:
+            if i in fresh:
+                continue
+            p = db.get(Product, i)
+            if p and p.price:
+                out.append({"id": p.id, "name": p.name})
+            if len(out) >= limit:
+                break
+    return out
+
+
+def ingest_browser(rows: list) -> dict:
+    """از پل پنل: ردیف [product_id, نتایج جست‌وجوی ترب]؛ مقایسه همین‌جا با همان قواعد سرور انجام می‌شود."""
+    from app.db.marketing import Product
+    stats = {"checked": 0, "cheaper": 0, "pricier": 0, "skipped": 0}
+    for r in rows[:200]:
+        if not isinstance(r, list) or len(r) < 2 or not isinstance(r[1], list):
+            stats["skipped"] += 1
+            continue
+        results = [x for x in r[1][:20] if isinstance(x, dict)]
+        with get_session() as db:
+            p = db.get(Product, int(r[0])) if str(r[0]).isdigit() else None
+            if not p:
+                stats["skipped"] += 1
+                continue
+            res = compare(p.name, p.price, results)
+            pc = db.get(PriceCheck, p.id) or PriceCheck(product_id=p.id)
+            pc.checked_at, pc.our_price = datetime.now(timezone.utc), p.price
+            pc.market_min, pc.shops, pc.ratio = res.get("market_min"), res.get("shops"), res.get("ratio")
+            pc.status, pc.match_name, pc.match_url = res["status"], res.get("match_name"), res.get("match_url")
+            db.merge(pc)
+            db.commit()
+        stats["checked"] += 1
+        if res["status"] in ("cheaper", "pricier"):
+            stats[res["status"]] += 1
+    if stats["checked"]:
+        set_setting("pricing.last_run_at", datetime.now(timezone.utc).isoformat())
+        set_setting("pricing.last_stats", {**stats, "via": "browser"})
+        set_setting("pricing.last_error", None)
+    return stats
+
+
 def purge_errors() -> int:
     """ردیف‌های «خطا» از اجراهای قبلی (که نتیجه‌ی واقعی نیستند) پاک می‌شوند تا دوباره بررسی شوند."""
     with get_session() as db:

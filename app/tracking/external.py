@@ -20,8 +20,8 @@ from urllib.parse import unquote, urlparse
 from app.db.session import get_session, get_setting, set_setting
 
 log = logging.getLogger("tracking.external")
-SOURCES = {"channel_candidates", "torob_clicks", "torob_yearly", "gsc_queries", "ga_cities", "ga_sources"}
-ORIGINS = {"https://panel.torob.com", "https://search.google.com", "https://analytics.google.com", "https://www.google.com"}
+SOURCES = {"torob_prices", "channel_candidates", "torob_clicks", "torob_yearly", "gsc_queries", "ga_cities", "ga_sources"}
+ORIGINS = {"https://torob.com", "https://panel.torob.com", "https://search.google.com", "https://analytics.google.com", "https://www.google.com"}
 _COMMERCIAL = re.compile(r"قیمت|خرید|فروش|نمایندگی|لیست قیمت|بازار|ارزان|عمده")
 
 
@@ -39,6 +39,9 @@ def ingest(payload: dict) -> dict:
     if not isinstance(rows, list) or len(rows) > 60000:
         raise ValueError("ردیف‌ها نامعتبر")
     meta = payload.get("meta") or {}
+    if src == "torob_prices":                           # جست‌وجوی ترب از مرورگر (آی‌پی ایران)
+        from app.plan.pricing import ingest_browser
+        return {"source": src, "rows": len(rows), **ingest_browser(rows)}
     if src == "channel_candidates":                     # لینک کانال‌ها از نتیجه‌ی جست‌وجوی گوگل
         from app.channels.hunter import ingest_candidates
         res = ingest_candidates(rows, "google")

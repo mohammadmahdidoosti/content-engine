@@ -329,6 +329,11 @@ def api_pricing_run(req, m):
     return 202, {"started": True}
 
 
+def api_pricing_todo(req, m):
+    from app.plan.pricing import todo
+    return {"products": todo(_int(req.q("limit", "60"), "limit", 1, 200))}
+
+
 def api_history(req, m):
     from app.tracking.history import summary
     return summary()
@@ -893,6 +898,7 @@ ROUTES = [
     ("POST", r"/api/bots/setup", api_bots_setup),
     ("GET", r"/api/history", api_history), ("POST", r"/api/history/run", api_history_run),
     ("GET", r"/api/pricing", api_pricing_status), ("POST", r"/api/pricing/run", api_pricing_run),
+    ("GET", r"/api/pricing/todo", api_pricing_todo),
     ("GET", r"/api/offline", api_offline), ("POST", r"/api/offline/import", api_offline_import),
     ("GET", r"/api/ext", api_ext), ("POST", r"/api/ext/import", api_ext_import),
     ("GET", r"/api/backup", api_backup_download), ("POST", r"/api/backup/restore", api_backup_restore),

@@ -253,3 +253,12 @@ def test_ad_problems():
     from app.plan.campaigns import ad_problems
     assert ad_problems("برای برخی کالاها خرید اقساطی هم داریم؛ ضمانت اصالت") == []
     assert len(ad_problems("خرید نقدی تخفیف دارد، اقساطی هم موجوده")) == 2
+
+
+def test_pricing_rejects_other_models_and_replicas():
+    from app.plan.pricing import compare, similarity
+    assert similarity("شمشاد زن اولیومک HC ۲۴۷ P", "شمشاد زن اولیومک مدل HC ۷۵۰ E") == 0.0
+    res = compare("اره زنجیری اشتیل مدل MS230", 51_000_000, [
+        {"name1": "اره موتوری اشتیل دیزاین MS230", "price": 35_000_000, "shop_text": "در ۳ فروشگاه"},
+        {"name1": "اره زنجیری اشتیل مدل MS230 بنزینی", "price": 95_000_000, "shop_text": "در ۲ فروشگاه"}])
+    assert res["market_min"] == 95_000_000 and res["status"] == "cheaper"

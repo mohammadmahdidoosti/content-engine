@@ -46,7 +46,15 @@ def _tokens(s: str) -> set[str]:
 
 def _model_codes(s: str) -> set[str]:
     s = (s or "").translate(FA_DIGITS).upper()
-    return {m for m in re.findall(r"[A-Z0-9][A-Z0-9\-./]{2,}", s) if re.search(r"\d", m) and re.search(r"[A-Z]", m)}
+    codes = {m for m in re.findall(r"[A-Z0-9][A-Z0-9\-./]{2,}", s) if re.search(r"\d", m) and re.search(r"[A-Z]", m)}
+    if re.search(r"[A-Z]", s):     # «HC ۲۴۷ P»: عدد مدل جدا از حروف
+        codes |= {"#" + n for n in re.findall(r"(?<![\d.,/])(\d{3,4})(?![\d.,/])", s)}
+    return codes
+
+
+# آگهی‌های «طرح/دیزاین/کپی/کارکرده» کالای اصل نیستند و نباید کمترین قیمت بازار حساب شوند
+_FAKE = re.compile(r"دیزاین|کپی|کارکرده|استوک|دست\s*دوم|(?:اشتیل|ماکیتا|بوش|هوسکوارنا|stihl|makita|bosch)\s+طرح|طرح\s+(?:مدل|اصل|اورجینال)",
+                   re.I)
 
 
 def similarity(ours: str, theirs: str) -> float:
@@ -59,7 +67,7 @@ def similarity(ours: str, theirs: str) -> float:
         if ca & cb:
             j = max(j, 0.75) + 0.15
         else:
-            j *= 0.5          # کد مدل متفاوت ← احتمالاً کالای دیگری است
+            return 0.0        # کد مدل متفاوت ← کالای دیگری است
     return min(1.0, j)
 
 
@@ -82,6 +90,8 @@ def search(q: str, timeout: float = 20) -> list[dict]:
 def compare(name: str, our_price: int | None, results: list[dict]) -> dict:
     matches = []
     for x in results:
+        if _FAKE.search(x.get("name1") or "") and not _FAKE.search(name or ""):
+            continue
         sim = similarity(name, x.get("name1") or "")
         if sim < 0.55 or not x.get("price"):
             continue

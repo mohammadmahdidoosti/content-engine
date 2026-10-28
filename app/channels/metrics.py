@@ -42,10 +42,12 @@ def classify_post(text: str, self_name: str = "") -> str:
     return "content"
 
 
-def ad_contacts(description: str | None) -> list[str]:
-    """آیدی/شماره‌ی «سفارش تبلیغ» از توضیح کانال (اطلاعات عمومی کسب‌وکار، نه شخصی)."""
+def ad_contacts(description: str | None, self_name: str = "") -> list[str]:
+    """آیدی/شماره‌ی «سفارش تبلیغ» از توضیح کانال (اطلاعات عمومی کسب‌وکار، نه شخصی). خود کانال حذف می‌شود و
+    آیدی‌هایی مثل tabligh/ads/admin جلوتر می‌آیند."""
     d = description or ""
-    out = [m for m in _AD_CONTACT.findall(d)]
+    out = [m for m in _AD_CONTACT.findall(d) if m.lstrip("@").lower() != self_name.lower()]
+    out.sort(key=lambda x: 0 if re.search(r"tab|ads|adv|admin|sefaresh|rezerv", x, re.I) else 1)
     if re.search(r"تبلیغ|رزرو|تعرفه", d):
         out += _PHONE.findall(d)
     seen, res = set(), []

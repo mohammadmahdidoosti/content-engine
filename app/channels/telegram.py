@@ -168,8 +168,8 @@ def apply_metrics(ch: Channel, posts: list[dict]) -> None:
     ch.posts_per_day = m.get("posts_per_day") or ch.posts_per_day
     ch.last_post_days = m.get("last_post_days") if m.get("last_post_days") is not None else ch.last_post_days
     ch.ad_ratio = m.get("ad_share") if m.get("ad_share") is not None else ch.ad_ratio
-    ch.ad_contacts = ad_contacts(ch.description)
-    if not ch.admin_contact and ch.ad_contacts:
+    ch.ad_contacts = ad_contacts(ch.description, ch.username)
+    if ch.ad_contacts and (not ch.admin_contact or ch.admin_contact.lstrip('@').lower() == ch.username.lower()):
         ch.admin_contact = ch.ad_contacts[0][:200]
     hist = list(ch.members_history or [])
     today = datetime.now(timezone.utc).date().isoformat()

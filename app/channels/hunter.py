@@ -91,7 +91,8 @@ def snowball_step(deadline: float, max_parents: int = 6) -> dict:
     cutoff = _now() - timedelta(days=14)
     with get_session() as db:
         parents = (db.query(Channel).filter(Channel.platform == "telegram", Channel.status == "checked",
-                                            Channel.score >= 40, Channel.relevant.isnot(False))
+                                            Channel.score >= 40, Channel.relevant.is_(True),
+                                            Channel.audience.notin_(["general", "irrelevant"]))
                    .filter((Channel.crawled_at.is_(None)) | (Channel.crawled_at < cutoff))
                    .order_by(Channel.score.desc()).limit(max_parents).all())
         parents = [(p.id, p.username) for p in parents]

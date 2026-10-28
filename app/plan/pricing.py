@@ -106,13 +106,17 @@ def compare(name: str, our_price: int | None, results: list[dict]) -> dict:
 
 
 def check_products(product_ids: list[int], max_checks: int = 60, max_age_days: int = 3,
-                   delay: float = 3.0, deadline: float | None = None) -> dict:
+                   delay: float = 6.0, deadline: float | None = None) -> dict:
+    """آهسته (هر ۶ ثانیه یک جست‌وجو). با اولین «محدودیت» از طرف ترب (۴۲۹/۴۰۳) کل اجرا متوقف می‌شود
+    تا آی‌پی سرور بسته نشود؛ خطا نتیجه‌ی قبلی کالا را پاک نمی‌کند."""
     from app.db.marketing import Product
     cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
     stats = {"checked": 0, "cheaper": 0, "pricier": 0, "errors": 0}
+    errors: list[str] = []
     with get_session() as db:
         fresh = {pc.product_id for pc in db.query(PriceCheck).filter(PriceCheck.product_id.in_(product_ids)).all()
-                 if pc.checked_at and (pc.checked_at if pc.checked_at.tzinfo else pc.checked_at.replace(tzinfo=timezone.utc)) > cutoff}
+                 if pc.status != "error" and pc.checked_at
+                 and (pc.checked_at if pc.checked_at.tzinfo else pc.checked_at.replace(tzinfo=timezone.utc)) > cutoff}
         todo = [db.get(Product, i) for i in product_ids if i not in fresh]
         todo = [p for p in todo if p and p.price][:max_checks]
     for p in todo:
@@ -120,13 +124,24 @@ def check_products(product_ids: list[int], max_checks: int = 60, max_age_days: i
             break
         try:
             res = compare(p.name, p.price, search(p.name))
+        except httpx.HTTPStatusError as e:
+            code = e.response.status_code
+            stats["errors"] += 1
+            errors.append(f"HTTP {code}")
+            if code in (403, 429):
+                stats["stopped"] = f"ترب محدود کرد (HTTP {code})؛ اجرا متوقف شد تا فردا"
+                log.warning("ترب محدود کرد: %s", code)
+                break
+            time.sleep(delay * 2)
+            continue
         except Exception as e:  # noqa: BLE001
             stats["errors"] += 1
-            res = {"status": "error", "match_name": str(e)[:200]}
+            errors.append(str(e)[:120])
             if stats["errors"] >= 3 and stats["checked"] == 0:
-                log.warning("ترب در دسترس نیست: %s", e)
-                set_setting("pricing.last_error", str(e)[:300])
+                stats["stopped"] = "ترب در دسترس نیست"
                 break
+            time.sleep(delay * 2)
+            continue
         with get_session() as db:
             pc = db.get(PriceCheck, p.id) or PriceCheck(product_id=p.id)
             pc.checked_at, pc.our_price = datetime.now(timezone.utc), p.price
@@ -140,7 +155,18 @@ def check_products(product_ids: list[int], max_checks: int = 60, max_age_days: i
         time.sleep(delay)
     if stats["checked"]:
         set_setting("pricing.last_run_at", datetime.now(timezone.utc).isoformat())
+    set_setting("pricing.last_error", (stats.get("stopped") or "") + (" · " if stats.get("stopped") and errors else "")
+                + "، ".join(sorted(set(errors))[:4]) if errors else None)
+    set_setting("pricing.last_stats", stats)
     return stats
+
+
+def purge_errors() -> int:
+    """ردیف‌های «خطا» از اجراهای قبلی (که نتیجه‌ی واقعی نیستند) پاک می‌شوند تا دوباره بررسی شوند."""
+    with get_session() as db:
+        n = db.query(PriceCheck).filter(PriceCheck.status == "error").delete()
+        db.commit()
+        return n
 
 
 def candidates(limit_recs: int = 12) -> list[int]:

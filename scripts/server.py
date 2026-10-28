@@ -323,6 +323,8 @@ def api_pricing_run(req, m):
     from app.plan.pricing import candidates, check_products
     if sync.is_running():
         raise HttpError(409, "همگام‌سازی در حال اجراست")
+    from app.plan.pricing import purge_errors
+    purge_errors()
     _bg(lambda: check_products(candidates(), max_checks=40), pool=_sync_pool)
     return 202, {"started": True}
 
@@ -345,7 +347,7 @@ def api_pricing_status(req, m):
     with get_session() as db:
         rows = dict(db.query(PriceCheck.status, func.count()).group_by(PriceCheck.status).all())
     return {"by_status": rows, "last_run_at": get_setting("pricing.last_run_at"),
-            "last_error": get_setting("pricing.last_error")}
+            "last_error": get_setting("pricing.last_error"), "last_stats": get_setting("pricing.last_stats")}
 
 
 # =============== تنظیمات ===============

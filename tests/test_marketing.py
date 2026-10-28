@@ -196,3 +196,29 @@ def test_lift_window(tmp_path, monkeypatch):
     assert _j2g("1405/08/04") == date(2026, 10, 26)
     from app.tracking import lift
     assert lift.placement_lift() == [] and set(lift.baselines()) == {"calls", "orders", "torob"}
+
+
+def test_pricing_stops_on_rate_limit(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/p.db")
+    from app.db import session as sess
+    monkeypatch.setattr(sess, "_engine", None)
+    monkeypatch.setattr(sess, "_Session", None)
+    sess.init_db()
+    import httpx
+    from app.db.marketing import Product
+    from app.plan import pricing
+    with sess.get_session() as db:
+        for i in (1, 2, 3):
+            db.add(Product(id=i, name=f"پمپ {i}", price=1000, in_stock=True))
+        db.commit()
+    calls = []
+
+    def boom(q, timeout=20):
+        calls.append(q)
+        raise httpx.HTTPStatusError("x", request=httpx.Request("GET", "https://x"), response=httpx.Response(429))
+    monkeypatch.setattr(pricing, "search", boom)
+    monkeypatch.setattr(pricing.time, "sleep", lambda s: None)
+    st = pricing.check_products([1, 2, 3])
+    assert len(calls) == 1 and "429" in st["stopped"] and st["checked"] == 0
+    with sess.get_session() as db:
+        assert db.query(pricing.PriceCheck).count() == 0      # خطا نتیجه‌ی قبلی را خراب نمی‌کند

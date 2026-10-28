@@ -727,6 +727,11 @@ async function settings(){
     $("#wxNow").onclick = async () => { try { const r = await post("/api/weather/refresh"); toast(fa(r.alerts) + " هشدار"); settings(); } catch (e) { toast(e.message); } }; }).catch(() => {});
   $("#syncNow").onclick = async () => { try { await post("/api/sync", {}); toast("همگام‌سازی شروع شد"); setTimeout(settings, 1500); } catch (e) { toast(e.message); } };
   if (sy.running) later(settings, 15000);
+  api("/api/collector").then(cl => { const v = $("#view"); if (!v || !$("#syncNow")) return;
+    const N = {eitaa: "ایتا", telegram: "تلگرام", torob_prices: "قیمت ترب", torob_panel: "پنل ترب", google: "گوگل"};
+    v.insertAdjacentHTML("beforeend", `<div class="card"><header>افزونه‌ی جمع‌آور کروم <span class="small muted">${cl.token_set ? "توکن جمع‌آور روی سرور تنظیم است" : "⚠ COLLECTOR_TOKEN در Coolify تنظیم نشده"}</span></header><div class="pad small">
+      ${Object.keys(N).map(k => { const t = (cl.tasks || {})[k]; return `<div class="inline" style="justify-content:space-between;flex-wrap:nowrap"><span>${N[k]}</span><span class="${t && !t.ok ? "danger" : "muted"}">${t ? ago(t.at) + " — " + esc(t.summary) : "هنوز اجرا نشده"}</span></div>`; }).join("")}
+      <div class="muted" style="margin-top:8px">کارهایی که به آی‌پی ایران و حساب‌های وارد‌شده‌ی شما در کروم نیاز دارند (ایتا، تلگرام، ترب، گوگل) را افزونه خودکار انجام می‌دهد؛ پوشه‌ی <code>extension</code> در مخزن.</div></div></div>`); }).catch(() => {});
   api("/api/backup/status").then(b => {
     const v = $("#view"); if (!v || !$("#syncNow")) return;
     const last = b.last; const warn = b.db_days_left != null && b.db_days_left <= 10;

@@ -300,3 +300,12 @@ def test_ingest_channel_posts(tmp_path, monkeypatch):
     with sess.get_session() as db:
         ch = db.query(Channel).one()
         assert ch.platform == "eitaa" and ch.expected_ad_views and ch.score > 0 and ch.status == "checked"
+
+
+def test_collector_routes_whitelist():
+    import importlib.util, sys
+    spec = importlib.util.spec_from_file_location("srv", "scripts/server.py")
+    srv = importlib.util.module_from_spec(spec)
+    sys.modules["srv"] = srv
+    spec.loader.exec_module(srv)
+    assert ("POST", "/api/ext/import") in srv.COLLECTOR_ROUTES and ("GET", "/api/campaigns") not in srv.COLLECTOR_ROUTES

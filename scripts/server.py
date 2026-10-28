@@ -827,6 +827,49 @@ def api_alerts(req, m):
     return {"alerts": alerts.collect()}
 
 
+COLLECTOR_ROUTES = {("GET", "/api/collector/tasks"), ("POST", "/api/ext/import"), ("POST", "/api/collector/status")}
+
+
+def api_collector_tasks(req, m):
+    """کارهای افزونه‌ی جمع‌آور کروم (اجرا با آی‌پی ایران و حساب‌های خود صاحب فروشگاه)."""
+    from app.channels import hunter
+    from app.plan.data import today_jalali
+    from app.plan.pricing import todo
+    qs = hunter.gap_queries(80)
+    cities = []
+    for q in qs:
+        c = q.get("city") or q["q"].replace("site:t.me ", "").split()[-1]
+        if c not in cities:
+            cities.append(c)
+    t = today_jalali()
+    from datetime import timedelta
+    start = t - timedelta(days=31)
+    return {
+        "eitaa_queries": [q["q"].replace("site:t.me ", "") for q in qs][:24],
+        "telegram_queries": cities[:30],
+        "google_queries": [q["q"] for q in qs][:35],
+        "torob_todo": todo(60),
+        "torob_panel": {"from": start.strftime("%Y-%m-%d"), "to": t.strftime("%Y-%m-%d")},
+        "intervals_hours": {"eitaa": 24, "telegram": 24, "torob_prices": 24, "torob_panel": 168, "google": 48},
+        "limits": {"eitaa_channels_per_query": 6, "telegram_results_per_query": 10},
+    }
+
+
+def api_collector_status_post(req, m):
+    b = req.body()
+    st = dict(get_setting("collector.status") or {})
+    task = str(b.get("task") or "")[:30]
+    if task:
+        st[task] = {"at": datetime.now(timezone.utc).isoformat(), "ok": bool(b.get("ok")),
+                    "summary": str(b.get("summary") or "")[:300], "version": str(b.get("version") or "")[:20]}
+        set_setting("collector.status", st)
+    return {"ok": True}
+
+
+def api_collector_status(req, m):
+    return {"tasks": get_setting("collector.status") or {}, "token_set": bool(os.environ.get("COLLECTOR_TOKEN"))}
+
+
 def api_ext(req, m):
     from app.tracking import external
     return external.summary()
@@ -927,6 +970,8 @@ ROUTES = [
     ("GET", r"/api/pricing/todo", api_pricing_todo),
     ("GET", r"/api/offline", api_offline), ("POST", r"/api/offline/import", api_offline_import),
     ("GET", r"/api/ext", api_ext), ("POST", r"/api/ext/import", api_ext_import),
+    ("GET", r"/api/collector/tasks", api_collector_tasks), ("POST", r"/api/collector/status", api_collector_status_post),
+    ("GET", r"/api/collector", api_collector_status),
     ("GET", r"/api/backup", api_backup_download), ("POST", r"/api/backup/restore", api_backup_restore),
     ("GET", r"/api/backup/status", api_backup_status),
     ("GET", r"/api/hunter", api_hunter), ("POST", r"/api/hunter/run", api_hunter_run),
@@ -1000,6 +1045,10 @@ class Handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self._send(204, b"", "text/plain", self._cors())
 
+    def _collector_ok(self) -> bool:
+        tok = os.environ.get("COLLECTOR_TOKEN", "").strip()
+        return len(tok) >= 16 and hmac.compare_digest(self.headers.get("X-Collector-Token", ""), tok)
+
     def _authorized(self) -> bool:
         return bool(RUN_TOKEN) and hmac.compare_digest(self.headers.get("X-Run-Token", ""), RUN_TOKEN)
 
@@ -1026,7 +1075,9 @@ class Handler(BaseHTTPRequestHandler):
             if not path.startswith("/api/"):
                 return self._json(404, {"error": "not found"})
             if not self._authorized():
-                return self._json(401, {"error": "unauthorized"})
+                # افزونه‌ی جمع‌آور فقط با توکن محدود خودش و فقط به همین سه مسیر دسترسی دارد
+                if not (self._collector_ok() and (method, path) in COLLECTOR_ROUTES):
+                    return self._json(401, {"error": "unauthorized"})
             for meth, rx, fn in _COMPILED:
                 mm = rx.match(path)
                 if mm and meth == method:

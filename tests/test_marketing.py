@@ -262,3 +262,24 @@ def test_pricing_rejects_other_models_and_replicas():
         {"name1": "اره موتوری اشتیل دیزاین MS230", "price": 35_000_000, "shop_text": "در ۳ فروشگاه"},
         {"name1": "اره زنجیری اشتیل مدل MS230 بنزینی", "price": 95_000_000, "shop_text": "در ۲ فروشگاه"}])
     assert res["market_min"] == 95_000_000 and res["status"] == "cheaper"
+
+
+def test_channel_metrics():
+    from datetime import datetime, timedelta, timezone
+    from app.channels.metrics import ad_contacts, classify_post, compute, parse_count, score
+    now = datetime(2026, 10, 28, 12, tzinfo=timezone.utc)
+    assert classify_post("عضو شو 👇 t.me/+abc") == "join_ad"
+    assert classify_post("فروش ویژه پمپ؛ سفارش 09121234567") == "product_ad"
+    assert classify_post("بارش باران در رشت") == "content"
+    posts = []
+    for i in range(20):
+        ad = i % 5 == 0
+        posts.append({"views": (400 if ad else 1000 + 37 * i), "ts": now - timedelta(days=5) + timedelta(hours=5 * i),
+                      "text": "#تبلیغ فروش ویژه" if ad else "خبر روز", "reactions": 3})
+    m = compute(posts, 10000, "x", now=now)
+    assert m["median_views"] and 0.25 <= m["ad_view_ratio"] <= 0.45 and m["expected_ad_views"] < m["median_views"]
+    assert m["kinds"]["product_ad"] == 4 and m["ad_life_hours"] == 5.0
+    s, flags, cpm = score(m, 10000, 500_000)
+    assert 0 < s <= 100 and cpm and any("تبلیغاتی" in f for f in flags)
+    assert parse_count("1.39K") == 1390 and parse_count("1.6میلیون") == 1_600_000 and parse_count("۱۸٫۸K") == 18800
+    assert ad_contacts("سفارش تبلیغ: @Newsadmin1 09018373801") == ["@Newsadmin1", "09018373801"]

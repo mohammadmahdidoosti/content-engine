@@ -434,7 +434,7 @@ async function channels(){
       <button class="btn" id="chAdd" style="margin-top:12px">افزودن و بررسی خودکار</button></div></div>
     <div class="pad" style="padding-top:0"><div class="note small">کانال‌های تلگرام خودکار بررسی می‌شوند: عضو، میانگین بازدید ۲۰ پست آخر، نسبت بازدید به عضو (برای تشخیص عضو فیک)، تعداد پست در روز و سهم پست‌های تبلیغاتی. برای ایتا، بله و روبیکا عضو و بازدید را خودتان در جدول وارد کنید. قیمت تبلیغ را که از ادمین گرفتید وارد کنید تا «هزینه به ازای هر ۱۰۰۰ بازدید» حساب شود.</div></div></div>
   <div class="card"><header>کانال‌ها (${fa(all.length)}) <span class="small muted">مرتب بر اساس امتیاز</span></header>${filt}
-  <div class="tbl">${list.length ? `<table><thead><tr><th>کانال</th><th>عضو</th><th>میانگین بازدید</th><th>بازدید/عضو</th><th>پست در روز</th><th>امتیاز</th><th>قیمت تبلیغ (تومان)</th><th>هزینه هر ۱۰۰۰ بازدید</th><th>ادمین</th><th></th></tr></thead><tbody>
+  <div class="tbl">${list.length ? `<table><thead><tr><th>کانال</th><th>عضو</th><th title="میانه‌ی بازدید پست‌های بالای ۲۴ ساعت">بازدید (میانه)</th><th>بازدید/عضو</th><th title="میانه‌ی بازدید × (بازدید پست تبلیغاتی ÷ پست عادی)">بازدید مورد انتظار آگهی</th><th>تبلیغ در روز</th><th>امتیاز</th><th>قیمت تبلیغ (تومان)</th><th title="بر اساس بازدید مورد انتظار آگهی">هزینه هر ۱۰۰۰ بازدید</th><th>ادمین</th><th></th></tr></thead><tbody>
   ${list.map(c => `<tr>
     <td><a href="${esc(c.url || "#")}" target="_blank" rel="noopener"><b>${esc(c.title || c.username)}</b></a><div class="small muted"><span class="badge">${esc(c.platform)}</span> <span class="ltr">@${esc(c.username)}</span></div>
       ${c.status === "error" ? `<div class="small danger">${esc(c.error)}</div>` : ""}
@@ -445,11 +445,12 @@ async function channels(){
     <td class="num">${c.platform === "telegram" ? fa(c.members) : `<input type="text" inputmode="numeric" style="width:90px" data-chf="${c.id}" data-k="members" value="${c.members ?? ""}">`}</td>
     <td class="num">${c.platform === "telegram" ? fa(c.avg_views) : `<input type="text" inputmode="numeric" style="width:80px" data-chf="${c.id}" data-k="avg_views" value="${c.avg_views ?? ""}">`}</td>
     <td class="num">${c.view_rate != null ? fa(Math.round(c.view_rate * 100)) + "٪" : "–"}</td>
-    <td class="num">${fa(c.posts_per_day)}</td>
+    <td class="num"><b>${fa(c.expected_ad_views)}</b>${c.metrics && c.metrics.ad_view_ratio != null ? `<div class="small muted" title="بازدید پست تبلیغاتی نسبت به پست عادی">تبلیغ/عادی ${fa(Math.round(c.metrics.ad_view_ratio * 100))}٪</div>` : ""}</td>
+    <td class="num">${c.metrics ? fa(c.metrics.ads_per_day) + (c.metrics.join_ads_per_day ? `<div class="small muted">جوین ${fa(c.metrics.join_ads_per_day)}</div>` : "") + (c.metrics.ad_life_hours != null ? `<div class="small muted">ماندگاری ${fa(c.metrics.ad_life_hours)} ساعت</div>` : "") : "–"}</td>
     <td class="num"><span class="badge ${c.score == null ? "" : c.score >= 50 ? "b-ok" : c.score >= 25 ? "b-warn" : "b-bad"}">${fa(c.score)}</span></td>
     <td><input type="text" inputmode="numeric" style="width:110px" data-chf="${c.id}" data-k="price_toman" value="${c.price_toman ?? ""}"></td>
     <td class="num">${c.cpm ? mtoman(c.cpm) : "–"}</td>
-    <td><input type="text" style="width:120px" data-chf="${c.id}" data-k="admin_contact" value="${esc(c.admin_contact || "")}" placeholder="@admin"></td>
+    <td><input type="text" style="width:120px" data-chf="${c.id}" data-k="admin_contact" value="${esc(c.admin_contact || "")}" placeholder="@admin">${(c.ad_contacts || []).length > 1 ? `<div class="small muted ltr">${c.ad_contacts.slice(1).map(esc).join(" ")}</div>` : ""}</td>
     <td class="inline">${c.platform === "telegram" ? `<button class="ghost sm" data-chk="${c.id}">بررسی</button>` : ""}<button class="ghost sm danger" data-chdel="${c.id}">حذف</button></td></tr>`).join("")}
   </tbody></table>` : '<div class="empty">هنوز کانالی ثبت نشده.</div>'}</div></div>`;
   $("#chAdd").onclick = async () => { const b = $("#chAdd"); b.disabled = true;

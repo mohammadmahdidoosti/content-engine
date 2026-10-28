@@ -115,6 +115,11 @@ class Channel(Base):
     sample: Mapped[str | None] = mapped_column(Text)               # چند پست آخر (برای برچسب‌زدن)
     tagged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     crawled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))   # آخرین گلوله‌برفی
+    # معیارهای دقیق (app/channels/metrics.py)
+    metrics: Mapped[dict | None] = mapped_column(JSON)
+    expected_ad_views: Mapped[int | None] = mapped_column(Integer)
+    ad_contacts: Mapped[list | None] = mapped_column(JSON)          # آیدی/شماره‌ی سفارش تبلیغ از توضیح کانال
+    members_history: Mapped[list | None] = mapped_column(JSON)     # [[تاریخ, عضو], …] برای تشخیص جهش عضو
 
 
 class ChannelCandidate(Base):

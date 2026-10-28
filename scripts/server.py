@@ -387,12 +387,21 @@ def api_settings_update(req, m):
 CH_FIELDS = ("id", "platform", "username", "title", "description", "members", "avg_views", "view_rate",
              "posts_per_day", "ad_ratio", "last_post_days", "score", "flags", "provinces", "topics",
              "price_toman", "admin_contact", "notes", "status", "error", "checked_at", "created_at",
-             "source", "found_via", "cities", "plan_ids", "audience", "scope", "relevant", "tagged_at")
+             "source", "found_via", "cities", "plan_ids", "audience", "scope", "relevant", "tagged_at",
+             "metrics", "expected_ad_views", "ad_contacts")
+
+
+def _score_any(c: Channel):
+    """معیار دقیق اگر پست‌ها سنجیده شده‌اند؛ وگرنه فرمول ساده (کانال‌هایی که عددشان دستی وارد شده)."""
+    if c.metrics and c.metrics.get("expected_ad_views"):
+        from app.channels.metrics import score as mscore
+        return mscore(c.metrics, c.members, c.price_toman)
+    return score_channel(c.members, c.avg_views, c.posts_per_day, c.ad_ratio, c.last_post_days, c.price_toman)
 
 
 def _ch_row(c: Channel) -> dict:
     d = _row(c, *CH_FIELDS)
-    _, _, d["cpm"] = score_channel(c.members, c.avg_views, c.posts_per_day, c.ad_ratio, c.last_post_days, c.price_toman)
+    _, _, d["cpm"] = _score_any(c)
     d["url"] = {"telegram": f"https://t.me/{c.username}", "eitaa": f"https://eitaa.com/{c.username}",
                 "bale": f"https://ble.ir/{c.username}", "rubika": f"https://rubika.ir/{c.username}",
                 "instagram": f"https://instagram.com/{c.username}"}.get(c.platform)
@@ -450,10 +459,27 @@ def api_channel_update(req, m):
         if "status" in b and b["status"] in ("new", "checked", "blocked"):
             c.status = b["status"]
         c.view_rate = round(c.avg_views / c.members, 3) if c.avg_views and c.members else None
-        c.score, c.flags, _ = score_channel(c.members, c.avg_views, c.posts_per_day, c.ad_ratio,
-                                            c.last_post_days, c.price_toman)
+        c.score, c.flags, _ = _score_any(c)
         db.commit()
         return _ch_row(c)
+
+
+def _recheck_all() -> None:
+    from app.channels.telegram import check_channel
+    with get_session() as db:
+        ids = [c.id for c in db.query(Channel).filter(Channel.platform == "telegram", Channel.relevant.isnot(False),
+                                                       Channel.status != "blocked").order_by(Channel.score.desc().nullslast()).all()]
+    for i in ids:
+        try:
+            check_channel(i)
+        except Exception:  # noqa: BLE001
+            pass
+        time.sleep(2.5)
+
+
+def api_channels_recheck(req, m):
+    _bg(_recheck_all)
+    return 202, {"started": True}
 
 
 def api_channel_check(req, m):
@@ -885,7 +911,7 @@ ROUTES = [
     ("GET", r"/api/settings", api_settings), ("POST", r"/api/settings", api_settings_update),
     ("GET", r"/api/channels", api_channels), ("POST", r"/api/channels/bulk", api_channels_bulk),
     ("POST", r"/api/channels/(\d+)", api_channel_update), ("POST", r"/api/channels/(\d+)/check", api_channel_check),
-    ("POST", r"/api/channels/(\d+)/delete", api_channel_delete),
+    ("POST", r"/api/channels/(\d+)/delete", api_channel_delete), ("POST", r"/api/channels/recheck", api_channels_recheck),
     ("GET", r"/api/campaigns", api_campaigns), ("POST", r"/api/campaigns", api_campaign_create),
     ("POST", r"/api/campaigns/(\d+)", api_campaign_update),
     ("POST", r"/api/placements", api_placement_create), ("POST", r"/api/placements/(\d+)", api_placement_update),

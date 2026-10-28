@@ -100,7 +100,18 @@ def fetch_telegram(username: str, timeout: float = 30, before: int | None = None
     clean = [html.unescape(re.sub(r"<[^>]+>", " ", x)) for x in texts]
     ads = sum(1 for x in clean if _AD_WORDS.search(x) or len(re.findall(r"t\.me/|@[A-Za-z]", x)) >= 3)
     ids = [int(x) for x in re.findall(r'data-post="[^"/]+/(\d+)"', t)]
+    posts = []
+    for block in t.split('class="tgme_widget_message_wrap')[1:]:
+        v = re.search(r'<span class="tgme_widget_message_views">([^<]+)</span>', block)
+        d = re.search(r'<time datetime="([^"]+)"', block)
+        tx = re.search(r'<div class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>', block, re.S)
+        reacts = sum(int(x) for x in re.findall(r'class="tgme_reaction[^"]*">.*?</i>(\d+)</span>', block, re.S))
+        posts.append({"views": _num(v.group(1)) if v else None,
+                      "ts": datetime.fromisoformat(d.group(1)) if d else None,
+                      "text": html.unescape(re.sub(r"<[^>]+>", " ", tx.group(1))) if tx else "",
+                      "reactions": reacts})
     return {
+        "post_list": posts,
         "mentions": extract_mentions(t, username), "texts": [re.sub(r"\s+", " ", x).strip()[:400] for x in clean],
         "min_post_id": min(ids) if ids else None,
         "title": html.unescape(re.sub(r"<[^>]+>", "", title.group(1))).strip() if title else None,
@@ -146,6 +157,29 @@ def score_channel(members: int | None, avg_views: int | None, posts_per_day: flo
     return score, flags, cpm
 
 
+def apply_metrics(ch: Channel, posts: list[dict]) -> None:
+    """معیارهای دقیق را روی کانال می‌نشاند (برای تلگرام، ایتا و هر منبع دیگری که پست‌ها را بدهد)."""
+    from app.channels.metrics import ad_contacts, compute
+    m = compute(posts, ch.members, ch.username)
+    ch.metrics = m
+    ch.expected_ad_views = m.get("expected_ad_views")
+    if m.get("median_views"):
+        ch.avg_views = m["median_views"]
+    ch.posts_per_day = m.get("posts_per_day") or ch.posts_per_day
+    ch.last_post_days = m.get("last_post_days") if m.get("last_post_days") is not None else ch.last_post_days
+    ch.ad_ratio = m.get("ad_share") if m.get("ad_share") is not None else ch.ad_ratio
+    ch.ad_contacts = ad_contacts(ch.description)
+    if not ch.admin_contact and ch.ad_contacts:
+        ch.admin_contact = ch.ad_contacts[0][:200]
+    hist = list(ch.members_history or [])
+    today = datetime.now(timezone.utc).date().isoformat()
+    if ch.members and (not hist or hist[-1][0] != today):
+        hist.append([today, ch.members])
+    ch.members_history = hist[-26:]
+    if len(hist) >= 2 and hist[-2][1] and ch.members / hist[-2][1] > 1.5:
+        m["member_jump"] = round(ch.members / hist[-2][1], 2)
+
+
 def check_channel(channel_id: int) -> Channel:
     with get_session() as db:
         ch = db.get(Channel, channel_id)
@@ -167,9 +201,20 @@ def check_channel(channel_id: int) -> Channel:
                     ch.last_post_days = round((datetime.now(timezone.utc) - ds[-1]).total_seconds() / 86400, 1)
                 ch.ad_ratio = round(d["ads"] / d["posts"], 2) if d["posts"] else None
                 ch.sample = "\n".join(d["texts"][-8:])[:3000] or ch.sample
+                posts = d["post_list"]
+                if len(posts) < 15 and d.get("min_post_id"):        # یک صفحه‌ی قدیمی‌تر برای دقت بیشتر
+                    try:
+                        posts = fetch_telegram(ch.username, before=d["min_post_id"])["post_list"] + posts
+                    except Exception:  # noqa: BLE001
+                        pass
+                apply_metrics(ch, posts)
             ch.view_rate = round(ch.avg_views / ch.members, 3) if ch.avg_views and ch.members else None
-            ch.score, ch.flags, _ = score_channel(ch.members, ch.avg_views, ch.posts_per_day, ch.ad_ratio,
-                                                  ch.last_post_days, ch.price_toman)
+            if ch.metrics and ch.metrics.get("expected_ad_views"):
+                from app.channels.metrics import score as mscore
+                ch.score, ch.flags, _ = mscore(ch.metrics, ch.members, ch.price_toman)
+            else:
+                ch.score, ch.flags, _ = score_channel(ch.members, ch.avg_views, ch.posts_per_day, ch.ad_ratio,
+                                                      ch.last_post_days, ch.price_toman)
             ch.status, ch.error = "checked", None
         except Exception as e:  # noqa: BLE001
             ch.status, ch.error = "error", str(e)[:300]

@@ -220,5 +220,13 @@ def test_pricing_stops_on_rate_limit(tmp_path, monkeypatch):
     monkeypatch.setattr(pricing.time, "sleep", lambda s: None)
     st = pricing.check_products([1, 2, 3])
     assert len(calls) == 1 and "429" in st["stopped"] and st["checked"] == 0
+
+    def blocked(q, timeout=20):
+        calls.append(q)
+        raise httpx.HTTPStatusError("x", request=httpx.Request("GET", "https://x"), response=httpx.Response(490))
+    monkeypatch.setattr(pricing, "search", blocked)
+    calls.clear()
+    st = pricing.check_products([1, 2, 3])
+    assert len(calls) == 1 and "490" in st["stopped"]
     with sess.get_session() as db:
         assert db.query(pricing.PriceCheck).count() == 0      # خطا نتیجه‌ی قبلی را خراب نمی‌کند

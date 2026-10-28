@@ -128,7 +128,7 @@ def check_products(product_ids: list[int], max_checks: int = 60, max_age_days: i
             code = e.response.status_code
             stats["errors"] += 1
             errors.append(f"HTTP {code}")
-            if code in (403, 429):
+            if 400 <= code < 500 and code != 404:     # ۴۰۳/۴۲۹/۴۹۰ و مانند آن یعنی ترب این آی‌پی را محدود کرده
                 stats["stopped"] = f"ترب محدود کرد (HTTP {code})؛ اجرا متوقف شد تا فردا"
                 log.warning("ترب محدود کرد: %s", code)
                 break

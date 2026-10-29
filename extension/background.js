@@ -55,6 +55,12 @@ async function run(tabId, func, args = []) {
   }
 }
 const closeTab = id => chrome.tabs.remove(id).catch(() => {});
+// ایتا و تلگرام وب فقط در یک تب فعال‌اند؛ اگر کاربر خودش بازش کرده، همان تب استفاده می‌شود (و بسته نمی‌شود).
+async function useOrOpen(pattern, url, waitMs) {
+  const [t] = await chrome.tabs.query({url: pattern});
+  if (t) { await chrome.tabs.update(t.id, {url}); await sleep(waitMs); return {id: t.id, own: false}; }
+  return {id: await openTab(url, waitMs), own: true};
+}
 
 // ---------- توابعی که داخل صفحه اجرا می‌شوند ----------
 // ایتای وب: جست‌وجوی «سراسری» (داخل متن پست‌ها) + «گفتگوها»؛ هر کانال باز و بازدید پست‌هایش خوانده می‌شود.
@@ -189,14 +195,14 @@ async function pageGoogle(queries) {
 // ---------- کارها ----------
 const TASKS = {
   async eitaa(t) {
-    const tab = await openTab("https://web.eitaa.com/", 9000);
-    let seen = [], n = 0, sent = 0, snow = 0;
+    const T = await useOrOpen("https://web.eitaa.com/*", "https://web.eitaa.com/", 9000), tab = T.id;
+    let seen = [], n = 0, sent = 0, snow = 0, found = 0;
     try {
       for (const q of t.eitaa_queries) {
         await progress(`جست‌وجوی ${n + 1} از ${t.eitaa_queries.length}: «${q}» — ${sent} کانال تا الان`);
         const r = await run(tab, pageEitaaQuery, [q, t.limits.eitaa_channels_per_query, 800, seen]);
         if (!r || r.error) throw new Error((r && r.error) || "خطای صفحه");
-        seen = seen.concat(r.ids);
+        seen = seen.concat(r.ids); found += r.ids.length;
         if (r.rows.length) { await send("channel_posts", r.rows, {platform: "eitaa"}); sent += r.rows.length; }
         n++;
         await sleep(jitter(5000, 9000));
@@ -210,11 +216,12 @@ const TASKS = {
         if (r.done.length) await send("candidates_checked", r.done);
         await sleep(jitter(4000, 7000));
       }
-    } finally { closeTab(tab); }
-    return `${n} جست‌وجو، ${sent} کانال سنجیده؛ ${snow} کانال از معرفی‌ها`;
+    } finally { if (T.own) closeTab(tab); }
+    if (n >= 3 && !found) throw new Error("ایتا هیچ نتیجه‌ای نشان نداد؛ اگر ایتای وب در پنجره‌ی دیگری باز است آن را ببندید یا صفحه‌اش را یک بار تازه کنید");
+    return `${n} جست‌وجو، ${found} نتیجه، ${sent} کانال سنجیده؛ ${snow} کانال از معرفی‌ها`;
   },
   async telegram(t) {
-    const tab = await openTab("https://web.telegram.org/a/", 9000);
+    const T = await useOrOpen("https://web.telegram.org/*", "https://web.telegram.org/a/", 9000), tab = T.id;
     const rows = [];
     try {
       for (const [i, q] of t.telegram_queries.entries()) {
@@ -224,7 +231,7 @@ const TASKS = {
         r.found.slice(0, t.limits.telegram_results_per_query).forEach(x => rows.push(["https://t.me/" + x.handle, q]));
         await sleep(jitter(6000, 10000));
       }
-    } finally { closeTab(tab); }
+    } finally { if (T.own) closeTab(tab); }
     if (rows.length) await send("channel_candidates", rows, {source: "telegram_search"});
     return `${t.telegram_queries.length} جست‌وجو، ${rows.length} کانال نامزد`;
   },

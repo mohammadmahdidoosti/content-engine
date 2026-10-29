@@ -153,6 +153,7 @@ const TASKS = {
     let seen = [], n = 0, sent = 0;
     try {
       for (const q of t.eitaa_queries) {
+        await progress(`جست‌وجوی ${n + 1} از ${t.eitaa_queries.length}: «${q}» — ${sent} کانال تا الان`);
         const r = await run(tab, pageEitaaQuery, [q, t.limits.eitaa_channels_per_query, 800, seen]);
         if (!r || r.error) throw new Error((r && r.error) || "خطای صفحه");
         seen = seen.concat(r.ids);
@@ -167,7 +168,8 @@ const TASKS = {
     const tab = await openTab("https://web.telegram.org/a/", 9000);
     const rows = [];
     try {
-      for (const q of t.telegram_queries) {
+      for (const [i, q] of t.telegram_queries.entries()) {
+        await progress(`جست‌وجوی ${i + 1} از ${t.telegram_queries.length}: «${q}»`);
         const r = await run(tab, pageTelegramSearch, [q]);
         if (!r || r.error) throw new Error((r && r.error) || "خطای صفحه");
         r.found.slice(0, t.limits.telegram_results_per_query).forEach(x => rows.push(["https://t.me/" + x.handle, q]));
@@ -180,6 +182,7 @@ const TASKS = {
   async torob_prices(t) {
     let batch = [], n = 0;
     for (const p of t.torob_todo) {
+      await progress(`کالای ${n + 1} از ${t.torob_todo.length}`);
       const r = await fetch("https://api.torob.com/v4/base-product/search/?page=0&sort=popularity&size=12&source=next_desktop&q=" + encodeURIComponent(p.name));
       if (r.status !== 200) { if (batch.length) await send("torob_prices", batch); throw new Error("ترب جواب نداد: HTTP " + r.status + " (بعد از " + n + " کالا)"); }
       const d = await r.json();
@@ -210,22 +213,43 @@ const TASKS = {
   },
 };
 
-async function runTask(name, force = false) {
+// قفل اجرا: هر کار در هر مرحله «ضربان» می‌زند؛ اگر ۱۰ دقیقه ضربان نیاید (مثلاً کروم بسته شد) قفل آزاد می‌شود.
+const STALE_MS = 10 * 60 * 1000;
+async function progress(step) {
+  const r = (await chrome.storage.local.get(["running"])).running;
+  if (r) await chrome.storage.local.set({running: {...r, step, beat: Date.now()}});
+}
+async function busy() {
+  const r = (await chrome.storage.local.get(["running"])).running;
+  return r && Date.now() - (r.beat || r.at) < STALE_MS ? r : null;
+}
+async function runTask(name) {
+  const cur = await busy();
+  if (cur) {
+    const q = (await chrome.storage.local.get(["queue"])).queue || [];
+    if (cur.name !== name && !q.includes(name)) q.push(name);
+    await chrome.storage.local.set({queue: q});
+    return cur.name === name ? "همین کار الان در حال اجراست" : "در صف قرار گرفت؛ بعد از کار فعلی خودش اجرا می‌شود";
+  }
   const c = await cfg();
-  const st = (await chrome.storage.local.get(["running"])).running;
-  if (st && Date.now() - st.at < 45 * 60 * 1000) return "کار دیگری در حال اجراست: " + st.name;
-  await chrome.storage.local.set({running: {name, at: Date.now()}});
+  await chrome.storage.local.set({running: {name, at: Date.now(), beat: Date.now(), step: "شروع…"}});
+  const keep = setInterval(() => chrome.runtime.getPlatformInfo(() => {}), 20000);  // سرویس‌ورکر خاموش نشود
+  let out;
   try {
     const t = await api("/api/collector/tasks");
     const summary = await TASKS[name](t, c);
     await log(name, true, summary);
-    return summary;
+    out = summary;
   } catch (e) {
     await log(name, false, e.message || String(e));
-    return "خطا: " + (e.message || e);
+    out = "خطا: " + (e.message || e);
   } finally {
+    clearInterval(keep);
     await chrome.storage.local.remove("running");
   }
+  const q = (await chrome.storage.local.get(["queue"])).queue || [];
+  if (q.length) { const next = q.shift(); await chrome.storage.local.set({queue: q}); runTask(next); }
+  return out;
 }
 
 // هر ۳۰ دقیقه: اولین کاری که وقتش رسیده (یکی‌یکی، تا مرورگر شلوغ نشود)
@@ -246,6 +270,7 @@ chrome.runtime.onInstalled.addListener(() => chrome.alarms.create("tick", {perio
 chrome.runtime.onStartup.addListener(() => chrome.alarms.create("tick", {periodInMinutes: 30, delayInMinutes: 2}));
 chrome.alarms.onAlarm.addListener(a => { if (a.name === "tick") tick(); });
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
-  if (msg && msg.type === "run") { runTask(msg.task, true).then(reply); return true; }
+  if (msg && msg.type === "run") { runTask(msg.task).then(reply); return true; }
+  if (msg && msg.type === "cancel_queue") { chrome.storage.local.set({queue: []}).then(() => reply("صف خالی شد")); return true; }
   if (msg && msg.type === "test") { api("/api/collector/tasks").then(t => reply("اتصال درست است؛ " + t.eitaa_queries.length + " جست‌وجوی ایتا آماده"), e => reply("خطا: " + e.message)); return true; }
 });

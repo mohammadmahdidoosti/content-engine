@@ -200,7 +200,7 @@ const TASKS = {
     try {
       for (const q of t.eitaa_queries) {
         await progress(`جست‌وجوی ${n + 1} از ${t.eitaa_queries.length}: «${q}» — ${sent} کانال تا الان`);
-        const r = await run(tab, pageEitaaQuery, [q, t.limits.eitaa_channels_per_query, 800, seen]);
+        const r = await run(tab, pageEitaaQuery, [q, t.limits.eitaa_channels_per_query, t.limits.min_members || 800, seen]);
         if (!r || r.error) throw new Error((r && r.error) || "خطای صفحه");
         seen = seen.concat(r.ids); found += r.ids.length;
         if (r.rows.length) { await send("channel_posts", r.rows, {platform: "eitaa"}); sent += r.rows.length; }
@@ -210,7 +210,7 @@ const TASKS = {
       const hs = t.eitaa_handles || [];
       for (let i = 0; i < hs.length; i += 5) {                // گلوله‌برفی: ۵تا ۵تا
         await progress(`کانال‌های معرفی‌شده: ${i + 1} تا ${Math.min(i + 5, hs.length)} از ${hs.length}`);
-        const r = await run(tab, pageEitaaHandles, [hs.slice(i, i + 5), 800]);
+        const r = await run(tab, pageEitaaHandles, [hs.slice(i, i + 5), t.limits.min_members || 800]);
         if (!r || r.error) break;
         if (r.rows.length) { await send("channel_posts", r.rows, {platform: "eitaa", source: "snowball"}); snow += r.rows.length; }
         if (r.done.length) await send("candidates_checked", r.done);

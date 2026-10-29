@@ -27,6 +27,7 @@ log = logging.getLogger("channels.hunter")
 _PAREN = re.compile(r"\s*\(.*?\)")
 
 MIN_MEMBERS = 800
+MIN_MEMBERS_CITY = 400   # کانال یک شهر هدف (اسم شهر در عنوان): در شهر کوچک ۴۰۰-۸۰۰ عضو واقعی هم ارزش دارد
 MIN_VIEWS = 150
 DELAY = 2.5            # ثانیه بین درخواست‌ها به t.me
 TARGET_PER_CELL = 8    # هدف: برای هر «دسته × استان» حداقل این تعداد کانال مناسب
@@ -60,6 +61,34 @@ def parent_yield(db, username: str) -> tuple[int, int]:
 
 def _now():
     return datetime.now(timezone.utc)
+
+
+_CITY_RX = None
+
+
+def _city_rx():
+    global _CITY_RX
+    if _CITY_RX is None:
+        try:
+            from app.plan.cities import list_cities
+            names = sorted({c["name"].strip() for c in list_cities("") if len(c["name"].strip()) >= 3}, key=len, reverse=True)
+        except Exception:  # noqa: BLE001
+            names = []
+        _CITY_RX = re.compile("|".join(map(re.escape, names))) if names else re.compile(r"(?!x)x")
+    return _CITY_RX
+
+
+def min_members(title: str | None, description: str | None = None) -> int:
+    """۴۰۰ برای کانال‌های یک شهر هدف (اسم شهر در عنوان یا توضیح)، وگرنه ۸۰۰."""
+    t = ((title or "") + " " + (description or "")[:200]).replace("ي", "ی").replace("ك", "ک")
+    return MIN_MEMBERS_CITY if _city_rx().search(t) else MIN_MEMBERS
+
+
+def affinity(ch, group: str | None) -> float | None:
+    """lift موضوع این دسته برای این کانال (از پست‌هایش)، یا None."""
+    from app.channels.metrics import topic_of
+    t = ((ch.metrics or {}).get("topics") or {}).get(topic_of(group)) or {}
+    return t.get("lift")
 
 
 # ---------------- نامزدها ----------------
@@ -194,7 +223,7 @@ def check_candidates(deadline: float, limit: int = 60) -> dict:
                 raise ValueError("بررسی خودکار این پیام‌رسان هنوز ممکن نیست")
             v = (d.get("views") or [])[-20:]
             avg = int(sum(v) / len(v)) if v else 0
-            if (d.get("members") or 0) < MIN_MEMBERS:
+            if (d.get("members") or 0) < min_members(d.get("title"), d.get("description")):
                 reason = f"عضو کم ({d.get('members') or 0})"
             elif is_noise(d.get("title"), d.get("description")):
                 reason = "موضوع بی‌ربط (دانشجویی/سرگرمی/…)"
@@ -312,7 +341,8 @@ def _fit(ch: Channel, plan_id: str, group: str | None, province: str) -> float:
     if in_prov and topical:
         return 1.0
     if in_prov and ch.audience in ("local_news", "classifieds", "trade"):
-        return 0.6          # کانال عمومی همان شهر/استان
+        lift = affinity(ch, group)   # مخاطب این کانال خبر این موضوع را بیشتر/کمتر از بقیه می‌بیند
+        return round(0.6 * (max(0.7, min(1.5, lift)) if lift else 1.0), 3)   # کانال عمومی همان شهر/استان
     if topical and (ch.scope == "national" or not ch.provinces):
         return 0.5          # کانال تخصصی سراسری
     return 0.0
@@ -383,15 +413,17 @@ def gap_queries(max_queries: int = 40) -> list[dict]:
     return out[:max_queries]
 
 
-_EITAA_PATS = {"AGRI": ["کشاورزی {c}", "{c}", "نیازمندیهای {c}"], "WATER": ["کشاورزی {c}", "{c}", "نیازمندیهای {c}"],
-               "BUILD": ["مصالح {c}", "{c}", "نیازمندیهای {c}"], "PIPE": ["تاسیسات {c}", "{c}", "نیازمندیهای {c}"]}
-_EITAA_DEFAULT = ["صنعت {c}", "{c}", "نیازمندیهای {c}"]
+_EITAA_PATS = {"AGRI": ["{c}", "اخبار {c}", "کشاورزی {c}", "نیازمندیهای {c}"],
+               "WATER": ["{c}", "اخبار {c}", "کشاورزی {c}", "نیازمندیهای {c}"],
+               "BUILD": ["{c}", "اخبار {c}", "مصالح {c}", "نیازمندیهای {c}"],
+               "PIPE": ["{c}", "اخبار {c}", "تاسیسات {c}", "نیازمندیهای {c}"]}
+_EITAA_DEFAULT = ["{c}", "اخبار {c}", "صنعت {c}", "نیازمندیهای {c}"]
 
 
 _TG_TOPIC = {"AGRI": "کشاورزی {c}", "WATER": "کشاورزی {c}", "BUILD": "مصالح ساختمانی {c}", "PIPE": "تاسیسات {c}"}
 
 
-def telegram_queries(n: int = 36) -> list[str]:
+def telegram_queries(n: int = 40) -> list[str]:
     """جست‌وجوی سراسری تلگرام هم اسم کانال را می‌گردد. فقط نام شهر ← فقط کانال خبری شهر؛ پس برای هر شهر
     «نام شهر» + یک عبارت موضوعی (کشاورزی/مصالح/صنعت) + «نیازمندی» جست‌وجو می‌شود."""
     cov = coverage()
@@ -409,13 +441,13 @@ def telegram_queries(n: int = 36) -> list[str]:
             if c in cities:
                 continue
             cities.append(c)
-            for q in (c, _TG_TOPIC.get(p.group, "صنعت {c}").format(c=c), f"نیازمندی {c}"):
+            for q in (c, f"اخبار {c}", _TG_TOPIC.get(p.group, "صنعت {c}").format(c=c), f"نیازمندی {c}"):
                 if q not in out:
                     out.append(q)
     return out[:n]
 
 
-def eitaa_queries(n: int = 24) -> list[str]:
+def eitaa_queries(n: int = 28) -> list[str]:
     """جست‌وجوی ایتا اسم کانال را می‌گردد، نه متن پست را؛ پس «نام شهر» و «نیازمندی/کشاورزی + شهر» بهتر از
     عبارت‌های طولانی جواب می‌دهد. به ترتیب خانه‌های خالی جدول پوشش، هر شهر یک بار."""
     cov = coverage()
@@ -450,6 +482,23 @@ def _cities_of(seg: dict, province: str) -> list[str]:
     return [re.sub(r"\s*\(.*?\)", "", c).strip() for c in re.split(r"[،,]", part) if c.strip()][:3]
 
 
+def reopen_small_city() -> int:
+    """نامزدهایی که با «عضو کم (۴۰۰ تا ۷۹۹)» رد شده بودند دوباره بررسی می‌شوند (قاعده‌ی شهرهای کوچک)."""
+    if get_setting("hunter.reopened_small_city"):
+        return 0
+    n = 0
+    with get_session() as db:
+        for c in db.query(ChannelCandidate).filter(ChannelCandidate.status == "rejected",
+                                                   ChannelCandidate.reason.like("عضو کم%")).all():
+            m = re.search(r"\((\d+)\)", c.reason or "")
+            if m and MIN_MEMBERS_CITY <= int(m.group(1)) < MIN_MEMBERS:
+                c.status, c.reason = "new", None
+                n += 1
+        db.commit()
+    set_setting("hunter.reopened_small_city", True)
+    return n
+
+
 def cleanup() -> dict:
     """کانال‌های «نویز» بی‌ربط می‌شوند؛ نامزدهای منتظرِ والدهای بی‌ربط یا کم‌بازده رد می‌شوند."""
     marked = dropped = 0
@@ -470,7 +519,27 @@ def cleanup() -> dict:
                 c.status, c.reason, c.checked_at = "rejected", "والد بی‌ربط یا کم‌بازده", _now()
                 dropped += 1
         db.commit()
-    return {"marked_irrelevant": marked, "dropped_candidates": dropped}
+    return {"marked_irrelevant": marked, "dropped_candidates": dropped, "reopened": reopen_small_city()}
+
+
+def refresh_topics(deadline: float, limit: int = 10) -> dict:
+    """کانال‌های تلگرامِ مرتبط که هنوز «علاقه‌ی مخاطب» ندارند دوباره سنجیده می‌شوند (هر اجرا چندتا)."""
+    from app.channels.telegram import check_channel
+    with get_session() as db:
+        ids = [c.id for c in db.query(Channel).filter(Channel.platform == "telegram", Channel.relevant.is_(True),
+                                                       Channel.status == "checked").order_by(Channel.score.desc().nullslast()).all()
+               if "topics" not in (c.metrics or {})][:limit]
+    n = 0
+    for i in ids:
+        if time.monotonic() > deadline:
+            break
+        try:
+            check_channel(i)
+            n += 1
+        except Exception:  # noqa: BLE001
+            pass
+        time.sleep(DELAY)
+    return {"refreshed": n}
 
 
 # ---------------- اجرای دوره‌ای ----------------
@@ -479,7 +548,8 @@ def run(budget_sec: int = 240, mock: bool = False) -> dict:
     stats = {"at": _now().isoformat()}
     for name, fn in (("cleanup", cleanup), ("tag", lambda: tag_channels(min(deadline, time.monotonic() + 90), mock=mock)),
                      ("check", lambda: check_candidates(deadline)),
-                     ("snowball", lambda: snowball_step(deadline))):
+                     ("snowball", lambda: snowball_step(deadline)),
+                     ("topics", lambda: refresh_topics(deadline))):
         if time.monotonic() > deadline:
             break
         try:
@@ -589,7 +659,7 @@ def ingest_channel_posts(rows: list, source: str = "eitaa") -> dict:
                 ch.view_rate = round(ch.avg_views / ch.members, 3) if ch.avg_views and ch.members else None
                 ch.score, ch.flags, _ = mscore(ch.metrics or {}, ch.members, ch.price_toman)
             ch.status, ch.error, ch.checked_at = "checked", None, _now()
-            if (ch.members or 0) < MIN_MEMBERS and new:
+            if (ch.members or 0) < min_members(ch.title, ch.description) and new:
                 ch.status = "blocked"
                 ch.error = f"عضو کم ({ch.members or 0})"
             elif new and is_noise(ch.title, ch.description):

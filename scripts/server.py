@@ -847,14 +847,14 @@ def api_collector_tasks(req, m):
     from datetime import timedelta
     start = t - timedelta(days=31)
     return {
-        "eitaa_queries": hunter.eitaa_queries(24),
+        "eitaa_queries": hunter.eitaa_queries(28),
         "eitaa_handles": hunter.eitaa_todo(15),
         "telegram_queries": hunter.telegram_queries(36),
         "google_queries": [q["q"] for q in qs][:35],
         "torob_todo": todo(60),
         "torob_panel": {"from": start.strftime("%Y-%m-%d"), "to": t.strftime("%Y-%m-%d")},
         "intervals_hours": {"eitaa": 24, "telegram": 24, "torob_prices": 24, "torob_panel": 168, "google": 48},
-        "limits": {"eitaa_channels_per_query": 8, "telegram_results_per_query": 10},
+        "limits": {"eitaa_channels_per_query": 8, "min_members": hunter.MIN_MEMBERS_CITY, "telegram_results_per_query": 10},
     }
 
 

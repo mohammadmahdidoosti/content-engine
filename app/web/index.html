@@ -179,6 +179,16 @@ const ago = iso => { if (!iso) return "–"; const s = (Date.now() - new Date(is
 function toast(m){ const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 2200); }
 function copy(text){ (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => toast("کپی شد"), () => toast("کپی نشد؛ دستی انتخاب کنید")); }
 
+// «علاقه‌ی مخاطب»: بازدید پست‌های هر موضوع نسبت به بقیه‌ی پست‌های همین کانال
+function topicBadges(c) {
+  const t = (c.metrics || {}).topics; if (!t) return "";
+  const N = {AGRI: "کشاورزی", BUILD: "ساختمان", INDUSTRY: "صنعت"};
+  const out = Object.entries(N).filter(([k]) => t[k] && t[k].lift != null).map(([k, n]) => {
+    const l = t[k].lift, col = l >= 1.15 ? "var(--green, #2e7d32)" : (l <= 0.85 ? "var(--amber)" : "inherit");
+    return `<span class="badge" style="color:${col}" title="${fa(t[k].n)} پست ${n}؛ بازدیدشان ${fa(Math.round(l * 100))}٪ بقیه‌ی پست‌ها">${n} ×${fa(l)}</span>`; });
+  return out.length ? `<div class="small" title="مخاطب این کانال خبرِ این موضوع را چقدر بیشتر/کمتر از بقیه می‌بیند">علاقه‌ی مخاطب: ${out.join(" ")}</div>` : "";
+}
+
 async function api(path, opts = {}) {
   const r = await fetch(path, {...opts, headers: {"Content-Type":"application/json","X-Run-Token":token}});
   if (r.status === 401) { logout(); throw new Error("unauthorized"); }
@@ -441,7 +451,8 @@ async function channels(){
       ${(c.flags || []).map(f => `<div class="small" style="color:var(--amber)">⚠ ${esc(f)}</div>`).join("")}
       ${(c.provinces || []).length || (c.cities || []).length ? `<div class="small muted">📍 ${esc([...(c.cities || []), ...(c.provinces || [])].filter((x, i, a) => a.indexOf(x) === i).slice(0, 5).join("، "))}${c.scope === "national" ? " · سراسری" : ""}</div>` : (c.scope === "national" ? '<div class="small muted">سراسری</div>' : "")}
       ${c.audience ? `<div class="small"><span class="badge ${c.relevant === false ? "b-bad" : "b-info"}">${esc(AUD[c.audience] || c.audience)}</span> ${(c.plan_ids || []).slice(0, 3).map(x => `<span class="badge">${esc(x)}</span>`).join(" ")}</div>` : ""}
-      ${c.source && c.source !== "manual" ? `<div class="small muted">پیدا شده از ${esc({snowball: "گلوله‌برفی", google: "گوگل", eitaa: "ایتا"}[c.source] || c.source)}${c.found_via ? ": " + esc(c.found_via.slice(0, 40)) : ""}</div>` : ""}</td>
+      ${topicBadges(c)}
+      ${c.source && c.source !== "manual" ? `<div class="small muted">پیدا شده از ${esc({snowball: "گلوله‌برفی", google: "گوگل", eitaa: "ایتا", telegram_search: "جست‌وجوی تلگرام"}[c.source] || c.source)}${c.found_via ? ": " + esc(c.found_via.slice(0, 40)) : ""}</div>` : ""}</td>
     <td class="num">${c.platform === "telegram" ? fa(c.members) : `<input type="text" inputmode="numeric" style="width:90px" data-chf="${c.id}" data-k="members" value="${c.members ?? ""}">`}</td>
     <td class="num">${c.platform === "telegram" ? fa(c.avg_views) : `<input type="text" inputmode="numeric" style="width:80px" data-chf="${c.id}" data-k="avg_views" value="${c.avg_views ?? ""}">`}</td>
     <td class="num">${c.view_rate != null ? fa(Math.round(c.view_rate * 100)) + "٪" : "–"}</td>

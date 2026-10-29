@@ -32,6 +32,36 @@ _AD_CONTACT = re.compile(r"(?:تبلیغ|تبلیغات|رزرو|سفارش|تع
 _PHONE = re.compile(r"(?:09|۰۹)[\d۰-۹]{9}")
 
 
+# موضوع‌های فروشگاه؛ برای سنجش «مخاطب این کانال خبرِ این موضوع را بیشتر می‌بیند یا کمتر»
+TOPICS = {
+    "AGRI": re.compile(r"کشاورز|باغ(?:دار|داران|ات|ستان)?\b|زراعت|زراعی|بذر|\bکود\b|کودهای\s*شیمیایی|سم\s*پاش|\bآفت\b|آفات|آبیاری|چاه|قنات|تراکتور|کمباین|"
+                       r"برداشت\s*(?:محصول|گندم|برنج|پسته|مرکبات)|کاشت|شالی|شالیزار|برنج|گندم|\bجو\b|پسته|خرما|مرکبات|زعفران|\bدام(?:دار|داران|داری|پزشکی)?\b|گلخانه|جهاد\s*کشاورزی|خشکسالی|سرمازدگی", re.I),
+    "BUILD": re.compile(r"ساختمان|مصالح|سیمان|میلگرد|آهن\s*آلات|بتن|آجر|پیمانکار|عمران|مسکن|نظام\s*مهندسی|پروانه\s*ساخت|"
+                        r"شهرداری.*(?:ساخت|پروژه)|لوله\s*کشی|تاسیسات|گازکشی", re.I),
+    "INDUSTRY": re.compile(r"صنعت|صنایع|کارخانه|شهرک\s*صنعتی|کارگاه|تولید(?:ی|کننده)|معدن|نیروگاه|پتروشیمی|فولاد|ماشین\s*آلات|تعمیرکار", re.I),
+}
+GROUP_TOPIC = {"AGRI": "AGRI", "WATER": "AGRI", "BUILD": "BUILD", "PIPE": "BUILD"}   # بقیه‌ی دسته‌ها ← INDUSTRY
+
+
+def topic_of(group: str | None) -> str:
+    return GROUP_TOPIC.get(group or "", "INDUSTRY")
+
+
+def topic_affinity(posts: list[dict]) -> dict:
+    """برای هر موضوع: n = تعداد پست‌های آن موضوع، lift = میانه‌ی بازدیدشان ÷ میانه‌ی بازدید بقیه‌ی پست‌های محتوایی.
+    کمتر از ۳ پست ← lift نامشخص (None)."""
+    base = [p for p in posts if p.get("kind") == "content" and p.get("views")]
+    out = {}
+    for k, rx in TOPICS.items():
+        hit = [p["views"] for p in base if rx.search(p.get("text") or "")]
+        rest = [p["views"] for p in base if not rx.search(p.get("text") or "")]
+        lift = None
+        if len(hit) >= 3 and len(rest) >= 3 and statistics.median(rest):
+            lift = round(max(0.3, min(3.0, statistics.median(hit) / statistics.median(rest))), 2)
+        out[k] = {"n": len(hit), "lift": lift}
+    return out
+
+
 def classify_post(text: str, self_name: str = "") -> str:
     t = text or ""
     others = {m.lower() for m in _MENTION.findall(t)} - {self_name.lower()}
@@ -104,6 +134,7 @@ def compute(posts: list[dict], members: int | None, self_name: str = "", now: da
         "views_cv": cv, "reactions_per_1k": round(1000 * reacts / tot_v, 2) if tot_v else None,
         "last_post_days": round((now - ts[-1]).total_seconds() / 86400, 1) if ts else None,
         "kinds": {k: sum(1 for p in ps if p["kind"] == k) for k in ("content", "product_ad", "join_ad")},
+        "topics": topic_affinity(mature),
     }
 
 

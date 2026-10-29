@@ -354,3 +354,25 @@ def test_torob_search_query():
     assert q("پمپ آب کشاورزی سه اینچ") == "پمپ آب کشاورزی سه اینچ"
     assert q("گاوآهن چهار خیش طرح ترک با چرخ فولادی (ممتاز) مدل AKMA–TU4–12 برند اکما", "اکما") == "گاوآهن چهار خیش اکما AKMA-TU4-12"
     assert q("فرز آهنگری ماکیتا - مدل GA9020", "ماکیتا") == "فرز آهنگری ماکیتا GA9020"
+
+
+def test_topic_affinity_and_small_city():
+    from datetime import datetime, timedelta, timezone
+    from app.channels.metrics import TOPICS, compute
+    rx = TOPICS["AGRI"]
+    assert rx.search("قیمت کود اوره") and rx.search("سم‌پاشی باغات") and rx.search("برداشت گندم آغاز شد")
+    assert not rx.search("کودک") and not rx.search("هوای آفتابی") and not rx.search("دامنه‌ی کوه") and not rx.search("دامغان")
+    now = datetime(2026, 10, 29, tzinfo=timezone.utc)
+    posts = [{"views": 2000, "ts": now - timedelta(days=3 + i), "text": "خبر کشاورزی و آبیاری باغات"} for i in range(4)] + \
+            [{"views": 1000, "ts": now - timedelta(days=3 + i), "text": "خبر حوادث شهر"} for i in range(8)]
+    m = compute(posts, 10000, "x", now)
+    assert m["topics"]["AGRI"] == {"n": 4, "lift": 2.0} and m["topics"]["BUILD"]["lift"] is None
+    from types import SimpleNamespace
+    from app.channels import hunter
+    ch = SimpleNamespace(relevant=True, status="checked", provinces=["گیلان"], plan_ids=[], audience="local_news",
+                         scope="city", metrics=m)
+    assert hunter._fit(ch, "IRRIG", "WATER", "گیلان") == 0.9          # ۰٫۶ × ۱٫۵ (سقف)
+    assert hunter._fit(ch, "PIPEX", "PIPE", "گیلان") == 0.6           # ساختمان نامشخص ← بدون تغییر
+    hunter._CITY_RX = __import__("re").compile("میناب|رشت")
+    assert hunter.min_members("اخبار میناب") == 400 and hunter.min_members("اخبار ورزشی") == 800
+    hunter._CITY_RX = None

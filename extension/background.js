@@ -55,26 +55,31 @@ async function run(tabId, func, args = []) {
   }
 }
 const closeTab = id => chrome.tabs.remove(id).catch(() => {});
-// ایتا و تلگرام وب فقط وقتی صفحه «دیده می‌شود» نتیجه‌ها را نشان می‌دهند (تب پس‌زمینه چیزی نمی‌سازد)؛
-// پس این دو در یک پنجره‌ی جدا و جلو باز می‌شوند و آخر کار بسته می‌شوند.
+// ایتا و تلگرام وب فقط وقتی صفحه «دیده می‌شود» نتیجه‌ها را می‌سازند (تب/پنجره‌ی پنهان چیزی نشان نمی‌دهد).
+// پنجره‌ی جدا پشت پنجره‌ی کاربر باز می‌شود و جلو نمی‌آید. اگر کروم با گزینه‌ی
+// --disable-backgrounding-occluded-windows اجرا شده باشد، همان پشت کار می‌کند؛ وگرنه صبر می‌کند تا کاربر
+// ۱۰ دقیقه پشت سیستم نباشد و فقط آن موقع پنجره را جلو می‌آورد.
 async function openWindow(url, waitMs) {
-  const w = await chrome.windows.create({url, focused: true, type: "normal", width: 1100, height: 820});
+  const idle = (await chrome.idle.queryState(600)) === "idle";
+  const w = await chrome.windows.create({url, focused: idle, type: "normal", width: 1000, height: 760});
   const id = w.tabs[0].id;
   for (let i = 0; i < 30; i++) { if ((await chrome.tabs.get(id)).status === "complete") break; await sleep(1000); }
   await sleep(waitMs);
   return {id, win: w.id};
 }
 const closeWindow = w => chrome.windows.remove(w.win).catch(() => {});
-// اگر پنجره پشت پنجره‌های دیگر رفت، تا ۱۵ دقیقه صبر می‌کند تا دوباره دیده شود
 async function waitVisible(w, label) {
-  for (let i = 0; i < 45; i++) {
-    const v = await run(w.id, () => document.visibilityState);
-    if (v === "visible") return;
-    if (i === 0) chrome.windows.update(w.win, {focused: true}).catch(() => {});
-    await progress(`منتظر: پنجره‌ی ${label} پشت پنجره‌های دیگر است؛ آن را جلو بیاورید (کوچکش نکنید)`);
-    await sleep(20000);
+  for (let i = 0; i < 360; i++) {                         // حداکثر ۳ ساعت
+    if ((await run(w.id, () => document.visibilityState)) === "visible") return;
+    if ((await chrome.idle.queryState(600)) === "idle") {   // کاربر نیست ← پنجره جلو بیاید
+      await chrome.windows.update(w.win, {focused: true}).catch(() => {});
+      await sleep(4000);
+      continue;
+    }
+    await progress(`در انتظار: پنجره‌ی ${label} پشت پنجره‌های شماست؛ وقتی ۱۰ دقیقه پشت سیستم نباشید خودش ادامه می‌دهد (یا همین حالا آن را جلو بیاورید)`);
+    await sleep(30000);
   }
-  throw new Error(`پنجره‌ی ${label} ۱۵ دقیقه دیده نشد؛ کار نیمه ماند`);
+  throw new Error(`پنجره‌ی ${label} ۳ ساعت دیده نشد؛ کار نیمه ماند`);
 }
 
 // ---------- توابعی که داخل صفحه اجرا می‌شوند ----------

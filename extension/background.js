@@ -55,11 +55,26 @@ async function run(tabId, func, args = []) {
   }
 }
 const closeTab = id => chrome.tabs.remove(id).catch(() => {});
-// ایتا و تلگرام وب فقط در یک تب فعال‌اند؛ اگر کاربر خودش بازش کرده، همان تب استفاده می‌شود (و بسته نمی‌شود).
-async function useOrOpen(pattern, url, waitMs) {
-  const [t] = await chrome.tabs.query({url: pattern});
-  if (t) { await chrome.tabs.update(t.id, {url}); await sleep(waitMs); return {id: t.id, own: false}; }
-  return {id: await openTab(url, waitMs), own: true};
+// ایتا و تلگرام وب فقط وقتی صفحه «دیده می‌شود» نتیجه‌ها را نشان می‌دهند (تب پس‌زمینه چیزی نمی‌سازد)؛
+// پس این دو در یک پنجره‌ی جدا و جلو باز می‌شوند و آخر کار بسته می‌شوند.
+async function openWindow(url, waitMs) {
+  const w = await chrome.windows.create({url, focused: true, type: "normal", width: 1100, height: 820});
+  const id = w.tabs[0].id;
+  for (let i = 0; i < 30; i++) { if ((await chrome.tabs.get(id)).status === "complete") break; await sleep(1000); }
+  await sleep(waitMs);
+  return {id, win: w.id};
+}
+const closeWindow = w => chrome.windows.remove(w.win).catch(() => {});
+// اگر پنجره پشت پنجره‌های دیگر رفت، تا ۱۵ دقیقه صبر می‌کند تا دوباره دیده شود
+async function waitVisible(w, label) {
+  for (let i = 0; i < 45; i++) {
+    const v = await run(w.id, () => document.visibilityState);
+    if (v === "visible") return;
+    if (i === 0) chrome.windows.update(w.win, {focused: true}).catch(() => {});
+    await progress(`منتظر: پنجره‌ی ${label} پشت پنجره‌های دیگر است؛ آن را جلو بیاورید (کوچکش نکنید)`);
+    await sleep(20000);
+  }
+  throw new Error(`پنجره‌ی ${label} ۱۵ دقیقه دیده نشد؛ کار نیمه ماند`);
 }
 
 // ---------- توابعی که داخل صفحه اجرا می‌شوند ----------
@@ -195,10 +210,11 @@ async function pageGoogle(queries) {
 // ---------- کارها ----------
 const TASKS = {
   async eitaa(t) {
-    const T = await useOrOpen("https://web.eitaa.com/*", "https://web.eitaa.com/", 9000), tab = T.id;
+    const T = await openWindow("https://web.eitaa.com/", 9000), tab = T.id;
     let seen = [], n = 0, sent = 0, snow = 0, found = 0;
     try {
       for (const q of t.eitaa_queries) {
+        await waitVisible(T, "ایتا");
         await progress(`جست‌وجوی ${n + 1} از ${t.eitaa_queries.length}: «${q}» — ${sent} کانال تا الان`);
         const r = await run(tab, pageEitaaQuery, [q, t.limits.eitaa_channels_per_query, t.limits.min_members || 800, seen]);
         if (!r || r.error) throw new Error((r && r.error) || "خطای صفحه");
@@ -209,6 +225,7 @@ const TASKS = {
       }
       const hs = t.eitaa_handles || [];
       for (let i = 0; i < hs.length; i += 5) {                // گلوله‌برفی: ۵تا ۵تا
+        await waitVisible(T, "ایتا");
         await progress(`کانال‌های معرفی‌شده: ${i + 1} تا ${Math.min(i + 5, hs.length)} از ${hs.length}`);
         const r = await run(tab, pageEitaaHandles, [hs.slice(i, i + 5), t.limits.min_members || 800]);
         if (!r || r.error) break;
@@ -216,22 +233,23 @@ const TASKS = {
         if (r.done.length) await send("candidates_checked", r.done);
         await sleep(jitter(4000, 7000));
       }
-    } finally { if (T.own) closeTab(tab); }
-    if (n >= 3 && !found) throw new Error("ایتا هیچ نتیجه‌ای نشان نداد؛ اگر ایتای وب در پنجره‌ی دیگری باز است آن را ببندید یا صفحه‌اش را یک بار تازه کنید");
+    } finally { closeWindow(T); }
+    if (n >= 3 && !found) throw new Error("ایتا هیچ نتیجه‌ای نشان نداد؛ ورود به ایتای وب را در همین کروم بررسی کنید");
     return `${n} جست‌وجو، ${found} نتیجه، ${sent} کانال سنجیده؛ ${snow} کانال از معرفی‌ها`;
   },
   async telegram(t) {
-    const T = await useOrOpen("https://web.telegram.org/*", "https://web.telegram.org/a/", 9000), tab = T.id;
+    const T = await openWindow("https://web.telegram.org/a/", 9000), tab = T.id;
     const rows = [];
     try {
       for (const [i, q] of t.telegram_queries.entries()) {
+        await waitVisible(T, "تلگرام");
         await progress(`جست‌وجوی ${i + 1} از ${t.telegram_queries.length}: «${q}»`);
         const r = await run(tab, pageTelegramSearch, [q]);
         if (!r || r.error) throw new Error((r && r.error) || "خطای صفحه");
         r.found.slice(0, t.limits.telegram_results_per_query).forEach(x => rows.push(["https://t.me/" + x.handle, q]));
         await sleep(jitter(6000, 10000));
       }
-    } finally { if (T.own) closeTab(tab); }
+    } finally { closeWindow(T); }
     if (rows.length) await send("channel_candidates", rows, {source: "telegram_search"});
     return `${t.telegram_queries.length} جست‌وجو، ${rows.length} کانال نامزد`;
   },
@@ -318,7 +336,10 @@ async function tick() {
   for (const name of Object.keys(TASKS)) {
     if (!c.tasks[name]) continue;
     const last = status[name] ? Date.parse(status[name].at) : 0;
-    if (Date.now() - last >= (t.intervals_hours[name] || 24) * 3600 * 1000) { await runTask(name); return; }
+    if (Date.now() - last < (t.intervals_hours[name] || 24) * 3600 * 1000) continue;
+    // ایتا و تلگرام پنجره‌ی جلو لازم دارند؛ خودکار فقط وقتی کاربر ۱۰ دقیقه پشت سیستم نبوده (و صفحه قفل نیست)
+    if ((name === "eitaa" || name === "telegram") && (await chrome.idle.queryState(600)) !== "idle") continue;
+    await runTask(name); return;
   }
 }
 

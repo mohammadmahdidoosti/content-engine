@@ -89,7 +89,8 @@ def search_query(name: str, brand: str | None = None) -> str:
     مرتبط نمی‌آورند؛ کد مدل مهم‌ترین قسمت است."""
     n = re.sub(r"\s+", " ", (name or "").replace("‌", " ")).strip()
     head = _CUT.sub("", n) or n
-    lat = (_DESC.sub("", n) or n).translate(FA_DIGITS)           # کد مدل ممکن است بعد از « - » بیاید
+    lat = re.sub(r"\s*[–—]\s*", "-", n).translate(FA_DIGITS)     # کد مدل هر جای اسم باشد (حتی بعد از «با …»)
+    lat = re.sub(r"\b([A-Za-z]+(?:\s[A-Za-z]+)?)\s*-\s*", r"\1-", lat)
     codes = re.findall(r"\b[A-Za-z]{1,4}[\s\-]?\d{1,5}(?:[\-.]\d+)?[A-Za-z0-9]*\b", lat)        # «MS 230»، «GX200»
     taken = " ".join(codes)
     codes += [c for c in re.findall(r"[A-Za-z0-9][A-Za-z0-9\-./]{1,}", lat)
@@ -99,7 +100,8 @@ def search_query(name: str, brand: str | None = None) -> str:
     b = (brand or "").strip()
     if b and b not in " ".join(fa):
         fa.append(b.split()[0])
-    q = " ".join(fa + codes[:2]) if codes else " ".join(words[:6])
+    codes = [c for c in dict.fromkeys(codes) if not any(c != o and c in o for o in codes)]   # «TU4-12» داخل «AKMA-TU4-12»
+    q = " ".join(fa + codes[:1]) if codes else " ".join(words[:6])
     return q.strip() or n[:60]
 
 

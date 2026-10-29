@@ -5,7 +5,7 @@
 const VERSION = chrome.runtime.getManifest().version;
 const DEFAULTS = {
   panel: "https://content.caravansanat.com", token: "", torobInstance: "292181",
-  tasks: {eitaa: true, telegram: true, torob_prices: true, torob_panel: true, google: false},
+  tasks: {outreach: true, eitaa: true, telegram: true, torob_prices: true, torob_panel: true, google: false},
 };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const jitter = (a, b) => a + Math.random() * (b - a);
@@ -156,9 +156,11 @@ async function pageTelegramSearch(q) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const inp = document.querySelector("#telegram-search-input");
   if (!inp) return {error: "ورود به تلگرام وب انجام نشده"};
-  inp.focus();
-  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(inp, q);
-  inp.dispatchEvent(new Event("input", {bubbles: true}));
+  ["pointerdown", "mousedown", "mouseup", "click"].forEach(t => inp.dispatchEvent(new MouseEvent(t, {bubbles: true})));
+  inp.focus(); await sleep(800); inp.select();
+  document.execCommand("insertText", false, q);                 // مثل تایپ واقعی (setter ساده را تلگرام نادیده می‌گیرد)
+  if (inp.value !== q) { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(inp, q);
+    inp.dispatchEvent(new Event("input", {bubbles: true})); }
   await sleep(4500);
   const out = [];
   document.querySelectorAll(".section-heading").forEach(h => {
@@ -173,6 +175,63 @@ async function pageTelegramSearch(q) {
   Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(inp, "");
   inp.dispatchEvent(new Event("input", {bubbles: true}));
   return {found: out};
+}
+
+// ---------- پیام به ادمین‌ها (فقط پیام‌هایی که صاحب فروشگاه در پنل تأیید کرده) ----------
+// گفتگوی یک آیدی را با جست‌وجو باز می‌کند؛ فقط حساب شخص (نه کانال/گروه/ربات) و فقط با آیدی دقیقاً همان.
+async function pageTgOpenUser(handle) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const inp = document.querySelector("#telegram-search-input");
+  if (!inp) return {error: "ورود به تلگرام وب انجام نشده"};
+  ["pointerdown", "mousedown", "mouseup", "click"].forEach(t => inp.dispatchEvent(new MouseEvent(t, {bubbles: true})));
+  inp.focus(); await sleep(800); inp.select(); document.execCommand("insertText", false, handle);   // حالت جست‌وجو باید فعال شود
+  await sleep(4500);
+  const it = [...document.querySelectorAll("[class*='LeftSearch'] .ListItem, .search-result")].find(x =>
+    (x.querySelector(".handle")?.textContent || "").replace(/^@/, "").trim().toLowerCase() === handle.toLowerCase());
+  if (!it) return {error: "این آیدی در تلگرام پیدا نشد"};
+  const st = (it.querySelector(".status")?.textContent || "") + " " + (it.querySelector(".subtitle")?.textContent || "");
+  if (/subscriber|member|مشترک|عضو/i.test(st) || /bot$/i.test(handle)) return {error: "این آیدی کانال/گروه/ربات است، نه شخص"};
+  const b = it.querySelector(".ListItem-button") || it;
+  b.dispatchEvent(new MouseEvent("mousedown", {bubbles: true})); b.click();
+  await sleep(5000);
+  const title = document.querySelector(".MiddleHeader .fullName")?.textContent || "";
+  if (!document.getElementById("editable-message-text")) return {error: "گفتگو باز نشد (شاید ارسال پیام بسته است)"};
+  return {ok: true, title, own: document.querySelectorAll("#MiddleColumn .Message.own").length,
+          all: document.querySelectorAll("#MiddleColumn .Message").length};
+}
+async function pageTgSend(lines) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const warn = () => [...document.querySelectorAll(".Notification, .modal, [class*='Toast'], [role='alert']")]
+    .map(e => e.innerText).join(" ").slice(0, 300);
+  const ed = document.getElementById("editable-message-text");
+  if (!ed) return {ok: false, error: "کادر پیام پیدا نشد"};
+  ed.focus();
+  lines.forEach((l, i) => { if (i) document.execCommand("insertLineBreak"); document.execCommand("insertText", false, l); });
+  await sleep(800);
+  if (ed.innerText.replace(/\s+/g, " ").trim() !== lines.join(" ").replace(/\s+/g, " ").trim())
+    return {ok: false, error: "متن درست در کادر ننشست؛ ارسال نشد"};
+  const before = document.querySelectorAll("#MiddleColumn .Message.own").length;
+  const btn = document.querySelector("#MiddleColumn button.main-button.send");
+  if (!btn) return {ok: false, error: "دکمه‌ی ارسال پیدا نشد"};
+  btn.click();
+  await sleep(5000);
+  const w = warn();
+  if (/too many|flood|spam|limit|محدود|اسپم|بیش از حد/i.test(w)) return {ok: false, stop: true, error: "هشدار تلگرام: " + w};
+  const own = [...document.querySelectorAll("#MiddleColumn .Message.own")];
+  const last = own[own.length - 1];
+  if (own.length <= before || !(last?.innerText || "").includes(lines[0]))
+    return {ok: false, stop: true, error: "رسیدن پیام تأیید نشد" + (w ? ": " + w : "")};
+  return {ok: true};
+}
+// جواب ادمین: پیام‌های طرف مقابل بعد از پیام ما (که خط «first» را دارد)
+async function pageTgReadReply(first) {
+  const msgs = [...document.querySelectorAll("#MiddleColumn .Message")];
+  let k = -1;
+  msgs.forEach((m, i) => { if (m.classList.contains("own") && (m.innerText || "").includes(first)) k = i; });
+  if (k < 0) return {text: ""};
+  const txt = msgs.slice(k + 1).filter(m => !m.classList.contains("own"))
+    .map(m => (m.querySelector(".text-content")?.innerText || "").replace(/\n?\d{1,2}:\d{2}\s*$/, "").trim()).filter(Boolean);
+  return {text: txt.join("\n").slice(0, 3000)};
 }
 
 // پنل فروشنده‌ی ترب: کلیک و هزینه‌ی هر کالا، نمودار روزانه، موجودی حساب، وضعیت کالاها.
@@ -258,6 +317,42 @@ const TASKS = {
     if (rows.length) await send("channel_candidates", rows, {source: "telegram_search"});
     return `${t.telegram_queries.length} جست‌وجو، ${rows.length} کانال نامزد`;
   },
+  async outreach(t) {
+    const o = t.outreach || {send: [], check: []};
+    if (!o.send.length && !o.check.length) return "پیامی برای ارسال یا پیگیری نبود";
+    const T = await openWindow("https://web.telegram.org/a/", 9000), tab = T.id;
+    let sent = 0, replies = 0, stopped = "";
+    try {
+      for (const [i, m] of o.send.entries()) {
+        await waitVisible(T, "تلگرام");
+        await progress(`ارسال پیام ${i + 1} از ${o.send.length} به @${m.handle}`);
+        let r = await run(tab, pageTgOpenUser, [m.handle]);
+        if (!r || !r.ok) r = {id: m.id, ok: false, error: (r && r.error) || "خطای صفحه"};
+        else if (r.own > 0) r = {id: m.id, ok: false, skip: true, error: "قبلاً با این آیدی گفتگو داشته‌اید؛ دستی پیگیری کنید"};
+        else r = {id: m.id, ...(await run(tab, pageTgSend, [m.lines]))};
+        await send("outreach_result", [r]);
+        if (r.ok) sent++;
+        if (r.stop) { stopped = r.error; break; }
+        if (i < o.send.length - 1) {                       // ۴ تا ۸ دقیقه فاصله
+          const until = Date.now() + jitter(o.gap_min[0], o.gap_min[1]) * 60000;
+          while (Date.now() < until) { await progress(`پیام بعدی ${Math.ceil((until - Date.now()) / 60000)} دقیقه‌ی دیگر`); await sleep(30000); }
+        }
+      }
+      const rows = [];
+      if (!stopped) for (const m of o.check) {
+        await waitVisible(T, "تلگرام");
+        await progress(`خواندن جواب @${m.handle}`);
+        const r = await run(tab, pageTgOpenUser, [m.handle]);
+        if (!r || !r.ok) continue;
+        const rep = await run(tab, pageTgReadReply, [m.first]);
+        if (rep && rep.text) rows.push({id: m.id, text: rep.text});
+        await sleep(jitter(4000, 8000));
+      }
+      if (rows.length) { await send("outreach_replies", rows); replies = rows.length; }
+    } finally { closeWindow(T); }
+    if (stopped) throw new Error("ارسال متوقف شد: " + stopped);
+    return `${sent} پیام فرستاده شد، ${replies} جواب خوانده شد`;
+  },
   async torob_prices(t) {
     let batch = [], n = 0;
     for (const p of t.torob_todo) {
@@ -342,8 +437,12 @@ async function tick() {
     if (!c.tasks[name]) continue;
     const last = status[name] ? Date.parse(status[name].at) : 0;
     if (Date.now() - last < (t.intervals_hours[name] || 24) * 3600 * 1000) continue;
+    if (name === "outreach") {                    // پنجره فقط وقتی کاری هست: پیام تأییدشده، یا هر ۳ ساعت خواندن جواب
+      const o = t.outreach || {send: [], check: []};
+      if (!o.send.length && (!o.check.length || Date.now() - last < 3 * 3600 * 1000)) continue;
+    }
     // ایتا و تلگرام پنجره‌ی جلو لازم دارند؛ خودکار فقط وقتی کاربر ۱۰ دقیقه پشت سیستم نبوده (و صفحه قفل نیست)
-    if ((name === "eitaa" || name === "telegram") && (await chrome.idle.queryState(600)) !== "idle") continue;
+    if ((name === "eitaa" || name === "telegram" || name === "outreach") && (await chrome.idle.queryState(600)) !== "idle") continue;
     await runTask(name); return;
   }
 }

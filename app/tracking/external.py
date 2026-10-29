@@ -20,7 +20,7 @@ from urllib.parse import unquote, urlparse
 from app.db.session import get_session, get_setting, set_setting
 
 log = logging.getLogger("tracking.external")
-SOURCES = {"channel_posts", "candidates_checked", "torob_prices", "channel_candidates", "torob_clicks", "torob_yearly", "gsc_queries", "ga_cities", "ga_sources"}
+SOURCES = {"channel_posts", "candidates_checked", "outreach_result", "outreach_replies", "torob_prices", "channel_candidates", "torob_clicks", "torob_yearly", "gsc_queries", "ga_cities", "ga_sources"}
 ORIGINS = {"https://web.eitaa.com", "https://web.telegram.org", "https://torob.com", "https://panel.torob.com", "https://search.google.com", "https://analytics.google.com", "https://www.google.com"}
 _COMMERCIAL = re.compile(r"قیمت|خرید|فروش|نمایندگی|لیست قیمت|بازار|ارزان|عمده")
 
@@ -46,6 +46,12 @@ def ingest(payload: dict) -> dict:
         from app.channels.hunter import ingest_channel_posts
         return {"source": src, "rows": len(rows),
                 **ingest_channel_posts(rows, (meta.get("source") or meta.get("platform") or "eitaa")[:20])}
+    if src == "outreach_result":                       # نتیجه‌ی ارسال پیام به ادمین (افزونه)
+        from app.channels.outreach import ingest_results
+        return {"source": src, "rows": len(rows), **ingest_results(rows)}
+    if src == "outreach_replies":                      # جواب ادمین‌ها (افزونه)
+        from app.channels.outreach import ingest_replies
+        return {"source": src, "rows": len(rows), **ingest_replies(rows)}
     if src == "candidates_checked":                     # نامزدهایی که افزونه سنجید و رد شدند
         from app.channels.hunter import mark_candidates
         return {"source": src, "rows": len(rows), **mark_candidates(rows)}

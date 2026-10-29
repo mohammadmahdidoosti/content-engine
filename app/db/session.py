@@ -34,6 +34,7 @@ def init_db() -> None:
     """ساخت جدول‌ها (در مراحل بعد به Alembic منتقل می‌شود)."""
     from app.db import marketing  # noqa: F401  (ثبت جدول‌های بازاریابی)
     from app.plan import pricing  # noqa: F401  (جدول مقایسه‌ی قیمت)
+    from app.channels import outreach  # noqa: F401  (پیام به ادمین‌ها)
     from app import assistant  # noqa: F401  (جدول پرسش‌های دستیار)
     from app.tracking import history  # noqa: F401  (جدول تاریخچه‌ی سفارش‌ها)
     from app.tracking import calls  # noqa: F401  (دفتر تماس)

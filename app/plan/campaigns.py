@@ -166,6 +166,50 @@ def ad_problems(text: str) -> list[str]:
     return out
 
 
+def support_lines(code: str) -> str:
+    """«مشاوره‌ی رایگان»: لینک تلگرام با متن آماده‌ی کد آگهی (از /m/<کد> تا کلیکش شمرده شود) + آیدی بله."""
+    s = get_settings()
+    base = (s.public_base_url or "").rstrip("/")
+    tg = f"{base}/m/{code}" if base else f"https://t.me/{s.support_telegram}"
+    return f"💬 مشاوره‌ی رایگان در تلگرام: {tg}\n📱 در بله: @{s.support_bale} (کد {code} را بفرستید)"
+
+
+def _compose(ad: dict, code: str, link: str) -> None:
+    tags = ad.get("tags") or ""
+    sup = support_lines(code)
+    ad["full_text"] = (f"**{ad['headline']}**\n\n{ad['body']}\n\n{ad['cta']}\n👈 {link}\n\n{sup}"
+                       + (f"\n\n{tags}" if tags else ""))
+    ad["short_text"] = f"{ad['short_version']}\n👈 {link}\n{sup}"
+
+
+def relink_all() -> int:
+    """متن آماده‌ی تبلیغ‌های ساخته‌شده با خط پشتیبانی به‌روز می‌شود (بدون هوش مصنوعی)."""
+    n = 0
+    with get_session() as db:
+        for pl in db.query(Placement).filter(Placement.ad_status == "ready").all():
+            ad = dict(pl.ad or {})
+            if not ad.get("headline"):
+                continue
+            if "tags" not in ad:
+                ad["tags"] = " ".join(h if str(h).startswith("#") else "#" + str(h) for h in ad.get("hashtags") or [])
+            _compose(ad, pl.code, ad.get("link") or short_url(pl.code) or pl.target_url)
+            pl.ad = ad
+            n += 1
+        db.commit()
+    return n
+
+
+def support_redirect_url(code: str) -> str:
+    from urllib.parse import quote
+    s = get_settings()
+    with get_session() as db:
+        pl = db.query(Placement).filter(Placement.code == code).first()
+        camp = db.get(Campaign, pl.campaign_id) if pl else None
+    about = re.sub(r"\s*[—\-–|].*$", "", (camp.title if camp else "") or "").strip()[:40]
+    text = f"سلام، از آگهی {code} " + (f"درباره‌ی {about} " if about else "") + "سؤال دارم"
+    return f"https://t.me/{s.support_telegram}?text={quote(text)}"
+
+
 def generate_ad(placement_id: int, mock: bool = False) -> None:
     with get_session() as db:
         pl = db.get(Placement, placement_id)
@@ -194,9 +238,8 @@ def generate_ad(placement_id: int, mock: bool = False) -> None:
             tags = " ".join(h if h.startswith("#") else "#" + h for h in ad.get("hashtags") or [])
             ad["link"] = link
             ad["utm_url"] = pl.target_url
-            ad["full_text"] = (f"**{ad['headline']}**\n\n{ad['body']}\n\n{ad['cta']}\n👈 {link}"
-                               + (f"\n\n{tags}" if tags else ""))
-            ad["short_text"] = f"{ad['short_version']}\n👈 {link}"
+            ad["tags"] = tags
+            _compose(ad, pl.code, link)
             ids = set(ad.get("featured_product_ids") or [])
             camp = db.get(Campaign, pl.campaign_id)
             imgs = []
@@ -237,10 +280,11 @@ def placement_metrics(db) -> dict[int, dict]:
         o = o_auto + (pl.orders or 0) + lg["bought"]
         rev = rev_auto + (pl.revenue_toman or 0) + lg["amount"]
         c = clicks.get(pl.code, 0)
+        mc = clicks.get(pl.code + "M", 0)          # کلیک روی «مشاوره در تلگرام»
         n_calls = (pl.calls or 0) + lg["calls"]
         leads = o_auto + (pl.orders or 0) + n_calls          # تماسی که به خرید رسید یک بار شمرده می‌شود
         out[pl.id] = {
-            "variant": pl.ad_variant, "clicks": c, "orders_auto": o_auto, "orders": o, "revenue": rev, "calls": n_calls,
+            "variant": pl.ad_variant, "clicks": c, "msg_clicks": mc, "orders_auto": o_auto, "orders": o, "revenue": rev, "calls": n_calls,
             "calls_logged": lg["calls"],
             "leads": leads, "cost": cost,
             "cpc": round(cost / c) if c and cost else None,

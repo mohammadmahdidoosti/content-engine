@@ -691,6 +691,54 @@ def public_redirect(req, m):
         raise Redirect(p.target_url or get_settings().brand_site_url)
 
 
+def public_support(req, m):
+    """«مشاوره‌ی رایگان در تلگرام» داخل آگهی: کلیک شمرده می‌شود و گفتگوی پشتیبانی با متن کد آگهی باز می‌شود."""
+    code = m.group(1).upper()
+    with get_session() as db:
+        if db.query(Placement).filter(Placement.code == code).first():
+            db.add(Click(code=code + "M", visitor=visitor_hash(req.client_ip(), req.headers.get("User-Agent", "")),
+                         referer=(req.headers.get("Referer") or "")[:300] or None))
+            db.commit()
+    raise Redirect(camps.support_redirect_url(code))
+
+
+# =============== پیام به ادمین‌ها ===============
+def api_outreach(req, m):
+    from app.channels import outreach
+    c = req.q("campaign")
+    return outreach.listing(_int(c, "campaign") if c else None)
+
+
+def api_outreach_draft(req, m):
+    from app.channels import outreach
+    return outreach.draft(_int(m.group(1), "id"))
+
+
+def api_outreach_update(req, m):
+    from app.channels import outreach
+    try:
+        return outreach.update(_int(m.group(1), "id"), req.body())
+    except ValueError as e:
+        raise HttpError(400, str(e)) from None
+
+
+def api_outreach_approve(req, m):
+    from app.channels import outreach
+    ids = req.body().get("ids") or []
+    if not isinstance(ids, list) or not ids:
+        raise HttpError(400, "هیچ پیامی انتخاب نشده")
+    return outreach.approve(ids)
+
+
+def api_outreach_resume(req, m):
+    from app.channels import outreach
+    return outreach.resume()
+
+
+def api_campaigns_relink(req, m):
+    return {"updated": camps.relink_all()}
+
+
 # =============== دستیار، ربات‌ها، ویجت ===============
 _rate: dict = {}
 ALLOWED_ORIGINS = {"https://caravansanat.com", "https://www.caravansanat.com"}
@@ -852,8 +900,9 @@ def api_collector_tasks(req, m):
         "telegram_queries": hunter.telegram_queries(36),
         "google_queries": [q["q"] for q in qs][:35],
         "torob_todo": todo(60),
+        "outreach": __import__("app.channels.outreach", fromlist=["tasks"]).tasks(),
         "torob_panel": {"from": start.strftime("%Y-%m-%d"), "to": t.strftime("%Y-%m-%d")},
-        "intervals_hours": {"eitaa": 24, "telegram": 24, "torob_prices": 24, "torob_panel": 168, "google": 48},
+        "intervals_hours": {"outreach": 0.5, "eitaa": 24, "telegram": 24, "torob_prices": 24, "torob_panel": 168, "google": 48},
         "limits": {"eitaa_channels_per_query": 8, "min_members": hunter.MIN_MEMBERS_CITY, "telegram_results_per_query": 10},
     }
 
@@ -981,10 +1030,14 @@ ROUTES = [
     ("POST", r"/api/hunter/pause", api_hunter_pause), ("GET", r"/api/hunter/coverage", api_hunter_coverage),
     ("GET", r"/api/hunter/queries", api_hunter_queries),
     ("GET", r"/api/alerts", api_alerts), ("GET", r"/api/lift", api_lift), ("GET", r"/api/seo/ideas", api_seo_ideas), ("GET", r"/api/calls", api_calls), ("POST", r"/api/calls", api_call_add),
+    ("GET", r"/api/outreach", api_outreach), ("POST", r"/api/campaigns/(\d+)/outreach", api_outreach_draft),
+    ("POST", r"/api/outreach/approve", api_outreach_approve), ("POST", r"/api/outreach/resume", api_outreach_resume),
+    ("POST", r"/api/outreach/(\d+)", api_outreach_update), ("POST", r"/api/campaigns/relink", api_campaigns_relink),
     ("POST", r"/api/calls/(\d+)", api_call_update), ("POST", r"/api/calls/(\d+)/delete", api_call_delete),
 ]
 _COMPILED = [(meth, re.compile("^" + pat + "$"), fn) for meth, pat, fn in ROUTES]
 _PUBLIC = [("GET", re.compile(r"^/r/([A-Za-z0-9]{3,12})$"), public_redirect),
+           ("GET", re.compile(r"^/m/([A-Za-z0-9]{3,12})$"), public_support),
            ("POST", re.compile(r"^/public/ask$"), public_ask),
            ("GET", re.compile(r"^/widget\.js$"), public_widget),
            ("POST", re.compile(r"^/bot/(telegram|bale)/([0-9a-f]{24})$"), public_bot)]

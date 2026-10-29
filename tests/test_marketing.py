@@ -376,3 +376,67 @@ def test_topic_affinity_and_small_city():
     hunter._CITY_RX = __import__("re").compile("میناب|رشت")
     assert hunter.min_members("اخبار میناب") == 400 and hunter.min_members("اخبار ورزشی") == 800
     hunter._CITY_RX = None
+
+
+def test_outreach_flow(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/out.db")
+    from app.db import session as sess
+    monkeypatch.setattr(sess, "_engine", None)
+    monkeypatch.setattr(sess, "_Session", None)
+    sess.init_db()
+    from app.channels import outreach as o
+    from app.db.marketing import Campaign, Channel, Placement
+    with sess.get_session() as db:
+        db.add(Campaign(id=7, code="CX7", title="خاک‌ورزی — گلستان", plan_id="TILL", status="active"))
+        a = Channel(platform="telegram", username="gonbadnews", title="خبرهای گنبد", admin_contact="@gonbadads", status="checked")
+        b = Channel(platform="telegram", username="aqqalaa", title="آق قلا", ad_contacts=["@ghojoghi_71", "0911"], status="checked")
+        c = Channel(platform="telegram", username="gorgan", title="گرگان", admin_contact="@ghojoghi_71", status="checked")
+        d = Channel(platform="telegram", username="noadmin", title="بی‌ادمین", status="checked")
+        db.add_all([a, b, c, d]); db.flush()
+        for i, ch in enumerate((a, b, c, d)):
+            db.add(Placement(code=f"PX{i}", campaign_id=7, channel_id=ch.id))
+        db.commit()
+    r = o.draft(7)
+    assert r["made"] == 2 and r["no_contact"] == ["بی‌ادمین"]
+    assert o.draft(7)["made"] == 0                       # تکراری نمی‌سازد
+    items = o.listing(7)["items"]
+    two = next(x for x in items if x["handle"] == "ghojoghi_71")
+    assert len(two["channels"]) == 2 and "«آق قلا»، «گرگان»" in two["text"]
+    assert o.tasks()["send"] == []                       # بدون تأیید هیچ پیامی نمی‌رود
+    o.approve([x["id"] for x in items])
+    t = o.tasks()
+    assert len(t["send"]) == 2 and t["send"][0]["lines"][0] == "سلام، وقت بخیر"
+    o.ingest_results([{"id": items[0]["id"], "ok": True}, {"id": items[1]["id"], "ok": False, "error": "Too many requests"}])
+    t = o.tasks()
+    assert t["paused"] and t["send"] == [] and len(t["check"]) == 1
+    o.ingest_replies([{"id": items[0]["id"], "text": "سلام، پست ۲۴ ساعته ۸۰۰ تومن"}], mock=True)
+    with sess.get_session() as db:
+        ch = db.query(Channel).filter(Channel.username == "gonbadnews").one()
+        pl = db.query(Placement).filter(Placement.channel_id == ch.id).one()
+        assert ch.price_toman == 800000 and pl.cost_toman == 800000 and pl.status == "contacted"
+    assert o.resume()["ok"] and not o.tasks()["paused"]
+
+
+def test_support_links(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/sl.db")
+    monkeypatch.setenv("PUBLIC_BASE_URL", "https://content.example.com")
+    from app.config import get_settings
+    get_settings.cache_clear() if hasattr(get_settings, "cache_clear") else None
+    from app.db import session as sess
+    monkeypatch.setattr(sess, "_engine", None)
+    monkeypatch.setattr(sess, "_Session", None)
+    sess.init_db()
+    from app.db.marketing import Campaign, Placement
+    from app.plan import campaigns as c
+    with sess.get_session() as db:
+        db.add(Campaign(id=3, code="CQ3", title="سم‌پاشی باغ — گیلان", plan_id="SPRAY", status="active"))
+        db.add(Placement(id=5, code="AB12", campaign_id=3, ad_status="ready",
+                         ad={"headline": "ت", "body": "ب", "cta": "س", "short_version": "ک", "hashtags": ["باغ"], "link": "L"}))
+        db.commit()
+    assert c.relink_all() == 1
+    with sess.get_session() as db:
+        ad = db.get(Placement, 5).ad
+    assert "/m/AB12" in ad["full_text"] and "@Caravansanatsupport" in ad["full_text"] and "#باغ" in ad["full_text"]
+    u = c.support_redirect_url("AB12")
+    assert u.startswith("https://t.me/Caravansanatsupport?text=") and "AB12" in __import__("urllib.parse").parse.unquote(u)
+    get_settings.cache_clear() if hasattr(get_settings, "cache_clear") else None

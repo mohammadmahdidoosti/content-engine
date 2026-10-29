@@ -1,8 +1,8 @@
-const NAMES = {eitaa: "ایتا: جست‌وجوی سراسری و سنجش کانال‌ها", telegram: "تلگرام: جست‌وجوی کانال", torob_prices: "ترب: مقایسه‌ی قیمت کالاهای کمپین",
+const NAMES = {outreach: "تلگرام: پیام به ادمین‌ها (فقط پیام‌های تأییدشده در پنل)", eitaa: "ایتا: جست‌وجوی سراسری و سنجش کانال‌ها", telegram: "تلگرام: جست‌وجوی کانال", torob_prices: "ترب: مقایسه‌ی قیمت کالاهای کمپین",
   torob_panel: "پنل ترب: کلیک و هزینه (هفتگی)", google: "گوگل: پیدا کردن کانال تلگرام (کم‌اولویت)"};
 const $ = s => document.querySelector(s);
 const DEF = {panel: "https://content.caravansanat.com", token: "", torobInstance: "292181",
-  tasks: {eitaa: true, telegram: true, torob_prices: true, torob_panel: true, google: false}};
+  tasks: {outreach: true, eitaa: true, telegram: true, torob_prices: true, torob_panel: true, google: false}};
 const fa = iso => iso ? new Date(iso).toLocaleString("fa-IR") : "هنوز اجرا نشده";
 async function showRunning() {
   const {running, queue} = await chrome.storage.local.get(["running", "queue"]);

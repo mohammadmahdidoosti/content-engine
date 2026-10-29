@@ -351,6 +351,7 @@ function campCard(c, chans, open){
         <div class="chips" style="margin-top:6px">${(b.keywords || []).map(k => `<button class="chip kw" data-copy="${esc(k)}">${esc(k)}</button>`).join("")}</div>
         <div class="small muted" style="margin-top:6px">${esc(b.channels || "")}</div></div></div>
     <div style="margin-top:10px">${prodStrip(c.products)}</div>
+    <div data-outreach="${c.id}" style="margin-top:12px"></div>
     <div class="inline" style="margin:14px 0 8px"><b style="font-size:14px">تبلیغ‌ها</b>
       <button class="ghost sm" data-addpl0="${c.id}">تبلیغ بدون کانال مشخص</button></div>
     ${avail.length ? `<div class="chlist" data-addch="${c.id}">${avail.map(ch => `<label><input type="checkbox" value="${ch.id}"> <b>${esc(ch.title || ch.username)}</b>
@@ -389,13 +390,51 @@ function plRow(p){
         <div><label class="f">فروش دستی (تومان)</label><input type="text" inputmode="numeric" data-plf="${p.id}" data-k="revenue_toman" value="${p.revenue_toman || 0}"></div>
         <div><label class="f">یادداشت</label><input type="text" data-plf="${p.id}" data-k="notes" value="${esc(p.notes || "")}"></div></div>
       <div class="inline" style="margin-top:10px;gap:4px 14px">
-        <span>کلیک: <b>${fa(m.clicks)}</b></span><span>سفارش خودکار: <b>${fa(m.orders_auto)}</b></span>
+        <span>کلیک: <b>${fa(m.clicks)}</b></span><span title="کلیک روی «مشاوره‌ی رایگان در تلگرام»">پیام پشتیبانی: <b>${fa(m.msg_clicks || 0)}</b></span><span>سفارش خودکار: <b>${fa(m.orders_auto)}</b></span>
         <span>هزینه هر کلیک: <b>${mtoman(m.cpc)}</b></span><span>هزینه هر مشتری بالقوه: <b>${mtoman(m.cost_per_lead)}</b></span>
         <span>بازگشت: <b>${m.roas != null ? fa(m.roas) + "×" : "–"}</b></span></div>
       <div class="muted" style="margin-top:6px">لینک ردیابی: <span class="ltr">${esc(p.short_url || "")}</span></div></div></div></div>`;
 }
+// ---------- پیام به ادمین‌ها ----------
+const OR_ST = {draft: "پیش‌نویس", approved: "در صف ارسال", sent: "فرستاده شد", replied: "جواب داد", failed: "ناموفق", skipped: "رد شد", manual: "دستی بفرستید"};
+const OR_CLS = {approved: "b-info", sent: "b-warn", replied: "b-ok", failed: "b-bad", skipped: "", manual: ""};
+async function loadOutreach(cid){
+  const box = document.querySelector(`[data-outreach="${cid}"]`); if (!box) return;
+  const d = await api("/api/outreach?campaign=" + cid).catch(() => null); if (!d) return;
+  const drafts = d.items.filter(x => x.status === "draft");
+  const q = d.items.filter(x => x.status === "approved").length;
+  box.innerHTML = `<div class="card" style="box-shadow:none"><header style="font-size:13.5px"><span>پیام به ادمین‌ها برای تعرفه
+      <span class="small muted">· ${fa(d.sent_today)} از ${fa(d.daily_cap)} پیام امروز${q ? " · " + fa(q) + " در صف" : ""}</span></span>
+    <span class="inline"><button class="ghost sm" data-ordraft="${cid}">${d.items.length ? "به‌روزرسانی پیش‌نویس‌ها" : "ساخت پیش‌نویس پیام‌ها"}</button>
+      ${drafts.length ? `<button class="btn sm" data-orapprove="${cid}">تأیید و شروع ارسال (${fa(drafts.length)})</button>` : ""}</span></header>
+    ${d.paused ? `<div class="pad small" style="color:var(--amber)">⛔ ارسال متوقف است: ${esc(d.paused.reason || "")} <button class="ghost sm" id="orResume">ادامه‌ی ارسال</button></div>` : ""}
+    <div class="pad small muted" style="padding-bottom:0">پیام‌ها فقط بعد از «تأیید» شما و با افزونه‌ی کروم خودتان فرستاده می‌شوند: هر ۴ تا ۸ دقیقه یکی، حداکثر ${fa(d.daily_cap)} پیام در روز، به هر آیدی یک بار؛ با هر هشدار تلگرام متوقف می‌شود. جواب‌ها هر ۳ ساعت خوانده و قیمت‌ها خودکار ثبت می‌شوند.</div>
+    <div class="pad">${d.items.map(x => `<div style="border-bottom:1px solid var(--line);padding:8px 0">
+      <div class="inline" style="justify-content:space-between"><span>${x.status === "draft" ? `<input type="checkbox" data-orpick="${x.id}" checked> ` : ""}<b class="ltr">@${esc(x.handle)}</b>
+        <span class="muted small">${esc(x.channels.map(c => c.title).join("، "))}</span></span>
+        <span class="inline small"><span class="badge ${OR_CLS[x.status] || ""}">${OR_ST[x.status] || x.status}</span>
+          ${["draft", "manual", "failed", "skipped"].includes(x.status) ? `<a class="ghost sm" href="https://t.me/${esc(x.handle)}" target="_blank" rel="noopener">باز کردن گفتگو</a> <button class="ghost sm" data-copy="${esc(x.text)}">کپی متن</button> <button class="ghost sm" data-orst="${x.id}" data-v="sent">خودم فرستادم</button>` : ""}
+          ${x.status === "draft" ? `<button class="ghost sm" data-orst="${x.id}" data-v="skipped">نفرست</button>` : ""}</span></div>
+      ${x.status === "draft" || x.status === "manual" ? `<textarea data-ortext="${x.id}" rows="4" style="margin-top:6px">${esc(x.text)}</textarea>` : ""}
+      ${x.error ? `<div class="small" style="color:var(--amber)">⚠ ${esc(x.error)}</div>` : ""}
+      ${x.reply ? `<div class="small" style="margin-top:4px"><b>جواب:</b> ${esc(x.reply.slice(0, 300))}</div>
+        <div class="small">${x.parsed && x.parsed.price_toman ? `💰 قیمت: <b>${mtoman(x.parsed.price_toman)}</b>` : "قیمت پیدا نشد"}${x.parsed && x.parsed.pin_price_toman ? ` · پین: ${mtoman(x.parsed.pin_price_toman)}` : ""}${x.parsed && x.parsed.duration_hours != null ? ` · ${x.parsed.duration_hours ? fa(x.parsed.duration_hours) + " ساعت" : "دائمی"}` : ""}${x.parsed && x.parsed.slots ? ` · ساعت: ${esc(x.parsed.slots)}` : ""}</div>` : ""}
+    </div>`).join("") || '<div class="muted small">هنوز پیش‌نویسی ساخته نشده. اول کانال‌ها را به کمپین اضافه کنید، بعد «ساخت پیش‌نویس پیام‌ها» را بزنید.</div>'}</div></div>`;
+  box.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => copy(b.dataset.copy));
+  box.querySelector("[data-ordraft]").onclick = async () => { const r = await post(`/api/campaigns/${cid}/outreach`);
+    toast(`${fa(r.made)} پیش‌نویس تازه${r.no_contact.length ? " · بدون آیدی تبلیغ: " + r.no_contact.join("، ") : ""}`); loadOutreach(cid); };
+  box.querySelectorAll("[data-ortext]").forEach(t => t.onchange = async () => { try { await post("/api/outreach/" + t.dataset.ortext, {text: t.value}); toast("متن ذخیره شد"); } catch (e) { toast(e.message); } });
+  box.querySelectorAll("[data-orst]").forEach(b => b.onclick = async () => { await post("/api/outreach/" + b.dataset.orst, {status: b.dataset.v}); loadOutreach(cid); });
+  const ap = box.querySelector("[data-orapprove]");
+  if (ap) ap.onclick = async () => { const ids = [...box.querySelectorAll("[data-orpick]:checked")].map(i => +i.dataset.orpick);
+    if (!ids.length) { toast("هیچ پیامی تیک نخورده"); return; }
+    if (!confirm(`${ids.length} پیام با حساب تلگرام شما و با فاصله فرستاده شود؟`)) return;
+    const r = await post("/api/outreach/approve", {ids}); toast(`${fa(r.approved)} پیام در صف ارسال افزونه قرار گرفت`); loadOutreach(cid); };
+  const rs = box.querySelector("#orResume"); if (rs) rs.onclick = async () => { await post("/api/outreach/resume"); loadOutreach(cid); };
+}
 function bindCampaigns(chans){
   const v = $("#view");
+  v.querySelectorAll("[data-outreach]").forEach(b => loadOutreach(+b.dataset.outreach));
   v.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => copy(b.dataset.copy));
   v.querySelectorAll("[data-campst]").forEach(s => s.onchange = async () => { await post("/api/campaigns/" + s.dataset.campst, {status: s.value}); toast("ذخیره شد"); });
   v.querySelectorAll("[data-addpl]").forEach(b => b.onclick = async () => {

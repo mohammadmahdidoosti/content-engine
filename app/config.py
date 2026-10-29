@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     # Brand
     brand_name: str = "کاروان صنعت"
     brand_site_url: str = "https://caravansanat.com"
+    support_telegram: str = "Caravansanatsupport"   # پشتیبانی تلگرام (لینک «مشاوره» در آگهی‌ها)
+    support_bale: str = "Caravansanatsupport"       # پشتیبانی بله
     brand_niche: str = (
         "فروشگاه آنلاین تجهیزات صنعتی، کشاورزی و ساختمانی با ارسال به کل کشور: بذر و نهاده، آبیاری و پمپ، "
         "هیدرولیک، پنوماتیک، برق صنعتی و الکتروموتور، لوله و اتصالات و شیرآلات، تاسیسات، ایمنی و ابزار"

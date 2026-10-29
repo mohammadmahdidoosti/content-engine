@@ -51,7 +51,8 @@ def ingest(payload: dict) -> dict:
         return {"source": src, "rows": len(rows), **mark_candidates(rows)}
     if src == "channel_candidates":                     # لینک کانال‌ها از نتیجه‌ی جست‌وجوی گوگل
         from app.channels.hunter import ingest_candidates
-        res = ingest_candidates(rows, "google")
+        sname = meta.get("source") if meta.get("source") in ("telegram_search", "google") else "google"
+        res = ingest_candidates(rows, sname)
         return {"source": src, "rows": len(rows), **res}
     if src == "torob_yearly":
         data = _torob_yearly(rows, payload.get("urls") or [], meta)

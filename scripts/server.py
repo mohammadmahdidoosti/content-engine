@@ -849,7 +849,7 @@ def api_collector_tasks(req, m):
     return {
         "eitaa_queries": hunter.eitaa_queries(24),
         "eitaa_handles": hunter.eitaa_todo(15),
-        "telegram_queries": cities[:30],
+        "telegram_queries": hunter.telegram_queries(36),
         "google_queries": [q["q"] for q in qs][:35],
         "torob_todo": todo(60),
         "torob_panel": {"from": start.strftime("%Y-%m-%d"), "to": t.strftime("%Y-%m-%d")},

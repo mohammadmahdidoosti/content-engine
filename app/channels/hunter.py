@@ -388,6 +388,33 @@ _EITAA_PATS = {"AGRI": ["کشاورزی {c}", "{c}", "نیازمندیهای {c}
 _EITAA_DEFAULT = ["صنعت {c}", "{c}", "نیازمندیهای {c}"]
 
 
+_TG_TOPIC = {"AGRI": "کشاورزی {c}", "WATER": "کشاورزی {c}", "BUILD": "مصالح ساختمانی {c}", "PIPE": "تاسیسات {c}"}
+
+
+def telegram_queries(n: int = 36) -> list[str]:
+    """جست‌وجوی سراسری تلگرام هم اسم کانال را می‌گردد. فقط نام شهر ← فقط کانال خبری شهر؛ پس برای هر شهر
+    «نام شهر» + یک عبارت موضوعی (کشاورزی/مصالح/صنعت) + «نیازمندی» جست‌وجو می‌شود."""
+    cov = coverage()
+    out, cities = [], []
+    with get_session() as db:
+        plans = {p.id: p for p in db.query(PlanCategory).all()}
+    for cell in cov["cells"]:
+        if not cell["gap"] or len(out) >= n:
+            continue
+        p = plans.get(cell["plan_id"])
+        if not p:
+            continue
+        seg = next((x for x in p.segments or [] if x.get("name") == cell["segment"]), None) or {}
+        for c in (_cities_of(seg, cell["province"]) or [cell["province"]])[:2]:
+            if c in cities:
+                continue
+            cities.append(c)
+            for q in (c, _TG_TOPIC.get(p.group, "صنعت {c}").format(c=c), f"نیازمندی {c}"):
+                if q not in out:
+                    out.append(q)
+    return out[:n]
+
+
 def eitaa_queries(n: int = 24) -> list[str]:
     """جست‌وجوی ایتا اسم کانال را می‌گردد، نه متن پست را؛ پس «نام شهر» و «نیازمندی/کشاورزی + شهر» بهتر از
     عبارت‌های طولانی جواب می‌دهد. به ترتیب خانه‌های خالی جدول پوشش، هر شهر یک بار."""

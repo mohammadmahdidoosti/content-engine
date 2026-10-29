@@ -225,7 +225,7 @@ const TASKS = {
         await sleep(jitter(6000, 10000));
       }
     } finally { closeTab(tab); }
-    if (rows.length) await send("channel_candidates", rows);
+    if (rows.length) await send("channel_candidates", rows, {source: "telegram_search"});
     return `${t.telegram_queries.length} جست‌وجو، ${rows.length} کانال نامزد`;
   },
   async torob_prices(t) {

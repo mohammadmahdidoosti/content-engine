@@ -36,6 +36,28 @@ AUDIENCES = {"farmer": "کشاورز و باغدار", "contractor": "پیمان
              "trade": "بازار و فروشندگان", "general": "عمومی سراسری", "irrelevant": "نامرتبط"}
 
 
+# مخاطب‌هایی که می‌خرند؛ گلوله‌برفی فقط از این کانال‌ها ادامه پیدا می‌کند
+USEFUL_AUDIENCES = ("farmer", "contractor", "industry", "technician", "local_news", "classifieds", "trade")
+# کانال‌هایی که مخاطبشان مشتری ما نیست (دانشجو، سرگرمی، …) بدون هزینه‌ی هوش مصنوعی کنار می‌روند
+_NOISE = re.compile(r"دانشجو|دانشگاه|دانشکده|انجمن\s*علمی|کنکور|جزوه|استاد\s*شناسی|خوابگاه|university|student|"
+                    r"\buni\b|فیلم|سریال|موزیک|آهنگ|طنز|فال\b|شرط\s*بندی|کازینو|ارز\s*دیجیتال|کریپتو|بیت\s*کوین|"
+                    r"مهاجرت|اپلای|ویزا|عاشقانه|استوری|والپیپر|میم\b", re.I)
+_NOISE_DESC = re.compile(r"دانشجو|انجمن\s*علمی|کنکور|جزوه|شرط\s*بندی|کازینو", re.I)   # توضیح کانال: فقط نشانه‌های قوی
+
+
+def is_noise(title: str | None, description: str | None = None) -> bool:
+    fa = str.maketrans("يك", "یک")
+    title, description = (title or "").translate(fa), (description or "").translate(fa)
+    return bool(_NOISE.search(title or "") or _NOISE_DESC.search(description or ""))
+
+
+def parent_yield(db, username: str) -> tuple[int, int]:
+    """(تعداد بچه‌های برچسب‌خورده، تعداد مرتبط) کانال‌هایی که از این والد پیدا شده‌اند."""
+    rows = db.query(Channel.relevant).filter(Channel.source == "snowball", func.lower(Channel.found_via) == username.lower(),
+                                            Channel.tagged_at.isnot(None)).all()
+    return len(rows), sum(1 for (r,) in rows if r)
+
+
 def _now():
     return datetime.now(timezone.utc)
 
@@ -92,10 +114,18 @@ def snowball_step(deadline: float, max_parents: int = 6) -> dict:
     with get_session() as db:
         parents = (db.query(Channel).filter(Channel.platform == "telegram", Channel.status == "checked",
                                             Channel.score >= 40, Channel.relevant.is_(True),
-                                            Channel.audience.notin_(["general", "irrelevant"]))
+                                            Channel.audience.in_(USEFUL_AUDIENCES))
                    .filter((Channel.crawled_at.is_(None)) | (Channel.crawled_at < cutoff))
-                   .order_by(Channel.score.desc()).limit(max_parents).all())
-        parents = [(p.id, p.username) for p in parents]
+                   .order_by(Channel.score.desc()).limit(max_parents * 4).all())
+        ok = []
+        for p in parents:
+            if is_noise(p.title, p.description):
+                continue
+            n, rel = parent_yield(db, p.username)
+            if n >= 5 and rel / n < 0.25:        # بچه‌های این والد بیشترشان بی‌ربط بوده‌اند
+                continue
+            ok.append((p.id, p.username))
+        parents = ok[:max_parents]
     found = Counter()
     done = 0
     for pid, user in parents:
@@ -147,7 +177,7 @@ def _fetch_eitaa(username: str) -> dict:
 def check_candidates(deadline: float, limit: int = 60) -> dict:
     from app.channels.telegram import check_channel, fetch_telegram
     with get_session() as db:
-        rows = (db.query(ChannelCandidate).filter(ChannelCandidate.status == "new")
+        rows = (db.query(ChannelCandidate).filter(ChannelCandidate.status == "new", ChannelCandidate.platform != "eitaa")
                 .order_by(ChannelCandidate.hits.desc(), ChannelCandidate.id).limit(limit).all())
         todo = [(c.id, c.platform, c.username, c.source, c.found_via) for c in rows]
     added = rejected = 0
@@ -166,6 +196,8 @@ def check_candidates(deadline: float, limit: int = 60) -> dict:
             avg = int(sum(v) / len(v)) if v else 0
             if (d.get("members") or 0) < MIN_MEMBERS:
                 reason = f"عضو کم ({d.get('members') or 0})"
+            elif is_noise(d.get("title"), d.get("description")):
+                reason = "موضوع بی‌ربط (دانشجویی/سرگرمی/…)"
             elif plat == "telegram" and avg < MIN_VIEWS:
                 reason = f"بازدید کم ({avg})"
             else:
@@ -241,7 +273,9 @@ def tag_channels(deadline: float, batch: int = 12, mock: bool = False) -> dict:
                       "قواعد: اگر نام یا محتوا به شهر خاصی اشاره دارد scope=city و آن شهر و استانش را بنویس. "
                       "کانال خبری عمومی یک شهر برای همه‌ی دسته‌ها مفید است ولی plan_ids را فقط برای دسته‌هایی بنویس که "
                       "واقعاً به مخاطبش می‌خورد (مثلاً شهر کشاورزی ← بذر، آبیاری، پمپ چاه). کانال سرگرمی، سیاسی، "
-                      "شرط‌بندی، مهاجرت یا ارز دیجیتال ← relevant=false. خروجی فقط JSON.")
+                      "شرط‌بندی، مهاجرت یا ارز دیجیتال ← relevant=false. کانال دانشجویی، دانشگاهی، انجمن علمی یا آموزشی "
+                      "(حتی رشته‌ی عمران/مکانیک/کشاورزی) ← relevant=false و audience=irrelevant، چون دانشجو مشتری ابزار و "
+                      "دستگاه نیست. خروجی فقط JSON.")
             try:
                 r = get_llm(get_settings().llm_fast_model).generate_json(
                     system, text + f"\n\nاسکیما: {_Tags.model_json_schema()}", _Tags)
@@ -349,6 +383,36 @@ def gap_queries(max_queries: int = 40) -> list[dict]:
     return out[:max_queries]
 
 
+_EITAA_PATS = {"AGRI": ["کشاورزی {c}", "{c}", "نیازمندیهای {c}"], "WATER": ["کشاورزی {c}", "{c}", "نیازمندیهای {c}"],
+               "BUILD": ["مصالح {c}", "{c}", "نیازمندیهای {c}"], "PIPE": ["تاسیسات {c}", "{c}", "نیازمندیهای {c}"]}
+_EITAA_DEFAULT = ["صنعت {c}", "{c}", "نیازمندیهای {c}"]
+
+
+def eitaa_queries(n: int = 24) -> list[str]:
+    """جست‌وجوی ایتا اسم کانال را می‌گردد، نه متن پست را؛ پس «نام شهر» و «نیازمندی/کشاورزی + شهر» بهتر از
+    عبارت‌های طولانی جواب می‌دهد. به ترتیب خانه‌های خالی جدول پوشش، هر شهر یک بار."""
+    cov = coverage()
+    out, cities = [], []
+    with get_session() as db:
+        plans = {p.id: p for p in db.query(PlanCategory).all()}
+    for cell in cov["cells"]:
+        if not cell["gap"] or len(out) >= n:
+            continue
+        p = plans.get(cell["plan_id"])
+        if not p:
+            continue
+        seg = next((x for x in p.segments or [] if x.get("name") == cell["segment"]), None) or {}
+        for c in (_cities_of(seg, cell["province"]) or [cell["province"]])[:2]:
+            if c in cities:
+                continue
+            cities.append(c)
+            for pat in _EITAA_PATS.get(p.group, _EITAA_DEFAULT):
+                q = pat.format(c=c)
+                if q not in out:
+                    out.append(q)
+    return out[:n]
+
+
 def _cities_of(seg: dict, province: str) -> list[str]:
     provs = [re.sub(r"\s*\(.*?\)", "", x).strip() for x in seg.get("provinces") or []]
     parts = (seg.get("cities") or "").split("|")
@@ -359,11 +423,34 @@ def _cities_of(seg: dict, province: str) -> list[str]:
     return [re.sub(r"\s*\(.*?\)", "", c).strip() for c in re.split(r"[،,]", part) if c.strip()][:3]
 
 
+def cleanup() -> dict:
+    """کانال‌های «نویز» بی‌ربط می‌شوند؛ نامزدهای منتظرِ والدهای بی‌ربط یا کم‌بازده رد می‌شوند."""
+    marked = dropped = 0
+    with get_session() as db:
+        for ch in db.query(Channel).filter(Channel.relevant.isnot(False)).all():
+            if is_noise(ch.title, ch.description):
+                ch.relevant, ch.audience = False, "irrelevant"
+                marked += 1
+        db.flush()
+        bad = {}
+        for c in db.query(ChannelCandidate).filter(ChannelCandidate.status == "new", ChannelCandidate.source == "snowball").all():
+            par = (c.found_via or "").lower()
+            if par not in bad:
+                p = db.query(Channel).filter(func.lower(Channel.username) == par).first()
+                n, rel = parent_yield(db, par)
+                bad[par] = bool(p and (p.relevant is False or p.audience not in USEFUL_AUDIENCES)) or (n >= 5 and rel / n < 0.25)
+            if bad[par]:
+                c.status, c.reason, c.checked_at = "rejected", "والد بی‌ربط یا کم‌بازده", _now()
+                dropped += 1
+        db.commit()
+    return {"marked_irrelevant": marked, "dropped_candidates": dropped}
+
+
 # ---------------- اجرای دوره‌ای ----------------
 def run(budget_sec: int = 240, mock: bool = False) -> dict:
     deadline = time.monotonic() + budget_sec
     stats = {"at": _now().isoformat()}
-    for name, fn in (("tag", lambda: tag_channels(min(deadline, time.monotonic() + 90), mock=mock)),
+    for name, fn in (("cleanup", cleanup), ("tag", lambda: tag_channels(min(deadline, time.monotonic() + 90), mock=mock)),
                      ("check", lambda: check_candidates(deadline)),
                      ("snowball", lambda: snowball_step(deadline))):
         if time.monotonic() > deadline:
@@ -397,12 +484,50 @@ def status() -> dict:
             "paused": bool(get_setting("hunter.paused"))}
 
 
+_EITAA_MENTION = re.compile(r"(?:eitaa\.com/|@)([A-Za-z][A-Za-z0-9_]{4,31})")
+
+
+def eitaa_mentions(texts: list[str], self_name: str) -> list[str]:
+    out = set()
+    for t in texts:
+        for m in _EITAA_MENTION.findall(t or ""):
+            if m.lower() != self_name.lower() and not m.lower().endswith("bot"):
+                out.add(m)
+    return sorted(out)
+
+
+def eitaa_todo(limit: int = 15) -> list[dict]:
+    """نامزدهای ایتا که باید در مرورگر صاحب فروشگاه سنجیده شوند (صفحه‌ی عمومی ایتا بازدید را نشان نمی‌دهد)."""
+    with get_session() as db:
+        rows = (db.query(ChannelCandidate).filter(ChannelCandidate.status == "new", ChannelCandidate.platform == "eitaa")
+                .order_by(ChannelCandidate.hits.desc(), ChannelCandidate.id).limit(limit).all())
+        return [{"username": c.username, "via": c.found_via or ""} for c in rows]
+
+
+def mark_candidates(rows: list) -> dict:
+    """از افزونه: [[platform, username, ok, reason]] ← وضعیت نامزد به‌روز می‌شود."""
+    n = 0
+    with get_session() as db:
+        for r in rows[:300]:
+            if not isinstance(r, list) or len(r) < 3:
+                continue
+            c = (db.query(ChannelCandidate).filter(ChannelCandidate.platform == str(r[0]),
+                                                   func.lower(ChannelCandidate.username) == str(r[1]).lower()).first())
+            if c and c.status == "new":
+                c.status = "added" if r[2] else "rejected"
+                c.reason = None if r[2] else str(r[3] if len(r) > 3 else "")[:180] or None
+                c.checked_at = _now()
+                n += 1
+        db.commit()
+    return {"marked": n}
+
+
 def ingest_channel_posts(rows: list, source: str = "eitaa") -> dict:
     """از پل پنل (مرورگر صاحب فروشگاه): [{platform, username, title, description, members, posts:[{views, ts, text,
     reactions}], query}] ← کانال ساخته/به‌روز و با همان فرمول تلگرام سنجیده می‌شود."""
     from app.channels.metrics import score as mscore
     from app.channels.telegram import apply_metrics
-    added = updated = skipped = 0
+    added = updated = skipped = mentions = 0
     for r in rows[:300]:
         if not isinstance(r, dict):
             skipped += 1
@@ -440,7 +565,16 @@ def ingest_channel_posts(rows: list, source: str = "eitaa") -> dict:
             if (ch.members or 0) < MIN_MEMBERS and new:
                 ch.status = "blocked"
                 ch.error = f"عضو کم ({ch.members or 0})"
+            elif new and is_noise(ch.title, ch.description):
+                ch.relevant, ch.audience = False, "irrelevant"
+            good_parent = (ch.status != "blocked" and ch.relevant is not False and not is_noise(ch.title, ch.description)
+                           and (ch.audience in USEFUL_AUDIENCES or ch.audience is None))
             db.commit()
+        if plat == "eitaa" and posts and good_parent:              # گلوله‌برفی ایتا
+            ms = eitaa_mentions([p["text"] for p in posts] + [str(r.get("description") or "")], user)
+            if ms:
+                mentions += add_candidates([("eitaa", m) for m in ms], "snowball", user)["added"]
         added += new
         updated += not new
-    return {"added": added, "updated": updated, "skipped": skipped}
+    mark_candidates([[r.get("platform"), r.get("username"), True] for r in rows if isinstance(r, dict)])
+    return {"added": added, "updated": updated, "skipped": skipped, "new_candidates": mentions}

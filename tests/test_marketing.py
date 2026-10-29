@@ -296,7 +296,7 @@ def test_ingest_channel_posts(tmp_path, monkeypatch):
     posts = [{"views": str(900 + i), "ts": str(1793000000 + 3600 * 6 * i), "text": "خبر"} for i in range(12)]
     r = ingest_channel_posts([{"platform": "eitaa", "username": "dez_news", "title": "اخبار دزفول", "members": "5000",
                                "posts": posts, "query": "کشاورزی دزفول"}, {"platform": "x"}])
-    assert r == {"added": 1, "updated": 0, "skipped": 1}
+    assert r == {"added": 1, "updated": 0, "skipped": 1, "new_candidates": 0}
     with sess.get_session() as db:
         ch = db.query(Channel).one()
         assert ch.platform == "eitaa" and ch.expected_ad_views and ch.score > 0 and ch.status == "checked"
@@ -309,3 +309,47 @@ def test_collector_routes_whitelist():
     sys.modules["srv"] = srv
     spec.loader.exec_module(srv)
     assert ("POST", "/api/ext/import") in srv.COLLECTOR_ROUTES and ("GET", "/api/campaigns") not in srv.COLLECTOR_ROUTES
+
+
+def test_hunter_noise_and_eitaa_snowball(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/ns.db")
+    from app.db import session as sess
+    monkeypatch.setattr(sess, "_engine", None)
+    monkeypatch.setattr(sess, "_Session", None)
+    sess.init_db()
+    from app.channels import hunter
+    from app.db.marketing import Channel, ChannelCandidate
+    assert hunter.is_noise("انجمن علمي عمران") and hunter.is_noise("x", "کانال دانشجویان")
+    assert not hunter.is_noise("اخبار ورامین", "خبر، فیلم و عکس شهر و دانشگاه") and not hunter.is_noise("کشاورزی رشت")
+    posts = [{"views": "900", "ts": str(1793000000 + 3600 * 6 * i), "text": f"کانال خوب @agri_rasht{i % 2} و eitaa.com/bazar_rasht"}
+             for i in range(10)]
+    r = hunter.ingest_channel_posts([{"platform": "eitaa", "username": "rasht_news", "title": "اخبار رشت", "members": "9000",
+                                      "posts": posts}], "eitaa")
+    assert r["new_candidates"] == 3
+    assert {"agri_rasht0", "agri_rasht1", "bazar_rasht"} <= {c["username"] for c in hunter.eitaa_todo()}
+    # دانشجویی ← بی‌ربط و بدون گلوله‌برفی
+    r = hunter.ingest_channel_posts([{"platform": "eitaa", "username": "civil_uni", "title": "انجمن علمی عمران", "members": "3000",
+                                      "posts": [{**p, "text": "@student_x1 جزوه"} for p in posts]}], "eitaa")
+    assert r["new_candidates"] == 0
+    assert hunter.mark_candidates([["eitaa", "agri_rasht0", False, "عضو کم"]]) == {"marked": 1}
+    hunter.ingest_channel_posts([{"platform": "eitaa", "username": "bazar_rasht", "title": "بازار رشت", "members": "2000",
+                                  "posts": posts, "query": "rasht_news"}], "snowball")
+    with sess.get_session() as db:
+        st = {c.username: c.status for c in db.query(ChannelCandidate).all()}
+        assert st["agri_rasht0"] == "rejected" and st["bazar_rasht"] == "added" and st["agri_rasht1"] == "new"
+        assert db.query(Channel).filter(Channel.username == "civil_uni").one().relevant is False
+        # والد کم‌بازده: ۵ بچه‌ی بی‌ربط ← نامزدهای منتظرش رد می‌شوند
+        for i in range(5):
+            db.add(Channel(platform="telegram", username=f"kid{i}", source="snowball", found_via="rasht_news",
+                           relevant=False, tagged_at=hunter._now(), status="checked"))
+        db.commit()
+    assert hunter.cleanup()["dropped_candidates"] == 1
+
+
+def test_torob_search_query():
+    from app.plan.pricing import search_query as q
+    assert q("اره زنجیری اشتیل مدل MS 230", "اشتیل") == "اره زنجیری اشتیل MS 230"
+    assert q("دریل بتن کن بوش GBH 2-26 DRE", "بوش").startswith("دریل بتن کن بوش GBH 2-26")
+    assert q("شمشاد زن شارژی ماکیتا مدل UH201DZ با تیغه ۲۰ سانتی") == "شمشاد زن شارژی UH201DZ"
+    assert q("پمپ آب کشاورزی سه اینچ") == "پمپ آب کشاورزی سه اینچ"
+    assert q("فرز آهنگری ماکیتا - مدل GA9020", "ماکیتا") == "فرز آهنگری ماکیتا GA9020"

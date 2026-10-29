@@ -94,6 +94,37 @@ async function pageEitaaQuery(q, limit, minMembers, seen) {
   return {ids, rows};
 }
 
+// ایتای وب: کانال‌هایی که از پست‌های کانال‌های خوب پیدا شده‌اند (گلوله‌برفی) با آیدی باز و سنجیده می‌شوند.
+async function pageEitaaHandles(handles, minMembers) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const fa = s => String(s || "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/٫/g, ".");
+  const num = s => { const t = fa(s).replace(/[,\s٬]/g, ""); const m = t.match(/([\d.]+)\s*([KkMm]|هزار|میلیون)?/); if (!m) return null;
+    return Math.round(parseFloat(m[1]) * ({k: 1e3, m: 1e6, "هزار": 1e3, "میلیون": 1e6}[(m[2] || "").toLowerCase()] || 1)); };
+  if (!document.querySelector(".sidebar-header input.input-search-input")) return {error: "ورود به ایتای وب انجام نشده"};
+  const rows = [], done = [];
+  for (const h of handles) {
+    location.hash = "#@" + h.username; await sleep(5000);
+    if (location.hash.toLowerCase() !== ("#@" + h.username).toLowerCase()) { done.push(["eitaa", h.username, false, "پیدا نشد"]); continue; }
+    const c = document.querySelector(".chat.active"); if (!c) { done.push(["eitaa", h.username, false, "باز نشد"]); continue; }
+    const info = c.querySelector(".chat-info .info")?.innerText || "";
+    const members = num(info);
+    if (!/مشترک|subscriber/i.test(info)) { done.push(["eitaa", h.username, false, "کانال نیست"]); continue; }
+    if (!members || members < minMembers) { done.push(["eitaa", h.username, false, `عضو کم (${members || 0})`]); continue; }
+    const sc = c.querySelector(".bubbles .scrollable");
+    for (let i = 0; i < 3 && sc; i++) { sc.scrollTop = 0; await sleep(1600); }
+    if (sc) { const step = Math.max(300, sc.clientHeight * 0.8), end = sc.scrollHeight;
+      for (let i = 0, y = 0; i < 25 && y <= end; i++, y += step) { sc.scrollTop = y; await sleep(650); } await sleep(1200); }
+    const posts = [...c.querySelectorAll(".bubble[data-timestamp]")].filter(b => !b.classList.contains("service")).map(b => {
+      const v = num(b.querySelector(".post-views")?.textContent);
+      return {ts: b.dataset.timestamp, views: v > 1 ? v : null, text: (b.querySelector(".message")?.innerText || "").replace(/\s+/g, " ").slice(0, 600)};
+    }).filter(p => p.views != null);
+    rows.push({platform: "eitaa", username: h.username, title: c.querySelector(".chat-info .peer-title")?.textContent || "",
+               members: String(members), posts, query: h.via});
+    await sleep(1500);
+  }
+  return {rows, done};
+}
+
 // تلگرام وب: فقط بخش «Global Search» (نه گفتگوهای شخصی) خوانده می‌شود.
 async function pageTelegramSearch(q) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -159,7 +190,7 @@ async function pageGoogle(queries) {
 const TASKS = {
   async eitaa(t) {
     const tab = await openTab("https://web.eitaa.com/", 9000);
-    let seen = [], n = 0, sent = 0;
+    let seen = [], n = 0, sent = 0, snow = 0;
     try {
       for (const q of t.eitaa_queries) {
         await progress(`جست‌وجوی ${n + 1} از ${t.eitaa_queries.length}: «${q}» — ${sent} کانال تا الان`);
@@ -170,8 +201,17 @@ const TASKS = {
         n++;
         await sleep(jitter(5000, 9000));
       }
+      const hs = t.eitaa_handles || [];
+      for (let i = 0; i < hs.length; i += 5) {                // گلوله‌برفی: ۵تا ۵تا
+        await progress(`کانال‌های معرفی‌شده: ${i + 1} تا ${Math.min(i + 5, hs.length)} از ${hs.length}`);
+        const r = await run(tab, pageEitaaHandles, [hs.slice(i, i + 5), 800]);
+        if (!r || r.error) break;
+        if (r.rows.length) { await send("channel_posts", r.rows, {platform: "eitaa", source: "snowball"}); snow += r.rows.length; }
+        if (r.done.length) await send("candidates_checked", r.done);
+        await sleep(jitter(4000, 7000));
+      }
     } finally { closeTab(tab); }
-    return `${n} جست‌وجو، ${sent} کانال سنجیده و فرستاده شد`;
+    return `${n} جست‌وجو، ${sent} کانال سنجیده؛ ${snow} کانال از معرفی‌ها`;
   },
   async telegram(t) {
     const tab = await openTab("https://web.telegram.org/a/", 9000);
@@ -192,7 +232,7 @@ const TASKS = {
     let batch = [], n = 0;
     for (const p of t.torob_todo) {
       await progress(`کالای ${n + 1} از ${t.torob_todo.length}`);
-      const r = await fetch("https://api.torob.com/v4/base-product/search/?page=0&sort=popularity&size=12&source=next_desktop&q=" + encodeURIComponent(p.name));
+      const r = await fetch("https://api.torob.com/v4/base-product/search/?page=0&sort=popularity&size=12&source=next_desktop&q=" + encodeURIComponent(p.q || p.name));
       if (r.status !== 200) { if (batch.length) await send("torob_prices", batch); throw new Error("ترب جواب نداد: HTTP " + r.status + " (بعد از " + n + " کالا)"); }
       const d = await r.json();
       batch.push([p.id, (d.results || []).slice(0, 12).map(x => ({name1: x.name1, price: x.price, shop_text: x.shop_text, web_client_absolute_url: x.web_client_absolute_url}))]);

@@ -351,8 +351,10 @@ def api_pricing_status(req, m):
     from app.plan.pricing import PriceCheck
     with get_session() as db:
         rows = dict(db.query(PriceCheck.status, func.count()).group_by(PriceCheck.status).all())
+    from app.plan.pricing import listing
     return {"by_status": rows, "last_run_at": get_setting("pricing.last_run_at"),
-            "last_error": get_setting("pricing.last_error"), "last_stats": get_setting("pricing.last_stats")}
+            "last_error": get_setting("pricing.last_error"), "last_stats": get_setting("pricing.last_stats"),
+            "items": listing(200)}
 
 
 # =============== تنظیمات ===============
@@ -845,13 +847,14 @@ def api_collector_tasks(req, m):
     from datetime import timedelta
     start = t - timedelta(days=31)
     return {
-        "eitaa_queries": [q["q"].replace("site:t.me ", "") for q in qs][:24],
+        "eitaa_queries": hunter.eitaa_queries(24),
+        "eitaa_handles": hunter.eitaa_todo(15),
         "telegram_queries": cities[:30],
         "google_queries": [q["q"] for q in qs][:35],
         "torob_todo": todo(60),
         "torob_panel": {"from": start.strftime("%Y-%m-%d"), "to": t.strftime("%Y-%m-%d")},
         "intervals_hours": {"eitaa": 24, "telegram": 24, "torob_prices": 24, "torob_panel": 168, "google": 48},
-        "limits": {"eitaa_channels_per_query": 6, "telegram_results_per_query": 10},
+        "limits": {"eitaa_channels_per_query": 8, "telegram_results_per_query": 10},
     }
 
 

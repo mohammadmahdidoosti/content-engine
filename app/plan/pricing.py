@@ -79,6 +79,30 @@ def _shops(text: str) -> tuple[int, bool]:
     return 1, OWN_SHOP in t
 
 
+_CUT = re.compile(r"\s*(?:[،,|؛:(]|\s[\-–—]\s|\s(?:با|دارای|مناسب|جهت|برای|همراه)\s).*$")
+_DESC = re.compile(r"\s(?:با|دارای|مناسب|جهت|برای|همراه)\s.*$")
+_FILLER = {"مدل", "برند", "کد", "اصل", "اورجینال", "ساخت", "کشور", "جدید", "سری", "حرفه‌ای", "حرفه ای"}
+
+
+def search_query(name: str, brand: str | None = None) -> str:
+    """جست‌وجوی کوتاه برای ترب: «نوع کالا + برند + کد مدل». اسم‌های طولانی (با توضیح و ویژگی) در ترب نتیجه‌ی
+    مرتبط نمی‌آورند؛ کد مدل مهم‌ترین قسمت است."""
+    n = re.sub(r"\s+", " ", (name or "").replace("‌", " ")).strip()
+    head = _CUT.sub("", n) or n
+    lat = (_DESC.sub("", n) or n).translate(FA_DIGITS)           # کد مدل ممکن است بعد از « - » بیاید
+    codes = re.findall(r"\b[A-Za-z]{1,4}[\s\-]?\d{1,5}(?:[\-.]\d+)?[A-Za-z0-9]*\b", lat)        # «MS 230»، «GX200»
+    taken = " ".join(codes)
+    codes += [c for c in re.findall(r"[A-Za-z0-9][A-Za-z0-9\-./]{1,}", lat)
+              if re.search(r"\d", c) and re.search(r"[A-Za-z]", c) and c not in taken]
+    words = [w for w in head.split() if w not in _FILLER]
+    fa = [w for w in words if not re.search(r"[A-Za-z0-9۰-۹]", w)][:3]           # نوع کالا (۲-۳ کلمه‌ی اول)
+    b = (brand or "").strip()
+    if b and b not in " ".join(fa):
+        fa.append(b.split()[0])
+    q = " ".join(fa + codes[:2]) if codes else " ".join(words[:6])
+    return q.strip() or n[:60]
+
+
 def search(q: str, timeout: float = 20) -> list[dict]:
     r = httpx.get(API, timeout=timeout, params={"page": 0, "sort": "popularity", "size": 12, "q": q,
                                                 "source": "next_desktop"},
@@ -133,7 +157,7 @@ def check_products(product_ids: list[int], max_checks: int = 60, max_age_days: i
         if deadline and time.monotonic() > deadline:
             break
         try:
-            res = compare(p.name, p.price, search(p.name))
+            res = compare(p.name, p.price, search(search_query(p.name, p.brand)))
         except httpx.HTTPStatusError as e:
             code = e.response.status_code
             stats["errors"] += 1
@@ -171,22 +195,27 @@ def check_products(product_ids: list[int], max_checks: int = 60, max_age_days: i
     return stats
 
 
+QUERY_V2_AT = datetime(2026, 10, 29, 9, 0, tzinfo=timezone.utc)   # «یافت نشد»های قبل از جست‌وجوی کوتاه دوباره بررسی می‌شوند
+
+
 def todo(limit: int = 60, max_age_days: int = 3) -> list[dict]:
     """کالاهایی که باید با ترب مقایسه شوند (برای اجرا از مرورگر صاحب فروشگاه با آی‌پی ایران)."""
     from app.db.marketing import Product
     ids = candidates()
     cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
     with get_session() as db:
+        def _at(pc):
+            return pc.checked_at if pc.checked_at.tzinfo else pc.checked_at.replace(tzinfo=timezone.utc)
         fresh = {pc.product_id for pc in db.query(PriceCheck).filter(PriceCheck.product_id.in_(ids)).all()
-                 if pc.status != "error" and pc.checked_at
-                 and (pc.checked_at if pc.checked_at.tzinfo else pc.checked_at.replace(tzinfo=timezone.utc)) > cutoff}
+                 if pc.status != "error" and pc.checked_at and _at(pc) > cutoff
+                 and not (pc.status == "no_match" and _at(pc) < QUERY_V2_AT)}
         out = []
         for i in ids:
             if i in fresh:
                 continue
             p = db.get(Product, i)
             if p and p.price:
-                out.append({"id": p.id, "name": p.name})
+                out.append({"id": p.id, "name": p.name, "q": search_query(p.name, p.brand)})
             if len(out) >= limit:
                 break
     return out
@@ -276,3 +305,14 @@ def plan_price_weight(examples: list[dict]) -> float:
     if med <= 1.10:
         return 0.85
     return 0.7
+
+
+def listing(limit: int = 200) -> list[dict]:
+    from app.db.marketing import Product
+    with get_session() as db:
+        rows = db.query(PriceCheck, Product).join(Product, Product.id == PriceCheck.product_id) \
+            .order_by(PriceCheck.checked_at.desc()).limit(limit).all()
+        return [{"id": p.id, "name": p.name, "q": search_query(p.name, p.brand), "status": pc.status, "our_price": pc.our_price,
+                 "market_min": pc.market_min, "ratio": pc.ratio, "shops": pc.shops, "match_name": pc.match_name,
+                 "match_url": pc.match_url, "checked_at": pc.checked_at.isoformat() if pc.checked_at else None}
+                for pc, p in rows]

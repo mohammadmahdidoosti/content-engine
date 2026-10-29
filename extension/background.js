@@ -41,9 +41,18 @@ async function openTab(url, waitMs = 8000) {
   await sleep(waitMs);
   return tab.id;
 }
+// اگر صفحه وسط کار خودش جابه‌جا شد (ریدایرکت پنل ترب و…)، صبر و دوباره تلاش
 async function run(tabId, func, args = []) {
-  const [res] = await chrome.scripting.executeScript({target: {tabId}, world: "MAIN", func, args});
-  return res ? res.result : null;
+  for (let i = 0; ; i++) {
+    try {
+      const [res] = await chrome.scripting.executeScript({target: {tabId}, world: "MAIN", func, args});
+      return res ? res.result : null;
+    } catch (e) {
+      if (i >= 2 || !/frame|removed|navigat/i.test(e.message || "")) throw e;
+      for (let k = 0; k < 20; k++) { if ((await chrome.tabs.get(tabId)).status === "complete") break; await sleep(1000); }
+      await sleep(5000);
+    }
+  }
 }
 const closeTab = id => chrome.tabs.remove(id).catch(() => {});
 

@@ -71,6 +71,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fa = n => n == null || n === "" ? "–" : Number(n).toLocaleString("fa-IR");
 const toman = n => n ? fa(n) + " تومان" : "–";
+const fd = s => String(s ?? "").replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]);
 const en = s => String(s ?? "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
 let META = null;
 function toast(m){ const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 2200); }
@@ -84,7 +85,7 @@ async function api(path, opts = {}){
 const post = (p, b) => api(p, {method: "POST", body: JSON.stringify(b || {})});
 const badge = d => `<span class="badge b-${d.stage}">${esc(d.stage_name)}</span>`;
 const dealItem = d => `<div class="item" data-deal="${d.id}"><div class="row sp"><b>${esc((d.contact && d.contact.name) || "بدون نام")}</b>${badge(d)}</div>
-  <div>${esc(d.title)}</div><div class="small muted">${d.contact && d.contact.city ? esc(d.contact.city) + " · " : ""}${d.ad_code ? "کد " + esc(d.ad_code) + " · " : d.source ? esc(d.source) + " · " : ""}${d.next_at_fa ? `<span class="${d.overdue ? "late" : ""}">پیگیری ${esc(d.next_at_fa)}${d.overdue ? " (عقب‌افتاده)" : ""}</span>` : "بدون تاریخ پیگیری"}</div></div>`;
+  <div>${esc(d.title)}</div><div class="small muted">${d.contact && d.contact.city ? esc(d.contact.city) + " · " : ""}${d.ad_code ? "کد " + esc(d.ad_code) + " · " : d.source ? esc(d.source) + " · " : ""}${d.next_at_fa ? `<span class="${d.overdue ? "late" : ""}">پیگیری ${fd(d.next_at_fa)}${d.overdue ? " (عقب‌افتاده)" : ""}</span>` : "بدون تاریخ پیگیری"}</div></div>`;
 function bindDeals(root = document){ root.querySelectorAll("[data-deal]").forEach(e => e.onclick = () => openDeal(+e.dataset.deal)); }
 
 // ---------- ورود ----------
@@ -103,7 +104,7 @@ async function today(){
       <div class="kpi"><b>${fa(d.due.length)}</b><span class="small muted">پیگیری امروز</span></div>
       <div class="kpi"><b>${fa(d.month.deals)}</b><span class="small muted">درخواست ۳۰ روز</span></div>
       <div class="kpi"><b>${fa(d.month.won)}</b><span class="small muted">خرید ۳۰ روز</span></div></div>
-    <div class="card" style="margin-top:10px"><h2>☀️ امروز ${esc(d.today)} باید پیگیری شوند</h2>${d.due.map(dealItem).join("") || '<div class="muted small">پیگیری‌ای برای امروز نیست 👌</div>'}</div>
+    <div class="card" style="margin-top:10px"><h2>☀️ امروز ${fd(d.today)} باید پیگیری شوند</h2>${d.due.map(dealItem).join("") || '<div class="muted small">پیگیری‌ای برای امروز نیست 👌</div>'}</div>
     <div class="card"><h2>🆕 درخواست‌های بدون تاریخ پیگیری</h2>${d.no_followup.map(dealItem).join("") || '<div class="muted small">همه تاریخ پیگیری دارند.</div>'}</div>
     <div class="card small muted">در کاریز: ${Object.entries(META.stages).filter(([k]) => !["won","lost"].includes(k)).map(([k, v]) => `${esc(v)} ${fa(d.counts[k])}`).join(" · ")}</div>`;
   bindDeals();
@@ -132,7 +133,7 @@ function add(){
   bindChips(root, "fu");
   $("#fPhone").onchange = async () => { const v = en($("#fPhone").value); if (v.replace(/\D/g, "").length < 8) return;
     const c = await api("/api/contacts/lookup?phone=" + encodeURIComponent(v)).catch(() => null);
-    if (c && c.id) { $("#known").innerHTML = `<div class="card" style="margin:8px 0;background:var(--brand-soft)">مشتری قبلی: <b>${esc(c.name || "بدون نام")}</b>${c.city ? " · " + esc(c.city) : ""}<br>${c.deals.slice(0, 5).map(d => `${badge(d)} ${esc(d.title)} <span class="muted">${esc(d.created_fa)}</span>`).join("<br>")}</div>`;
+    if (c && c.id) { $("#known").innerHTML = `<div class="card" style="margin:8px 0;background:var(--brand-soft)">مشتری قبلی: <b>${esc(c.name || "بدون نام")}</b>${c.city ? " · " + esc(c.city) : ""}<br>${c.deals.slice(0, 5).map(d => `${badge(d)} ${esc(d.title)} <span class="muted">${fd(d.created_fa)}</span>`).join("<br>")}</div>`;
       if (!$("#fName").value) $("#fName").value = c.name || ""; if (!$("#fCity").value) $("#fCity").value = c.city || ""; } else $("#known").innerHTML = ""; };
   $("#save").onclick = async () => { const b = $("#save"); b.disabled = true;
     try { await post("/api/deals", {phone: en($("#fPhone").value), name: $("#fName").value, city: $("#fCity").value, title: $("#fTitle").value,
@@ -159,20 +160,20 @@ async function openDeal(id){
   el.innerHTML = `<div class="in"><div class="row sp"><b style="font-size:16px">${esc(c.name || "بدون نام")}</b><button class="ghost" data-x>بستن</button></div>
     <div class="row" style="margin:8px 0">${c.phone ? `<a class="call" href="tel:${esc(c.phone)}">📞 <span class="ltr">${esc(c.phone)}</span></a>` : ""}${c.city ? `<span class="muted">${esc(c.city)}</span>` : ""}</div>
     <div class="card"><div class="row sp"><b>${esc(d.title)}</b>${badge(d)}</div>
-      <div class="small muted">${d.category ? esc(d.category) + " · " : ""}${d.ad_code ? "کد آگهی " + esc(d.ad_code) : esc(d.source || "منبع نامشخص")} · ثبت ${esc(d.created_fa)}</div>
+      <div class="small muted">${d.category ? esc(d.category) + " · " : ""}${d.ad_code ? "کد آگهی " + esc(d.ad_code) : esc(d.source || "منبع نامشخص")} · ثبت ${fd(d.created_fa)}</div>
       ${d.note ? `<div style="margin-top:6px">${esc(d.note)}</div>` : ""}</div>
     <div class="card"><h2>مرحله</h2>${chips("stage", Object.entries(META.stages), d.stage)}
       <div id="lostBox" ${d.stage === "lost" ? "" : "hidden"}><label>دلیل انصراف</label>${chips("lost", META.lost_reasons.map(r => [r, r]), d.lost_reason || "")}</div>
       <div id="amtBox" ${["invoice", "won"].includes(d.stage) ? "" : "hidden"}><label>مبلغ (تومان)</label><input id="amt" inputmode="numeric" value="${d.amount ?? ""}">
         <label>سود (اختیاری)</label><input id="prf" inputmode="numeric" value="${d.profit ?? ""}"></div>
       <button class="full" id="stSave">ذخیره‌ی مرحله</button></div>
-    <div class="card"><h2>پیگیری بعدی ${d.next_at_fa ? `<span class="small ${d.overdue ? "late" : "muted"}">(فعلاً ${esc(d.next_at_fa)})</span>` : ""}</h2>
+    <div class="card"><h2>پیگیری بعدی ${d.next_at_fa ? `<span class="small ${d.overdue ? "late" : "muted"}">(فعلاً ${fd(d.next_at_fa)})</span>` : ""}</h2>
       ${chips("fu", [["1", "فردا"], ["2", "۲ روز"], ["3", "۳ روز"], ["7", "هفته‌ی بعد"], ["14", "دو هفته"]], "")}
       <label>یا تاریخ (۱۴۰۵/۰۸/۲۰)</label><input id="fuDate" class="ltr" style="text-align:left">
       <label>نتیجه‌ی تماس / یادداشت</label><textarea id="logT" placeholder="مثلاً: قیمت را فرستادم، گفت با شریک مشورت می‌کند"></textarea>
       <button class="full" id="fuSave">ثبت تماس و پیگیری</button></div>
-    <div class="card"><h2>تاریخچه</h2><div class="tl">${d.activities.map(a => `<div><span class="small muted">${esc(a.at_fa)}${a.user ? " · " + esc(a.user) : ""}</span><br>${esc(a.text)}</div>`).join("") || '<span class="muted small">—</span>'}</div></div>
-    ${d.other_deals.length ? `<div class="card"><h2>درخواست‌های دیگر این مشتری</h2>${d.other_deals.map(o => `<div class="small">${badge(o)} ${esc(o.title)} <span class="muted">${esc(o.created_fa)}</span>${o.amount ? " · " + toman(o.amount) : ""}</div>`).join("")}</div>` : ""}
+    <div class="card"><h2>تاریخچه</h2><div class="tl">${d.activities.map(a => `<div><span class="small muted">${fd(a.at_fa)}${a.user ? " · " + esc(a.user) : ""}</span><br>${esc(a.text)}</div>`).join("") || '<span class="muted small">—</span>'}</div></div>
+    ${d.other_deals.length ? `<div class="card"><h2>درخواست‌های دیگر این مشتری</h2>${d.other_deals.map(o => `<div class="small">${badge(o)} ${esc(o.title)} <span class="muted">${fd(o.created_fa)}</span>${o.amount ? " · " + toman(o.amount) : ""}</div>`).join("")}</div>` : ""}
     <button class="danger full" id="del">حذف این درخواست</button></div>`;
   document.body.appendChild(el);
   const close = () => { el.remove(); route(); };
@@ -199,7 +200,7 @@ async function customers(){
     <label>مشتری‌های فصلی: چه کسانی این دسته را خریده‌اند…</label><input id="cc" list="cats2" value="${esc(CUS.cat)}" placeholder="دسته یا اسم کالا"><datalist id="cats2">${META.categories.map(c => `<option value="${esc(c)}">`).join("")}</datalist>
     <label>…در این ماه‌ها</label><div class="chips">${MONTHS.map((m, i) => `<button class="chip ${CUS.months.includes(i + 1) ? "on" : ""}" data-m="${i + 1}">${m}</button>`).join("")}</div></div>
     <div class="card"><div class="small muted" style="margin-bottom:6px">${fa(list.length)} مشتری</div>${list.map(c => `<div class="item"><div class="row sp"><b>${esc(c.name || "بدون نام")}</b>${c.phone ? `<a href="tel:${esc(c.phone)}" class="ltr">${esc(c.phone)}</a>` : ""}</div>
-      <div class="small muted">${c.city ? esc(c.city) + " · " : ""}${c.activity ? esc(c.activity) + " · " : ""}${c.bought ? `${fa(c.bought)} خرید، ${toman(c.spent)}، آخرین ${esc(c.last)}` : "خرید ثبت‌شده ندارد"}</div>
+      <div class="small muted">${c.city ? esc(c.city) + " · " : ""}${c.activity ? esc(c.activity) + " · " : ""}${c.bought ? `${fa(c.bought)} خرید، ${toman(c.spent)}، آخرین ${fd(c.last)}` : "خرید ثبت‌شده ندارد"}</div>
       ${c.items.length ? `<div class="small">${esc(c.items.join("، "))}</div>` : ""}</div>`).join("") || '<div class="muted small">کسی پیدا نشد.</div>'}</div>`;
   $("#cq").onchange = e => { CUS.q = e.target.value; customers(); };
   $("#cc").onchange = e => { CUS.cat = e.target.value; customers(); };

@@ -106,7 +106,7 @@ ROUTES = [
     ("GET", r"/api/contacts", lambda req, m: core.search_contacts(req.q("q") or "", req.q("tag") or "", req.q("category") or "",
                                                                   [int(x) for x in (req.q("months") or "").split(",") if x.isdigit()])),
     ("POST", r"/api/contacts/(\d+)", lambda req, m: _val(core.update_contact, _int(m.group(1), "id"), req.body())),
-    ("GET", r"/api/report", lambda req, m: core.report(_int(req.q("days") or 90, "days"), req.q("import") == "1")),
+    ("GET", r"/api/report", lambda req, m: core.report(_int(req.q("days") or 90, "days"), req.q("import") != "0")),
     ("POST", r"/api/bale/link", lambda req, m: _val(bale.link)),
     ("POST", r"/api/bale/unlink", lambda req, m: bale.unlink(req.body().get("id"))),
     ("POST", r"/api/bale/test", lambda req, m: {"sent": _val(bale.send_morning, os.environ.get("CRM_PUBLIC_URL", ""))}),

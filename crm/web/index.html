@@ -466,8 +466,10 @@ async function more(){
   const b = META.bale;
   const sec = (ic, bg, fg, title, body) => `<div class="card"><div class="set"><div class="ic" style="background:${bg};color:${fg}">${I(ic)}</div><div style="flex:1;min-width:0"><h3 style="margin:6px 0 8px">${title}</h3>${body}</div></div></div>`;
   $("#view").innerHTML = `
-    <div class="sec" style="margin-top:4px"><h2>${I("chart")} گزارش</h2>${chips("rd", [["30", "۳۰ روز"], ["90", "۹۰ روز"], ["365", "یک سال"]], String(RDAYS))}</div>
-    <div class="kpis"><div class="kpi"><b>${fa(r.total)}</b><span>درخواست</span></div><div class="kpi"><b style="color:var(--ok)">${fa(r.won)}</b><span>خرید · ${fa(conv)}٪</span></div><div class="kpi"><b>${mil(r.revenue)}</b><span>فروش</span></div></div>
+    <div class="sec" style="margin-top:4px"><h2>${I("chart")} گزارش</h2>${chips("rd", [["30", "۳۰ روز"], ["90", "۹۰ روز"], ["365", "یک سال"], ["5000", "همه"]], String(RDAYS))}</div>
+    <div class="card" style="display:flex;align-items:center;gap:12px"><div class="set"><div class="ic" style="background:var(--blue-soft);color:var(--blue)">${I("users")}</div></div>
+      <div><b style="font-size:18px">${fa(r.phones)}</b> <span class="muted">شماره‌ی تلفن در CRM</span><div class="small faint">${fa(r.mobiles)} موبایل، ${fa(r.phones - r.mobiles)} تلفن ثابت/دیگر</div></div></div>
+    <div class="kpis"><div class="kpi"><b>${fa(r.total)}</b><span>درخواست${r.history ? ` (${fa(r.history)} سابقه)` : ""}</span></div><div class="kpi"><b style="color:var(--ok)">${fa(r.won)}</b><span>خرید · ${fa(conv)}٪</span></div><div class="kpi"><b>${mil(r.revenue)}</b><span>فروش</span></div></div>
     <div class="card"><h3>منبع / کد آگهی</h3>${bars(r.by_source)}<div class="small faint">سبز = خرید، کم‌رنگ = بقیه</div></div>
     <div class="card"><h3>دسته‌ی کالا</h3>${bars(r.by_category)}</div>
     <div class="card"><h3>چرا نخریدند؟</h3>${r.lost_reasons.map(([k, v]) => `<div class="bar"><div class="lb"><span>${esc(k)}</span><b>${fa(v)}</b></div><div class="tr"><i style="width:${100 * v / lostMax}%;background:var(--bad)"></i></div></div>`).join("") || '<div class="muted small">هنوز انصرافی ثبت نشده.</div>'}</div>

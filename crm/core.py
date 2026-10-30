@@ -359,13 +359,19 @@ def search_contacts(q: str = "", tag: str = "", category: str = "", months: list
 
 
 # ---------------- گزارش ----------------
-def report(days: int = 90, include_import: bool = False) -> dict:
+ORIGIN_NAME = {"leads_import": "سابقه (فایل Leads)", "demand_import": "دفتر درخواست‌ها"}
+
+
+def report(days: int = 90, include_import: bool = True) -> dict:
     since = datetime.now(timezone.utc) - timedelta(days=days)
     with session() as db:
         q = db.query(Deal).filter(Deal.created_at >= since)
         if not include_import:
             q = q.filter(Deal.origin != "leads_import")
         deals = q.all()
+        contacts = db.query(func.count(Contact.id)).scalar()
+        phones = db.query(func.count(Contact.id)).filter(Contact.phone.isnot(None)).scalar()
+        mobiles = db.query(func.count(Contact.id)).filter(Contact.phone.like("09%")).scalar()
 
     def agg(key):
         g = defaultdict(lambda: Counter())
@@ -383,10 +389,11 @@ def report(days: int = 90, include_import: bool = False) -> dict:
             rows.append({"key": k, **v, "conv_pct": round(100 * v["won"] / v["deals"], 1) if v["deals"] else 0,
                          "win_of_closed_pct": round(100 * v["won"] / closed, 1) if closed else None})
         return sorted(rows, key=lambda r: -r["deals"])
-    lost = Counter(d.lost_reason or "بدون دلیل" for d in deals if d.stage == "lost")
-    return {"days": days, "total": len(deals), "won": sum(d.stage == "won" for d in deals),
+    lost = Counter(d.lost_reason or "بدون دلیل" for d in deals if d.stage == "lost" and d.origin != "leads_import")
+    return {"days": days, "contacts": contacts, "phones": phones, "mobiles": mobiles,
+            "history": sum(d.origin == "leads_import" for d in deals), "total": len(deals), "won": sum(d.stage == "won" for d in deals),
             "revenue": sum(d.amount or 0 for d in deals if d.stage == "won"),
-            "by_source": agg(lambda d: d.ad_code or d.source), "by_category": agg(lambda d: d.category),
+            "by_source": agg(lambda d: d.ad_code or d.source or ORIGIN_NAME.get(d.origin)), "by_category": agg(lambda d: d.category),
             "lost_reasons": lost.most_common(), "stages": Counter(d.stage for d in deals)}
 
 

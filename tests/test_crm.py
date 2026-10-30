@@ -115,7 +115,7 @@ def test_import_real_leads(crm):
     r = crm.import_leads(data)
     assert r["added"] > 500 and r["invoices_sheet"] == "مجموع فاکتورها"
     assert crm.import_leads(data)["added"] == 0                      # دوباره وارد نمی‌شود
-    rep = crm.report(3650, include_import=True)
+    rep = crm.report(3650)
     assert rep["won"] > 50
     assert crm.today_view()["due"] == [] and crm.stats_for_marketing()["codes"] == {}   # سابقه در آمار جاری نمی‌آید
 

@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f6f5c">
+<link rel="manifest" href="/manifest.webmanifest">
+<title>CRM کاروان صنعت</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1d2127;--ink2:#5b6470;--line:#e6e8ec;--brand:#1f6f5c;--brand-soft:#e3f1ec;--warn:#b26a00;--warn-soft:#fff3df;--bad:#b3261e;--bad-soft:#fde8e6;--ok:#1b7f3b;--ok-soft:#e5f5ea;--blue:#2457a6;--blue-soft:#e7eefb}
+@media (prefers-color-scheme: dark){:root{--bg:#121417;--card:#1b1e23;--ink:#e9ecef;--ink2:#a2abb6;--line:#2b3037;--brand:#4fb394;--brand-soft:#1c3530;--warn:#f0b35a;--warn-soft:#3a2d17;--bad:#f2867d;--bad-soft:#3b1f1d;--ok:#6fcf8c;--ok-soft:#1b3323;--blue:#8fb3f0;--blue-soft:#1d2a40}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Vazirmatn,"Segoe UI",Tahoma,sans-serif;font-size:15px;line-height:1.6}
+a{color:var(--blue)}
+header{position:sticky;top:0;z-index:5;background:var(--brand);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+header b{font-size:16px}
+main{padding:12px 12px 90px;max-width:720px;margin:0 auto}
+nav.tabs{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;z-index:6;padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs a{flex:1;text-align:center;padding:9px 0 7px;color:var(--ink2);text-decoration:none;font-size:12px}
+nav.tabs a span{display:block;font-size:20px;line-height:1.1}
+nav.tabs a.on{color:var(--brand);font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sp{justify-content:space-between}
+.muted{color:var(--ink2)}.small{font-size:12.5px}
+.badge{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;background:var(--line);color:var(--ink)}
+.b-new{background:var(--blue-soft);color:var(--blue)}.b-quoted{background:var(--warn-soft);color:var(--warn)}.b-followup{background:var(--warn-soft);color:var(--warn)}
+.b-invoice{background:var(--brand-soft);color:var(--brand)}.b-won{background:var(--ok-soft);color:var(--ok)}.b-lost{background:var(--bad-soft);color:var(--bad)}
+.late{color:var(--bad);font-weight:700}
+.item{display:block;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.item:last-child{border-bottom:0}
+h2{font-size:15px;margin:4px 0 8px}
+label{display:block;font-size:12.5px;color:var(--ink2);margin:10px 0 4px}
+input,select,textarea{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+textarea{min-height:70px}
+button{font:inherit;border:0;border-radius:10px;padding:10px 14px;background:var(--brand);color:#fff;cursor:pointer}
+button.ghost{background:var(--brand-soft);color:var(--brand)}
+button.danger{background:var(--bad-soft);color:var(--bad)}
+button.full{width:100%;margin-top:12px;padding:12px}
+button:disabled{opacity:.5}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:13px}
+.chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.kpi b{display:block;font-size:20px}
+.call{display:inline-flex;align-items:center;gap:6px;background:var(--ok);color:#fff;padding:9px 14px;border-radius:10px;text-decoration:none}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-end}
+.sheet .in{background:var(--bg);width:100%;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:14px 12px 30px}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:8px 14px;border-radius:10px;opacity:0;transition:.2s;z-index:30;font-size:13px}
+.toast.on{opacity:1}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:right}
+.ltr{direction:ltr;unicode-bidi:embed;display:inline-block}
+.tl{border-right:2px solid var(--line);padding-right:10px;margin-right:4px}
+.tl div{margin-bottom:8px}
+</style>
+</head>
+<body>
+<header><b>CRM کاروان صنعت</b><span id="who" class="small"></span></header>
+<main id="view"><div class="card muted">در حال بارگذاری…</div></main>
+<nav class="tabs" id="tabs" hidden>
+  <a href="#today"><span>☀️</span>امروز</a><a href="#add"><span>➕</span>ثبت</a><a href="#pipe"><span>📋</span>کاریز</a>
+  <a href="#customers"><span>👥</span>مشتری‌ها</a><a href="#more"><span>⋯</span>بیشتر</a>
+</nav>
+<div class="toast" id="toast"></div>
+<script>
+(() => {
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fa = n => n == null || n === "" ? "–" : Number(n).toLocaleString("fa-IR");
+const toman = n => n ? fa(n) + " تومان" : "–";
+const en = s => String(s ?? "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+let META = null;
+function toast(m){ const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 2200); }
+async function api(path, opts = {}){
+  const r = await fetch(path, {...opts, headers: {"Content-Type": "application/json", ...(opts.headers || {})}, credentials: "same-origin"});
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 401 && path !== "/api/login") { loginView(); throw new Error("ورود لازم است"); }
+  if (!r.ok) throw new Error(d.error || ("خطا " + r.status));
+  return d;
+}
+const post = (p, b) => api(p, {method: "POST", body: JSON.stringify(b || {})});
+const badge = d => `<span class="badge b-${d.stage}">${esc(d.stage_name)}</span>`;
+const dealItem = d => `<div class="item" data-deal="${d.id}"><div class="row sp"><b>${esc((d.contact && d.contact.name) || "بدون نام")}</b>${badge(d)}</div>
+  <div>${esc(d.title)}</div><div class="small muted">${d.contact && d.contact.city ? esc(d.contact.city) + " · " : ""}${d.ad_code ? "کد " + esc(d.ad_code) + " · " : d.source ? esc(d.source) + " · " : ""}${d.next_at_fa ? `<span class="${d.overdue ? "late" : ""}">پیگیری ${esc(d.next_at_fa)}${d.overdue ? " (عقب‌افتاده)" : ""}</span>` : "بدون تاریخ پیگیری"}</div></div>`;
+function bindDeals(root = document){ root.querySelectorAll("[data-deal]").forEach(e => e.onclick = () => openDeal(+e.dataset.deal)); }
+
+// ---------- ورود ----------
+function loginView(){
+  $("#tabs").hidden = true; $("#who").textContent = "";
+  $("#view").innerHTML = `<div class="card"><h2>ورود</h2><label>نام کاربری</label><input id="u" autocomplete="username" class="ltr" style="text-align:left">
+    <label>رمز</label><input id="p" type="password" autocomplete="current-password"><button class="full" id="lg">ورود</button><div id="err" class="small" style="color:var(--bad)"></div></div>`;
+  $("#lg").onclick = async () => { try { await post("/api/login", {username: $("#u").value, password: $("#p").value}); boot(); } catch (e) { $("#err").textContent = e.message; } };
+  $("#p").onkeydown = e => { if (e.key === "Enter") $("#lg").click(); };
+}
+
+// ---------- امروز ----------
+async function today(){
+  const d = await api("/api/today");
+  $("#view").innerHTML = `<div class="kpis">
+      <div class="kpi"><b>${fa(d.due.length)}</b><span class="small muted">پیگیری امروز</span></div>
+      <div class="kpi"><b>${fa(d.month.deals)}</b><span class="small muted">درخواست ۳۰ روز</span></div>
+      <div class="kpi"><b>${fa(d.month.won)}</b><span class="small muted">خرید ۳۰ روز</span></div></div>
+    <div class="card" style="margin-top:10px"><h2>☀️ امروز ${esc(d.today)} باید پیگیری شوند</h2>${d.due.map(dealItem).join("") || '<div class="muted small">پیگیری‌ای برای امروز نیست 👌</div>'}</div>
+    <div class="card"><h2>🆕 درخواست‌های بدون تاریخ پیگیری</h2>${d.no_followup.map(dealItem).join("") || '<div class="muted small">همه تاریخ پیگیری دارند.</div>'}</div>
+    <div class="card small muted">در کاریز: ${Object.entries(META.stages).filter(([k]) => !["won","lost"].includes(k)).map(([k, v]) => `${esc(v)} ${fa(d.counts[k])}`).join(" · ")}</div>`;
+  bindDeals();
+}
+
+// ---------- ثبت سریع ----------
+function chips(name, list, val){ return `<div class="chips" data-chips="${name}">${list.map(([v, t]) => `<button type="button" class="chip ${v === val ? "on" : ""}" data-v="${esc(v)}">${esc(t)}</button>`).join("")}</div>`; }
+function bindChips(root, name, onPick){ const all = [...root.querySelectorAll(`[data-chips="${name}"] .chip`)];
+  all.forEach(b => b.onclick = () => { const was = b.classList.contains("on"); all.forEach(x => x.classList.remove("on")); if (!was) b.classList.add("on"); onPick && onPick(); }); }
+const picked = (root, name) => (root.querySelector(`[data-chips="${name}"] .chip.on`) || {}).dataset?.v || "";
+function add(){
+  $("#view").innerHTML = `<div class="card"><h2>➕ ثبت درخواست</h2>
+    <label>شماره‌ی تلفن *</label><input id="fPhone" type="tel" inputmode="tel" class="ltr" style="text-align:left" placeholder="0912…">
+    <div id="known" class="small"></div>
+    <label>نام</label><input id="fName">
+    <label>شهر</label><input id="fCity">
+    <label>کالای درخواستی *</label><input id="fTitle" placeholder="مثلاً الکتروموتور ۵٫۵ کیلووات سه‌فاز">
+    <label>دسته</label><input id="fCat" list="cats"><datalist id="cats">${META.categories.map(c => `<option value="${esc(c)}">`).join("")}</datalist>
+    <label>از کجا آمد؟</label>${chips("src", META.sources.map(s => [s, s]), "")}
+    <div id="codeBox" hidden><label>کد آگهی (در پیام مشتری هست، مثلاً CC2Y)</label><input id="fCode" class="ltr" style="text-align:left;text-transform:uppercase"></div>
+    <label>یادداشت</label><textarea id="fNote" placeholder="چه گفت؟ چه قیمتی دادید؟"></textarea>
+    <label>پیگیری بعدی</label>${chips("fu", [["0", "امروز"], ["1", "فردا"], ["3", "۳ روز"], ["7", "هفته‌ی بعد"]], "1")}
+    <button class="full" id="save">ثبت</button></div>`;
+  const root = $("#view");
+  bindChips(root, "src", () => { $("#codeBox").hidden = picked(root, "src") !== "کد آگهی"; });
+  bindChips(root, "fu");
+  $("#fPhone").onchange = async () => { const v = en($("#fPhone").value); if (v.replace(/\D/g, "").length < 8) return;
+    const c = await api("/api/contacts/lookup?phone=" + encodeURIComponent(v)).catch(() => null);
+    if (c && c.id) { $("#known").innerHTML = `<div class="card" style="margin:8px 0;background:var(--brand-soft)">مشتری قبلی: <b>${esc(c.name || "بدون نام")}</b>${c.city ? " · " + esc(c.city) : ""}<br>${c.deals.slice(0, 5).map(d => `${badge(d)} ${esc(d.title)} <span class="muted">${esc(d.created_fa)}</span>`).join("<br>")}</div>`;
+      if (!$("#fName").value) $("#fName").value = c.name || ""; if (!$("#fCity").value) $("#fCity").value = c.city || ""; } else $("#known").innerHTML = ""; };
+  $("#save").onclick = async () => { const b = $("#save"); b.disabled = true;
+    try { await post("/api/deals", {phone: en($("#fPhone").value), name: $("#fName").value, city: $("#fCity").value, title: $("#fTitle").value,
+        category: $("#fCat").value, source: picked(root, "src"), ad_code: $("#fCode").value, note: $("#fNote").value, follow_days: picked(root, "fu") || null});
+      toast("ثبت شد"); location.hash = "#today"; } catch (e) { toast(e.message); b.disabled = false; } };
+}
+
+// ---------- کاریز ----------
+let PIPE = {stage: "", q: ""};
+async function pipe(){
+  const list = await api(`/api/deals?stage=${PIPE.stage}&q=${encodeURIComponent(PIPE.q)}`);
+  $("#view").innerHTML = `<div class="card"><input id="q" placeholder="جست‌وجو: نام، شماره، کالا، شهر، کد آگهی" value="${esc(PIPE.q)}">
+    <div class="chips" style="margin-top:8px">${[["", "همه‌ی باز"], ...Object.entries(META.stages)].map(([k, v]) => `<button class="chip ${PIPE.stage === k ? "on" : ""}" data-st="${k}">${esc(v)}</button>`).join("")}</div></div>
+    <div class="card">${list.map(dealItem).join("") || '<div class="muted small">چیزی نیست.</div>'}</div>`;
+  $("#q").onchange = e => { PIPE.q = e.target.value; pipe(); };
+  document.querySelectorAll("[data-st]").forEach(b => b.onclick = () => { PIPE.stage = b.dataset.st; pipe(); });
+  bindDeals();
+}
+
+// ---------- جزئیات معامله ----------
+async function openDeal(id){
+  const d = await api("/api/deals/" + id); const c = d.contact || {};
+  const el = document.createElement("div"); el.className = "sheet";
+  el.innerHTML = `<div class="in"><div class="row sp"><b style="font-size:16px">${esc(c.name || "بدون نام")}</b><button class="ghost" data-x>بستن</button></div>
+    <div class="row" style="margin:8px 0">${c.phone ? `<a class="call" href="tel:${esc(c.phone)}">📞 <span class="ltr">${esc(c.phone)}</span></a>` : ""}${c.city ? `<span class="muted">${esc(c.city)}</span>` : ""}</div>
+    <div class="card"><div class="row sp"><b>${esc(d.title)}</b>${badge(d)}</div>
+      <div class="small muted">${d.category ? esc(d.category) + " · " : ""}${d.ad_code ? "کد آگهی " + esc(d.ad_code) : esc(d.source || "منبع نامشخص")} · ثبت ${esc(d.created_fa)}</div>
+      ${d.note ? `<div style="margin-top:6px">${esc(d.note)}</div>` : ""}</div>
+    <div class="card"><h2>مرحله</h2>${chips("stage", Object.entries(META.stages), d.stage)}
+      <div id="lostBox" ${d.stage === "lost" ? "" : "hidden"}><label>دلیل انصراف</label>${chips("lost", META.lost_reasons.map(r => [r, r]), d.lost_reason || "")}</div>
+      <div id="amtBox" ${["invoice", "won"].includes(d.stage) ? "" : "hidden"}><label>مبلغ (تومان)</label><input id="amt" inputmode="numeric" value="${d.amount ?? ""}">
+        <label>سود (اختیاری)</label><input id="prf" inputmode="numeric" value="${d.profit ?? ""}"></div>
+      <button class="full" id="stSave">ذخیره‌ی مرحله</button></div>
+    <div class="card"><h2>پیگیری بعدی ${d.next_at_fa ? `<span class="small ${d.overdue ? "late" : "muted"}">(فعلاً ${esc(d.next_at_fa)})</span>` : ""}</h2>
+      ${chips("fu", [["1", "فردا"], ["2", "۲ روز"], ["3", "۳ روز"], ["7", "هفته‌ی بعد"], ["14", "دو هفته"]], "")}
+      <label>یا تاریخ (۱۴۰۵/۰۸/۲۰)</label><input id="fuDate" class="ltr" style="text-align:left">
+      <label>نتیجه‌ی تماس / یادداشت</label><textarea id="logT" placeholder="مثلاً: قیمت را فرستادم، گفت با شریک مشورت می‌کند"></textarea>
+      <button class="full" id="fuSave">ثبت تماس و پیگیری</button></div>
+    <div class="card"><h2>تاریخچه</h2><div class="tl">${d.activities.map(a => `<div><span class="small muted">${esc(a.at_fa)}${a.user ? " · " + esc(a.user) : ""}</span><br>${esc(a.text)}</div>`).join("") || '<span class="muted small">—</span>'}</div></div>
+    ${d.other_deals.length ? `<div class="card"><h2>درخواست‌های دیگر این مشتری</h2>${d.other_deals.map(o => `<div class="small">${badge(o)} ${esc(o.title)} <span class="muted">${esc(o.created_fa)}</span>${o.amount ? " · " + toman(o.amount) : ""}</div>`).join("")}</div>` : ""}
+    <button class="danger full" id="del">حذف این درخواست</button></div>`;
+  document.body.appendChild(el);
+  const close = () => { el.remove(); route(); };
+  el.querySelector("[data-x]").onclick = close; el.onclick = e => { if (e.target === el) close(); };
+  bindChips(el, "stage", () => { const s = picked(el, "stage"); el.querySelector("#lostBox").hidden = s !== "lost"; el.querySelector("#amtBox").hidden = !["invoice", "won"].includes(s); });
+  bindChips(el, "lost"); bindChips(el, "fu");
+  el.querySelector("#stSave").onclick = async () => { const s = picked(el, "stage") || d.stage;
+    try { await post("/api/deals/" + id, {stage: s, lost_reason: picked(el, "lost") || undefined, amount: en(el.querySelector("#amt").value), profit: en(el.querySelector("#prf").value)}); toast("ذخیره شد"); el.remove(); openDeal(id); }
+    catch (e) { toast(e.message); } };
+  el.querySelector("#fuSave").onclick = async () => { const days = picked(el, "fu"), dt = en(el.querySelector("#fuDate").value), t = el.querySelector("#logT").value;
+    if (!days && !dt && !t) { toast("زمان پیگیری یا یادداشت را وارد کنید"); return; }
+    const b = {}; if (t) { b.log = t; b.log_kind = "call"; } if (dt) b.next_at = dt; else if (days) b.follow_days = days;
+    if (d.stage === "new" && (days || dt)) b.stage = "followup";
+    try { await post("/api/deals/" + id, b); toast("ثبت شد"); el.remove(); openDeal(id); } catch (e) { toast(e.message); } };
+  el.querySelector("#del").onclick = async () => { if (!confirm("این درخواست حذف شود؟")) return; await post(`/api/deals/${id}/delete`); toast("حذف شد"); close(); };
+}
+
+// ---------- مشتری‌ها ----------
+let CUS = {q: "", cat: "", months: []};
+const MONTHS = ["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
+async function customers(){
+  const list = await api(`/api/contacts?q=${encodeURIComponent(CUS.q)}&category=${encodeURIComponent(CUS.cat)}&months=${CUS.months.join(",")}`);
+  $("#view").innerHTML = `<div class="card"><input id="cq" placeholder="نام، شماره یا شهر" value="${esc(CUS.q)}">
+    <label>مشتری‌های فصلی: چه کسانی این دسته را خریده‌اند…</label><input id="cc" list="cats2" value="${esc(CUS.cat)}" placeholder="دسته یا اسم کالا"><datalist id="cats2">${META.categories.map(c => `<option value="${esc(c)}">`).join("")}</datalist>
+    <label>…در این ماه‌ها</label><div class="chips">${MONTHS.map((m, i) => `<button class="chip ${CUS.months.includes(i + 1) ? "on" : ""}" data-m="${i + 1}">${m}</button>`).join("")}</div></div>
+    <div class="card"><div class="small muted" style="margin-bottom:6px">${fa(list.length)} مشتری</div>${list.map(c => `<div class="item"><div class="row sp"><b>${esc(c.name || "بدون نام")}</b>${c.phone ? `<a href="tel:${esc(c.phone)}" class="ltr">${esc(c.phone)}</a>` : ""}</div>
+      <div class="small muted">${c.city ? esc(c.city) + " · " : ""}${c.activity ? esc(c.activity) + " · " : ""}${c.bought ? `${fa(c.bought)} خرید، ${toman(c.spent)}، آخرین ${esc(c.last)}` : "خرید ثبت‌شده ندارد"}</div>
+      ${c.items.length ? `<div class="small">${esc(c.items.join("، "))}</div>` : ""}</div>`).join("") || '<div class="muted small">کسی پیدا نشد.</div>'}</div>`;
+  $("#cq").onchange = e => { CUS.q = e.target.value; customers(); };
+  $("#cc").onchange = e => { CUS.cat = e.target.value; customers(); };
+  document.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { const m = +b.dataset.m; CUS.months = CUS.months.includes(m) ? CUS.months.filter(x => x !== m) : [...CUS.months, m]; customers(); });
+}
+
+// ---------- بیشتر: گزارش، بله، ورود فایل، رمز ----------
+async function more(){
+  const r = await api("/api/report?days=90");
+  const tbl = rows => `<table><tr><th></th><th>درخواست</th><th>خرید</th><th>تبدیل</th><th>فروش</th></tr>${rows.slice(0, 15).map(x => `<tr><td>${esc(x.key)}</td><td>${fa(x.deals)}</td><td>${fa(x.won)}</td><td>${fa(x.conv_pct)}٪</td><td>${x.revenue ? fa(Math.round(x.revenue / 1e6 * 10) / 10) + "م" : "–"}</td></tr>`).join("")}</table>`;
+  const b = META.bale;
+  $("#view").innerHTML = `<div class="card"><h2>📊 ۹۰ روز اخیر</h2><div class="small muted">${fa(r.total)} درخواست · ${fa(r.won)} خرید · فروش ${toman(r.revenue)}</div>
+      <h2 style="margin-top:12px">به تفکیک منبع / کد آگهی</h2>${tbl(r.by_source)}
+      <h2 style="margin-top:12px">به تفکیک دسته</h2>${tbl(r.by_category)}
+      <h2 style="margin-top:12px">چرا نخریدند؟</h2>${r.lost_reasons.map(([k, v]) => `<div class="row sp small"><span>${esc(k)}</span><b>${fa(v)}</b></div>`).join("") || '<span class="muted small">—</span>'}</div>
+    <div class="card"><h2>🔔 یادآور صبحگاهی بله (ساعت ۸:۳۰)</h2>
+      ${b.token ? `<div class="small">۱) ربات بله‌ی CRM را باز کنید و این کد را برایش بفرستید: <b class="ltr" style="font-size:18px">${esc(b.code)}</b><br>۲) بعد این دکمه را بزنید:</div>
+        <button class="ghost" id="bLink" style="margin-top:8px">اتصال</button> <button class="ghost" id="bTest">ارسال آزمایشی الان</button>
+        <div class="small" style="margin-top:8px">${b.chats.map(c => `✅ ${esc(c.name || c.id)} <a href="#" data-unl="${esc(c.id)}">قطع</a>`).join("<br>") || "هنوز گفتگویی وصل نشده."}</div>`
+        : '<div class="small muted">توکن ربات بله (BALE_BOT_TOKEN) هنوز در سرور تنظیم نشده.</div>'}</div>
+    <div class="card"><h2>📥 ورود تاریخچه از فایل Leads (فقط مدیر)</h2><div class="small muted">تماس‌های قبلی به‌عنوان «سابقه» وارد می‌شوند (در آمار ۹۰ روز حساب نمی‌شوند). تکراری وارد نمی‌شود.</div>
+      <input type="file" id="xl" accept=".xlsx" style="margin-top:8px"><button class="ghost" id="xlGo" style="margin-top:8px">ورود فایل</button><div id="xlOut" class="small"></div></div>
+    <div class="card"><h2>🔑 تغییر رمز</h2><input id="pw0" type="password" placeholder="رمز فعلی"><input id="pw1" type="password" placeholder="رمز جدید (حداقل ۸ حرف)" style="margin-top:6px">
+      <button class="ghost" id="pwGo" style="margin-top:8px">تغییر رمز</button></div>
+    <button class="danger full" id="out">خروج</button>`;
+  if (b.token) {
+    $("#bLink").onclick = async () => { try { await post("/api/bale/link"); toast("وصل شد"); META = await api("/api/meta"); more(); } catch (e) { toast(e.message); } };
+    $("#bTest").onclick = async () => { try { const r = await post("/api/bale/test"); toast(r.sent ? "فرستاده شد" : "گفتگویی وصل نیست"); } catch (e) { toast(e.message); } };
+    document.querySelectorAll("[data-unl]").forEach(a => a.onclick = async e => { e.preventDefault(); await post("/api/bale/unlink", {id: a.dataset.unl}); META = await api("/api/meta"); more(); });
+  }
+  $("#xlGo").onclick = async () => { const f = $("#xl").files[0]; if (!f) { toast("فایل را انتخاب کنید"); return; }
+    $("#xlOut").textContent = "در حال ورود…";
+    try { const r = await fetch("/api/import/leads", {method: "POST", body: f, credentials: "same-origin"}); const d = await r.json(); if (!r.ok) throw new Error(d.error);
+      $("#xlOut").textContent = `${fa(d.added)} درخواست وارد شد، ${fa(d.duplicates)} تکراری، ${fa(d.enriched_contacts)} مشتری کامل شد.`; META = await api("/api/meta"); } catch (e) { $("#xlOut").textContent = e.message; } };
+  $("#pwGo").onclick = async () => { try { await post("/api/password", {old: $("#pw0").value, new: $("#pw1").value}); toast("رمز عوض شد"); } catch (e) { toast(e.message); } };
+  $("#out").onclick = async () => { await post("/api/logout"); loginView(); };
+}
+
+const VIEWS = {today, add, pipe, customers, more};
+async function route(){
+  const v = (location.hash || "#today").slice(1);
+  document.querySelectorAll("#tabs a").forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + v));
+  try { await (VIEWS[v] || today)(); } catch (e) { if (e.message !== "ورود لازم است") $("#view").innerHTML = `<div class="card" style="color:var(--bad)">${esc(e.message)}</div>`; }
+}
+async function boot(){
+  try { META = await api("/api/meta"); } catch (e) { return; }
+  $("#tabs").hidden = false; $("#who").textContent = META.user; route();
+}
+window.addEventListener("hashchange", route);
+boot();
+})();
+</script>
+</body>
+</html>

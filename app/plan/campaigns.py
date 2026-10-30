@@ -272,10 +272,18 @@ def placement_metrics(db) -> dict[int, dict]:
         logged = by_ad_code()
     except Exception:  # noqa: BLE001
         logged = {}
+    try:
+        from app.tracking.crm_link import stats as crm_stats
+        crm = ((crm_stats() or {}).get("codes")) or {}
+    except Exception:  # noqa: BLE001
+        crm = {}
     out = {}
     for pl in db.query(Placement).all():
         o_auto, rev_auto = orders.get(pl.code, [0, 0])
         lg = logged.get(pl.code) or {"calls": 0, "bought": 0, "amount": 0}
+        cr = crm.get(pl.code)
+        if cr:      # CRM دقیق‌تر از دفتر تماس است؛ برای همین کد جای آن را می‌گیرد (دوباره‌شماری نشود)
+            lg = {"calls": cr.get("deals", 0), "bought": cr.get("won", 0), "amount": cr.get("revenue", 0)}
         cost = pl.cost_toman or 0
         o = o_auto + (pl.orders or 0) + lg["bought"]
         rev = rev_auto + (pl.revenue_toman or 0) + lg["amount"]
@@ -285,7 +293,7 @@ def placement_metrics(db) -> dict[int, dict]:
         leads = o_auto + (pl.orders or 0) + n_calls          # تماسی که به خرید رسید یک بار شمرده می‌شود
         out[pl.id] = {
             "variant": pl.ad_variant, "clicks": c, "msg_clicks": mc, "orders_auto": o_auto, "orders": o, "revenue": rev, "calls": n_calls,
-            "calls_logged": lg["calls"],
+            "calls_logged": lg["calls"], "from_crm": bool(cr),
             "leads": leads, "cost": cost,
             "cpc": round(cost / c) if c and cost else None,
             "cost_per_lead": round(cost / leads) if leads and cost else None,

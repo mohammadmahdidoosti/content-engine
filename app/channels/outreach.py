@@ -37,6 +37,7 @@ class Outreach(Base):
     __tablename__ = "outreach"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     campaign_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    project_id: Mapped[int | None] = mapped_column(Integer, index=True)   # پروژه‌ی جدا (channel_ids ← project_channels)
     platform: Mapped[str] = mapped_column(String(20), default="telegram")
     handle: Mapped[str] = mapped_column(String(80), index=True)          # بدون @
     peer: Mapped[str | None] = mapped_column(String(40))                  # شناسه‌ی گفتگو در تلگرام (برای خواندن جواب)
@@ -84,6 +85,46 @@ def message_text(titles: list[str]) -> str:
             f"- مدت ماندن پست و امکان پین\n- ساعت‌های خالی این هفته\nممنون")
 
 
+def project_text(intro: str, titles: list[str]) -> str:
+    titles = [_clean_title(t) for t in titles]
+    where = f"کانال «{titles[0]}»" if len(titles) == 1 else "کانال‌های " + "، ".join(f"«{t}»" for t in titles)
+    return (f"سلام، وقت بخیر\n{intro.strip()}\n"
+            f"برای تبلیغ در {where} لطفاً تعرفه‌ی یک پست (عکس + متن) را بفرمایید:\n"
+            f"- مدت ماندن پست و امکان پین\n- ساعت‌های خالی این هفته\nممنون")
+
+
+def draft_project(project_id: int, channel_ids: list[int]) -> dict:
+    """پیش‌نویس برای کانال‌های انتخاب‌شده‌ی یک پروژه‌ی جدا (با معرفی همان پروژه، نه کاروان صنعت)."""
+    from app.projects import Project, ProjectChannel
+    made = skipped = 0
+    with get_session() as db:
+        p = db.get(Project, project_id)
+        if not p or not (p.intro or "").strip():
+            raise ValueError("اول «معرفی فرستنده» را برای این پروژه بنویسید (مثلاً «از دبیرخانه‌ی مسابقه‌ی … هستیم»)")
+        chans = [c for c in db.query(ProjectChannel).filter(ProjectChannel.project_id == project_id,
+                                                            ProjectChannel.id.in_([int(i) for i in channel_ids])).all()]
+        groups: dict[str, list] = {}
+        no_contact = []
+        for c in chans:
+            h = _handle_of(type("C", (), {"admin_contact": None, "ad_contacts": c.ad_contacts, "username": c.username})())
+            if not h:
+                no_contact.append(c.title or c.username)
+                continue
+            groups.setdefault(h, []).append(c)
+        recent = _now() - timedelta(days=30)
+        for h, cs in groups.items():
+            old = [o for o in db.query(Outreach).all() if o.handle.lower() == h.lower()]
+            if any(o.project_id == project_id for o in old) or any(
+                    o.status in ("sent", "replied") and _aware(o.sent_at) and _aware(o.sent_at) > recent for o in old):
+                skipped += 1
+                continue
+            db.add(Outreach(project_id=project_id, platform="telegram", handle=h, channel_ids=[c.id for c in cs],
+                            text=project_text(p.intro, [c.title or c.username for c in cs]), status="draft"))
+            made += 1
+        db.commit()
+    return {"made": made, "skipped": skipped, "no_contact": no_contact}
+
+
 def draft(campaign_id: int) -> dict:
     """برای کانال‌های تبلیغ‌های این کمپین پیش‌نویس می‌سازد (تکراری نمی‌سازد)."""
     from app.db.marketing import Channel, Placement
@@ -117,7 +158,7 @@ def draft(campaign_id: int) -> dict:
 
 
 def _row(o: Outreach, chans: dict) -> dict:
-    return {"id": o.id, "campaign_id": o.campaign_id, "platform": o.platform, "handle": o.handle, "status": o.status,
+    return {"id": o.id, "campaign_id": o.campaign_id, "project_id": o.project_id, "platform": o.platform, "handle": o.handle, "status": o.status,
             "text": o.text, "error": o.error, "reply": o.reply, "parsed": o.parsed,
             "channels": [{"id": i, "title": (chans[i].title or chans[i].username) if i in chans else str(i)}
                          for i in o.channel_ids or []],
@@ -125,15 +166,21 @@ def _row(o: Outreach, chans: dict) -> dict:
             "reply_at": o.reply_at.isoformat() if o.reply_at else None}
 
 
-def listing(campaign_id: int | None = None) -> dict:
+def listing(campaign_id: int | None = None, project_id: int | None = None) -> dict:
     from app.db.marketing import Channel
+    from app.projects import ProjectChannel
     with get_session() as db:
         q = db.query(Outreach)
         if campaign_id:
             q = q.filter(Outreach.campaign_id == campaign_id)
+        elif project_id:
+            q = q.filter(Outreach.project_id == project_id)
+        else:
+            q = q.filter(Outreach.project_id.is_(None))
         rows = q.order_by(Outreach.id).all()
         ids = {i for o in rows for i in (o.channel_ids or [])}
-        chans = {c.id: c for c in db.query(Channel).filter(Channel.id.in_(ids)).all()} if ids else {}
+        model = ProjectChannel if project_id else Channel
+        chans = {c.id: c for c in db.query(model).filter(model.id.in_(ids)).all()} if ids else {}
         return {"items": [_row(o, chans) for o in rows], "paused": get_setting("outreach.paused"),
                 "sent_today": sent_today(db), "daily_cap": DAILY_CAP}
 
@@ -229,7 +276,7 @@ def _mark_contacted():
     """تبلیغ‌های کمپین که به ادمینشان پیام رفته ← «تماس با ادمین»."""
     from app.db.marketing import Placement
     with get_session() as db:
-        for o in db.query(Outreach).filter(Outreach.status.in_(["sent", "replied"])).all():
+        for o in db.query(Outreach).filter(Outreach.status.in_(["sent", "replied"]), Outreach.campaign_id.isnot(None)).all():
             for pl in db.query(Placement).filter(Placement.campaign_id == o.campaign_id,
                                                  Placement.channel_id.in_(o.channel_ids or [0])).all():
                 if pl.status == "draft":
@@ -266,6 +313,7 @@ def parse_reply(text: str, titles: list[str], mock: bool = False) -> dict:
 def ingest_replies(rows: list, mock: bool = False) -> dict:
     """[{id, text}] ← جواب ادمین؛ قیمت روی کانال و تبلیغ‌های همان کمپین می‌نشیند."""
     from app.db.marketing import Channel, Placement
+    from app.projects import ProjectChannel
     n = 0
     for r in rows[:30]:
         if not isinstance(r, dict) or not str(r.get("id", "")).isdigit():
@@ -275,7 +323,8 @@ def ingest_replies(rows: list, mock: bool = False) -> dict:
             o = db.get(Outreach, int(r["id"]))
             if not o or not text or (o.reply or "") == text:
                 continue
-            titles = [(db.get(Channel, i).title or db.get(Channel, i).username) for i in o.channel_ids or [] if db.get(Channel, i)]
+            M = ProjectChannel if o.project_id else Channel
+            titles = [(db.get(M, i).title or db.get(M, i).username) for i in o.channel_ids or [] if db.get(M, i)]
         try:
             q = parse_reply(text, titles, mock=mock)
         except Exception as e:  # noqa: BLE001
@@ -287,13 +336,16 @@ def ingest_replies(rows: list, mock: bool = False) -> dict:
             if str(r.get("peer") or "").lstrip("-").isdigit():
                 o.peer = str(r["peer"])[:40]
             per = {str(x.get("title") or "").strip(): x.get("price_toman") for x in q.get("per_channel") or []}
+            M = ProjectChannel if o.project_id else Channel
             for cid in o.channel_ids or []:
-                ch = db.get(Channel, cid)
+                ch = db.get(M, cid)
                 if not ch:
                     continue
                 price = per.get((ch.title or "").strip()) or q.get("price_toman")
                 if price and 10000 <= int(price) <= 500_000_000:
                     ch.price_toman = int(price)
+                    if o.project_id:
+                        continue
                     for pl in db.query(Placement).filter(Placement.campaign_id == o.campaign_id,
                                                          Placement.channel_id == cid).all():
                         if not pl.cost_toman:

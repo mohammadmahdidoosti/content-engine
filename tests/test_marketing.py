@@ -442,3 +442,45 @@ def test_support_links(tmp_path, monkeypatch):
     u = c.support_redirect_url("AB12")
     assert u.startswith("https://t.me/Caravansanatsupport?text=") and "AB12" in __import__("urllib.parse").parse.unquote(u)
     get_settings.cache_clear() if hasattr(get_settings, "cache_clear") else None
+
+
+def test_projects_flow(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/pj.db")
+    from app.db import session as sess
+    monkeypatch.setattr(sess, "_engine", None)
+    monkeypatch.setattr(sess, "_Session", None)
+    sess.init_db()
+    from datetime import datetime, timedelta, timezone
+    from app import projects as P
+    assert P.parse_refs("لینک کانال\nhttps://t.me/Vadana_Zaban\nhttps://t.me/s/sharifdaily, @startup360 t.me/joinchat/x https://t.me/Vadana_Zaban") \
+        == ["Vadana_Zaban", "sharifdaily", "startup360"]
+    r = P.create("کارآفرینی", "مسابقه‌ی کارآفرینی برای دانشجویان و استارتاپ‌ها", "https://t.me/aaaa1\nhttps://t.me/bbbb2", mock=True)
+    pid = r["id"]
+    assert r["channels"] == 2
+    P.update(pid, {"keywords": ["کارآفرین", "استارتاپ"], "intro": "از دبیرخانه‌ی مسابقه‌ی کارآفرینی هستیم."})
+    now = datetime.now(timezone.utc)
+    def fake(user, before=None):
+        posts = [{"views": 3000 if i % 3 == 0 else 1000, "ts": now - timedelta(days=2 + i),
+                  "text": "رویداد استارتاپ" if i % 3 == 0 else "خبر دانشگاه", "reactions": 0} for i in range(20)]
+        return {"post_list": posts, "min_post_id": None, "title": "کانال " + user, "description": "تبلیغات: @ads_" + user,
+                "members": 20000, "texts": ["x"]}
+    import app.channels.telegram as T
+    monkeypatch.setattr(T, "fetch_telegram", fake)
+    st = P.run_once(60, mock=True)
+    assert st["measured"] == 2 and st["tagged"] == 2
+    d = P.get(pid)
+    row = d["items"][0]
+    assert d["stats"]["checked"] == 2 and row["topic_lift"] == 3.0 and row["est_price"] and row["price_is_estimate"]
+    assert row["ad_contacts"] == ["@ads_" + row["username"]]
+    P.set_price(row["id"], 2_000_000)
+    b = P.budget_plan(pid, 10_000_000, min_fit=0.5)
+    assert b["channels"] == 2 and b["spent"] <= 10_000_000
+    assert P.export_csv(pid).startswith("﻿".encode())
+    from app.channels import outreach as O
+    r = O.draft_project(pid, [x["id"] for x in d["items"]])
+    assert r["made"] == 2
+    items = O.listing(project_id=pid)["items"]
+    assert "دبیرخانه" in items[0]["text"] and O.listing()["items"] == []        # جدا از کمپین‌های کاروان
+    O.approve([items[0]["id"]]); O.ingest_results([{"id": items[0]["id"], "ok": True}])
+    O.ingest_replies([{"id": items[0]["id"], "text": "پست ۲۴ ساعته ۹۰۰"}], mock=True)
+    assert any(x["price_toman"] == 900000 for x in P.get(pid)["items"])

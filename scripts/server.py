@@ -705,8 +705,8 @@ def public_support(req, m):
 # =============== پیام به ادمین‌ها ===============
 def api_outreach(req, m):
     from app.channels import outreach
-    c = req.q("campaign")
-    return outreach.listing(_int(c, "campaign") if c else None)
+    c, p = req.q("campaign"), req.q("project")
+    return outreach.listing(_int(c, "campaign") if c else None, _int(p, "project") if p else None)
 
 
 def api_outreach_draft(req, m):
@@ -737,6 +737,85 @@ def api_outreach_resume(req, m):
 
 def api_campaigns_relink(req, m):
     return {"updated": camps.relink_all()}
+
+
+# =============== پروژه‌های جدا (ارزیابی کانال برای موضوعی غیر از کاروان صنعت) ===============
+def _pj():
+    from app import projects
+    return projects
+
+
+def _val(fn, *a):
+    try:
+        return fn(*a)
+    except ValueError as e:
+        raise HttpError(400, str(e)) from None
+
+
+def api_projects(req, m):
+    return _pj().listing()
+
+
+def api_project_create(req, m):
+    b = req.body()
+    return _val(_pj().create, b.get("name"), b.get("topic"), b.get("links"), MOCK)
+
+
+def api_project_get(req, m):
+    return _val(_pj().get, _int(m.group(1), "id"))
+
+
+def api_project_update(req, m):
+    return _val(_pj().update, _int(m.group(1), "id"), req.body())
+
+
+def api_project_links(req, m):
+    return _pj().add_links(_int(m.group(1), "id"), req.body().get("links") or "")
+
+
+def api_project_delete(req, m):
+    return _pj().delete(_int(m.group(1), "id"))
+
+
+def api_project_budget(req, m):
+    amount = _int(req.q("amount", "0"), "amount", 0, 10**12)
+    fit = float(req.q("min_fit", "0.6") or 0.6)
+    return _pj().budget_plan(_int(m.group(1), "id"), amount, max(0.0, min(1.0, fit)))
+
+
+def api_project_export(req, m):
+    pid = _int(m.group(1), "id")
+    data = _val(_pj().export_csv, pid)
+    req._send(200, data, "text/csv; charset=utf-8", {"Content-Disposition": f'attachment; filename="project-{pid}.csv"'})
+    raise Handled()
+
+
+def api_project_channel_price(req, m):
+    v = req.body().get("price_toman")
+    v = int(str(v).replace(",", "")) if str(v or "").replace(",", "").isdigit() else None
+    return _val(_pj().set_price, _int(m.group(1), "id"), v)
+
+
+def api_project_outreach(req, m):
+    from app.channels import outreach
+    ids = req.body().get("channel_ids") or []
+    if not ids:
+        raise HttpError(400, "هیچ کانالی انتخاب نشده")
+    return _val(outreach.draft_project, _int(m.group(1), "id"), ids)
+
+
+def project_loop() -> None:
+    """پروژه‌های جدا: هر ۵ دقیقه حدود ۴ دقیقه سنجش آهسته‌ی کانال‌ها + برچسب + قیمت تخمینی."""
+    time.sleep(120)
+    while True:
+        try:
+            if not sync.is_running():
+                r = _pj().run_once(240, mock=MOCK)
+                if r["measured"] or r["tagged"]:
+                    log.info("پروژه‌ها: %s", r)
+        except Exception:  # noqa: BLE001
+            log.exception("خطای پروژه‌ها")
+        time.sleep(300)
 
 
 # =============== دستیار، ربات‌ها، ویجت ===============
@@ -1030,6 +1109,12 @@ ROUTES = [
     ("POST", r"/api/hunter/pause", api_hunter_pause), ("GET", r"/api/hunter/coverage", api_hunter_coverage),
     ("GET", r"/api/hunter/queries", api_hunter_queries),
     ("GET", r"/api/alerts", api_alerts), ("GET", r"/api/lift", api_lift), ("GET", r"/api/seo/ideas", api_seo_ideas), ("GET", r"/api/calls", api_calls), ("POST", r"/api/calls", api_call_add),
+    ("GET", r"/api/projects", api_projects), ("POST", r"/api/projects", api_project_create),
+    ("GET", r"/api/projects/(\d+)", api_project_get), ("POST", r"/api/projects/(\d+)", api_project_update),
+    ("POST", r"/api/projects/(\d+)/links", api_project_links), ("POST", r"/api/projects/(\d+)/delete", api_project_delete),
+    ("GET", r"/api/projects/(\d+)/budget", api_project_budget), ("GET", r"/api/projects/(\d+)/export", api_project_export),
+    ("POST", r"/api/projects/(\d+)/outreach", api_project_outreach),
+    ("POST", r"/api/project-channels/(\d+)", api_project_channel_price),
     ("GET", r"/api/outreach", api_outreach), ("POST", r"/api/campaigns/(\d+)/outreach", api_outreach_draft),
     ("POST", r"/api/outreach/approve", api_outreach_approve), ("POST", r"/api/outreach/resume", api_outreach_resume),
     ("POST", r"/api/outreach/(\d+)", api_outreach_update), ("POST", r"/api/campaigns/relink", api_campaigns_relink),
@@ -1225,6 +1310,7 @@ def main() -> None:
     if not NO_SCHEDULER:
         threading.Thread(target=scheduler_loop, daemon=True, name="scheduler").start()
         threading.Thread(target=hunter_loop, daemon=True, name="hunter").start()
+        threading.Thread(target=project_loop, daemon=True, name="projects").start()
     if not RUN_TOKEN:
         log.warning("RUN_TOKEN تنظیم نشده؛ API و پنل قابل ورود نیستند.")
     port = int(os.environ.get("PORT", "10000"))

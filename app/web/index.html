@@ -151,7 +151,7 @@ details[open]>summary::before{content:"▾ "}
   <nav class="tabs" id="tabs">
     <a href="#home">خانه</a><a href="#plan">برنامه‌ی تبلیغ</a><a href="#campaigns">کمپین‌ها</a>
     <a href="#channels">کانال‌ها</a><a href="#calls">تماس‌ها</a><a href="#report">گزارش</a><a href="#map">نقشه</a>
-    <a href="#cities">شهرها</a><a href="#assistant">دستیار قیمت</a><a href="#studio">استودیو محتوا</a><a href="#settings">تنظیمات</a>
+    <a href="#cities">شهرها</a><a href="#assistant">دستیار قیمت</a><a href="#studio">استودیو محتوا</a><a href="#projects">پروژه‌های جدا</a><a href="#settings">تنظیمات</a>
   </nav>
   <main id="view"></main>
 </div>
@@ -212,7 +212,7 @@ $("#themeBtn").onclick = () => { const cur = document.documentElement.getAttribu
   const t = dark ? "light" : "dark"; store.set("ce_theme", t); applyTheme(t); };
 
 // ---------------- router ----------------
-const VIEWS = {home, plan, campaigns, channels, calls, report, map, studio, settings, cities, assistant};
+const VIEWS = {home, plan, campaigns, channels, calls, report, map, studio, settings, cities, assistant, projects};
 window.addEventListener("hashchange", route);
 function route(){ clearTimeout(timer); const v = (location.hash || "#home").slice(1).split("/")[0];
   document.querySelectorAll("#tabs a").forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + v));
@@ -398,14 +398,15 @@ function plRow(p){
 // ---------- پیام به ادمین‌ها ----------
 const OR_ST = {draft: "پیش‌نویس", approved: "در صف ارسال", sent: "فرستاده شد", replied: "جواب داد", failed: "ناموفق", skipped: "رد شد", manual: "دستی بفرستید"};
 const OR_CLS = {approved: "b-info", sent: "b-warn", replied: "b-ok", failed: "b-bad", skipped: "", manual: ""};
-async function loadOutreach(cid){
-  const box = document.querySelector(`[data-outreach="${cid}"]`); if (!box) return;
-  const d = await api("/api/outreach?campaign=" + cid).catch(() => null); if (!d) return;
+async function loadOutreach(cid, kind = "campaign"){
+  const box = document.querySelector(kind === "project" ? `[data-pjoutreach="${cid}"]` : `[data-outreach="${cid}"]`); if (!box) return;
+  const d = await api(`/api/outreach?${kind}=` + cid).catch(() => null); if (!d) return;
+  if (kind === "project" && !d.items.length) { box.innerHTML = ""; return; }
   const drafts = d.items.filter(x => x.status === "draft");
   const q = d.items.filter(x => x.status === "approved").length;
   box.innerHTML = `<div class="card" style="box-shadow:none"><header style="font-size:13.5px"><span>پیام به ادمین‌ها برای تعرفه
       <span class="small muted">· ${fa(d.sent_today)} از ${fa(d.daily_cap)} پیام امروز${q ? " · " + fa(q) + " در صف" : ""}</span></span>
-    <span class="inline"><button class="ghost sm" data-ordraft="${cid}">${d.items.length ? "به‌روزرسانی پیش‌نویس‌ها" : "ساخت پیش‌نویس پیام‌ها"}</button>
+    <span class="inline">${kind === "campaign" ? `<button class="ghost sm" data-ordraft="${cid}">${d.items.length ? "به‌روزرسانی پیش‌نویس‌ها" : "ساخت پیش‌نویس پیام‌ها"}</button>` : ""}
       ${drafts.length ? `<button class="btn sm" data-orapprove="${cid}">تأیید و شروع ارسال (${fa(drafts.length)})</button>` : ""}</span></header>
     ${d.paused ? `<div class="pad small" style="color:var(--amber)">⛔ ارسال متوقف است: ${esc(d.paused.reason || "")} <button class="ghost sm" id="orResume">ادامه‌ی ارسال</button></div>` : ""}
     <div class="pad small muted" style="padding-bottom:0">پیام‌ها فقط بعد از «تأیید» شما و با افزونه‌ی کروم خودتان فرستاده می‌شوند: هر ۴ تا ۸ دقیقه یکی، حداکثر ${fa(d.daily_cap)} پیام در روز، به هر آیدی یک بار؛ با هر هشدار تلگرام متوقف می‌شود. جواب‌ها هر ۳ ساعت خوانده و قیمت‌ها خودکار ثبت می‌شوند.</div>
@@ -421,16 +422,17 @@ async function loadOutreach(cid){
         <div class="small">${x.parsed && x.parsed.price_toman ? `💰 قیمت: <b>${mtoman(x.parsed.price_toman)}</b>` : "قیمت پیدا نشد"}${x.parsed && x.parsed.pin_price_toman ? ` · پین: ${mtoman(x.parsed.pin_price_toman)}` : ""}${x.parsed && x.parsed.duration_hours != null ? ` · ${x.parsed.duration_hours ? fa(x.parsed.duration_hours) + " ساعت" : "دائمی"}` : ""}${x.parsed && x.parsed.slots ? ` · ساعت: ${esc(x.parsed.slots)}` : ""}</div>` : ""}
     </div>`).join("") || '<div class="muted small">هنوز پیش‌نویسی ساخته نشده. اول کانال‌ها را به کمپین اضافه کنید، بعد «ساخت پیش‌نویس پیام‌ها» را بزنید.</div>'}</div></div>`;
   box.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => copy(b.dataset.copy));
-  box.querySelector("[data-ordraft]").onclick = async () => { const r = await post(`/api/campaigns/${cid}/outreach`);
-    toast(`${fa(r.made)} پیش‌نویس تازه${r.no_contact.length ? " · بدون آیدی تبلیغ: " + r.no_contact.join("، ") : ""}`); loadOutreach(cid); };
+  const dr = box.querySelector("[data-ordraft]");
+  if (dr) dr.onclick = async () => { const r = await post(`/api/campaigns/${cid}/outreach`);
+    toast(`${fa(r.made)} پیش‌نویس تازه${r.no_contact.length ? " · بدون آیدی تبلیغ: " + r.no_contact.join("، ") : ""}`); loadOutreach(cid, kind); };
   box.querySelectorAll("[data-ortext]").forEach(t => t.onchange = async () => { try { await post("/api/outreach/" + t.dataset.ortext, {text: t.value}); toast("متن ذخیره شد"); } catch (e) { toast(e.message); } });
-  box.querySelectorAll("[data-orst]").forEach(b => b.onclick = async () => { await post("/api/outreach/" + b.dataset.orst, {status: b.dataset.v}); loadOutreach(cid); });
+  box.querySelectorAll("[data-orst]").forEach(b => b.onclick = async () => { await post("/api/outreach/" + b.dataset.orst, {status: b.dataset.v}); loadOutreach(cid, kind); });
   const ap = box.querySelector("[data-orapprove]");
   if (ap) ap.onclick = async () => { const ids = [...box.querySelectorAll("[data-orpick]:checked")].map(i => +i.dataset.orpick);
     if (!ids.length) { toast("هیچ پیامی تیک نخورده"); return; }
     if (!confirm(`${ids.length} پیام با حساب تلگرام شما و با فاصله فرستاده شود؟`)) return;
-    const r = await post("/api/outreach/approve", {ids}); toast(`${fa(r.approved)} پیام در صف ارسال افزونه قرار گرفت`); loadOutreach(cid); };
-  const rs = box.querySelector("#orResume"); if (rs) rs.onclick = async () => { await post("/api/outreach/resume"); loadOutreach(cid); };
+    const r = await post("/api/outreach/approve", {ids}); toast(`${fa(r.approved)} پیام در صف ارسال افزونه قرار گرفت`); loadOutreach(cid, kind); };
+  const rs = box.querySelector("#orResume"); if (rs) rs.onclick = async () => { await post("/api/outreach/resume"); loadOutreach(cid, kind); };
 }
 function bindCampaigns(chans){
   const v = $("#view");
@@ -449,6 +451,89 @@ function bindCampaigns(chans){
   v.querySelectorAll("[data-plf]").forEach(i => i.onchange = async () => {
     try { await post("/api/placements/" + i.dataset.plf, {[i.dataset.k]: i.value.replace(/[٬,]/g, "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))}); toast("ذخیره شد"); }
     catch (e) { toast(e.message); } });
+}
+
+// ================= PROJECTS (جدا از کاروان صنعت) =================
+let PJF = {fit: "0.6", n: 200};
+async function projects(){
+  const id = +(location.hash.split("/")[1] || 0);
+  if (id) return projectView(id);
+  const list = await api("/api/projects");
+  $("#view").innerHTML = `<div class="card"><header>پروژه‌ی جدید <span class="small muted">ارزیابی و قیمت‌سنجی کانال‌های تلگرام برای موضوعی غیر از کاروان صنعت؛ کاملاً جدا از کانال‌ها و کمپین‌های فروشگاه</span></header>
+    <div class="pad grid2"><div><label class="f">نام پروژه</label><input type="text" id="pjName" placeholder="مسابقه‌ی کارآفرینی">
+      <label class="f">موضوع و مخاطب هدف (هرچه دقیق‌تر، ارزیابی بهتر)</label><textarea id="pjTopic" rows="4" placeholder="مسابقه‌ی کارآفرینی برای دانشجویان، فارغ‌التحصیلان و تیم‌های استارتاپی؛ ثبت‌نام آنلاین؛ جایزه‌ی نقدی و سرمایه‌گذاری"></textarea></div>
+    <div><label class="f">لینک یا آیدی کانال‌ها (هر خط یکی؛ هر تعداد)</label><textarea id="pjLinks" rows="8" placeholder="https://t.me/startup360&#10;@karafarinisharif"></textarea>
+      <button class="btn" id="pjCreate" style="margin-top:10px">ساخت پروژه و شروع بررسی</button></div></div></div>
+  ${list.map(p => `<div class="card"><header><a href="#projects/${p.id}"><b>${esc(p.name)}</b></a>
+    <span class="small muted">${fa(p.done)} از ${fa(p.total)} کانال بررسی شده${p.status === "paused" ? " · متوقف" : ""}</span></header>
+    <div class="pad small muted">${esc(p.topic)}</div></div>`).join("")}`;
+  $("#pjCreate").onclick = async () => { const b = $("#pjCreate"); b.disabled = true; b.textContent = "در حال ساخت…";
+    try { const r = await post("/api/projects", {name: $("#pjName").value, topic: $("#pjTopic").value, links: $("#pjLinks").value});
+      toast(`${fa(r.channels)} کانال اضافه شد؛ بررسی در پس‌زمینه شروع می‌شود`); location.hash = "#projects/" + r.id; }
+    catch (e) { toast(e.message); b.disabled = false; b.textContent = "ساخت پروژه و شروع بررسی"; } };
+}
+async function projectView(id){
+  const d = await api("/api/projects/" + id); const st = d.stats;
+  const minFit = +PJF.fit;
+  const rows = d.items.filter(x => x.status !== "checked" ? false : (x.fit == null || x.fit >= minFit)).slice(0, PJF.n);
+  const pct = st.total ? Math.round(100 * (st.checked + st.error) / st.total) : 0;
+  $("#view").innerHTML = `<div class="card"><header><span><a href="#projects">پروژه‌ها</a> › <b>${esc(d.name)}</b></span>
+    <span class="inline"><button class="ghost sm" id="pjExport">خروجی اکسل (CSV)</button>
+      <button class="ghost sm" id="pjPause">${d.status === "paused" ? "ادامه‌ی بررسی" : "توقف بررسی"}</button>
+      <button class="ghost sm" id="pjDel" style="color:var(--red,#c62828)">حذف پروژه</button></span></header>
+  <div class="pad"><div class="small muted">${esc(d.topic)}</div>
+    <div style="margin:10px 0;background:var(--line);border-radius:6px;height:10px"><div style="width:${pct}%;height:10px;border-radius:6px;background:var(--accent,#2e7d32)"></div></div>
+    <div class="inline small" style="gap:14px"><span>بررسی‌شده: <b>${fa(st.checked)}</b> از ${fa(st.total)}</span><span>در صف: ${fa(st.waiting)}${st.waiting ? ` (حدود ${fa(Math.max(5, d.eta_min))} دقیقه)` : ""}</span>
+      <span>خطا/خصوصی: ${fa(st.error)}</span><span>ارزیابی موضوع: ${fa(st.tagged)}</span><span>مرتبط (≥۰٫۶): <b>${fa(st.relevant)}</b></span>
+      <span title="از قیمت‌های واقعی ادمین‌ها">قیمت هر بازدید آگهی: ${fa(d.toman_per_view)} تومان ${d.price_samples ? `(از ${fa(d.price_samples)} قیمت واقعی)` : "(پیش‌فرض)"}</span></div></div></div>
+  <div class="grid2">
+    <div class="card"><header>تنظیم ارزیابی</header><div class="pad">
+      <label class="f">کلمه‌های کلیدی موضوع (برای «علاقه‌ی مخاطب»؛ با ویرگول جدا کنید)</label><textarea id="pjKw" rows="3">${esc(d.keywords.join("، "))}</textarea>
+      <label class="f">معرفی فرستنده در پیام به ادمین‌ها (به‌جای کاروان صنعت)</label><input type="text" id="pjIntro" value="${esc(d.intro)}" placeholder="از دبیرخانه‌ی مسابقه‌ی کارآفرینی … هستیم">
+      <button class="ghost sm" id="pjSave" style="margin-top:8px">ذخیره</button>
+      <label class="f" style="margin-top:12px">افزودن کانال‌های بیشتر</label><textarea id="pjMore" rows="2" placeholder="https://t.me/..."></textarea>
+      <button class="ghost sm" id="pjAdd" style="margin-top:6px">افزودن</button></div></div>
+    <div class="card"><header>تقسیم بودجه</header><div class="pad">
+      <div class="inline"><input type="text" inputmode="numeric" id="pjBudget" placeholder="بودجه به تومان، مثلاً ۲۰۰۰۰۰۰۰" style="max-width:220px">
+        <select id="pjBfit" style="width:auto"><option value="0.6">فقط مرتبط‌ها (≥۰٫۶)</option><option value="0.8">خیلی مرتبط (≥۰٫۸)</option><option value="0.4">گسترده‌تر (≥۰٫۴)</option></select>
+        <button class="btn sm" id="pjPlan">پیشنهاد بده</button></div>
+      <div id="pjPlanOut" class="small" style="margin-top:8px"></div></div></div></div>
+  <div data-pjoutreach="${id}"></div>
+  <div class="card"><header>کانال‌ها <span class="small muted">مرتب بر اساس «امتیاز نهایی» = کیفیت × ربط به موضوع × علاقه‌ی مخاطب</span>
+    <span class="inline small"><select id="pjFit" style="width:auto">${[["0", "همه"], ["0.4", "ربط ≥۰٫۴"], ["0.6", "ربط ≥۰٫۶"], ["0.8", "ربط ≥۰٫۸"]].map(([v, t]) => `<option value="${v}" ${PJF.fit === v ? "selected" : ""}>${t}</option>`).join("")}</select>
+      <button class="btn sm" id="pjOut">پیش‌نویس پیام به ادمینِ تیک‌خورده‌ها</button></span></header>
+  <div class="tbl">${rows.length ? `<table><thead><tr><th><input type="checkbox" id="pjAll"></th><th>کانال</th><th>عضو</th><th title="میانه‌ی بازدید × نسبت بازدید پست تبلیغاتی">بازدید مورد انتظار آگهی</th><th>کیفیت</th><th>ربط</th><th title="بازدید پست‌های این موضوع ÷ بقیه‌ی پست‌های همین کانال">علاقه به موضوع</th><th>امتیاز نهایی</th><th>قیمت (تومان)</th><th>هر ۱۰۰۰ بازدید</th><th>تماس تبلیغ</th></tr></thead><tbody>
+    ${rows.map(x => `<tr><td><input type="checkbox" data-pjc="${x.id}" ${x.ad_contacts.length ? "" : "disabled"}></td>
+      <td><a href="https://t.me/${esc(x.username)}" target="_blank" rel="noopener"><b>${esc(x.title || x.username)}</b></a><div class="small muted ltr">@${esc(x.username)}</div>
+        ${x.audience ? `<div class="small"><span class="badge b-info">${esc(x.audience)}</span>${x.city ? " · " + esc(x.city) : ""}</div>` : ""}
+        ${x.flags.map(f => `<div class="small" style="color:var(--amber)">⚠ ${esc(f)}</div>`).join("")}</td>
+      <td class="num">${fa(x.members)}</td><td class="num"><b>${fa(x.expected_ad_views)}</b>${x.view_rate != null ? `<div class="small muted">بازدید/عضو ${fa(Math.round(x.view_rate * 100))}٪</div>` : ""}</td>
+      <td class="num">${fa(x.score)}</td><td class="num">${x.fit != null ? fa(x.fit) : "…"}</td>
+      <td class="num">${x.topic_lift != null ? `<span style="color:${x.topic_lift >= 1.15 ? "var(--green,#2e7d32)" : x.topic_lift <= 0.85 ? "var(--amber)" : "inherit"}">×${fa(x.topic_lift)}</span>` : `<span class="muted small">${x.topic_posts ? fa(x.topic_posts) + " پست" : "–"}</span>`}</td>
+      <td class="num"><b>${fa(x.value)}</b></td>
+      <td><input type="text" inputmode="numeric" style="width:110px" data-pjprice="${x.id}" value="${x.price_toman || ""}" placeholder="${x.est_price ? "تخمین " + fa(x.est_price) : ""}"></td>
+      <td class="num">${x.cpm ? fa(x.cpm) + (x.price_is_estimate ? '<div class="small muted">تخمینی</div>' : "") : "–"}</td>
+      <td class="small ltr">${esc(x.ad_contacts.slice(0, 2).join(" "))}</td></tr>`).join("")}</tbody></table>`
+      : `<div class="empty">${st.waiting ? "بررسی در پس‌زمینه در جریان است؛ چند دقیقه‌ی دیگر سر بزنید." : "کانالی با این فیلتر نیست."}</div>`}</div></div>`;
+  loadOutreach(id, "project");
+  $("#pjFit").onchange = e => { PJF.fit = e.target.value; projectView(id); };
+  $("#pjAll") && ($("#pjAll").onchange = e => document.querySelectorAll("[data-pjc]:not(:disabled)").forEach(c => c.checked = e.target.checked));
+  $("#pjSave").onclick = async () => { try { await post("/api/projects/" + id, {keywords: $("#pjKw").value.split(/[،,\n]+/).map(x => x.trim()).filter(Boolean), intro: $("#pjIntro").value}); toast("ذخیره شد"); projectView(id); } catch (e) { toast(e.message); } };
+  $("#pjAdd").onclick = async () => { const r = await post(`/api/projects/${id}/links`, {links: $("#pjMore").value}); toast(`${fa(r.added)} کانال اضافه شد${r.duplicates ? "، " + fa(r.duplicates) + " تکراری" : ""}`); projectView(id); };
+  $("#pjPause").onclick = async () => { await post("/api/projects/" + id, {status: d.status === "paused" ? "active" : "paused"}); projectView(id); };
+  $("#pjDel").onclick = async () => { if (!confirm("پروژه و همه‌ی کانال‌هایش حذف شود؟")) return; await post(`/api/projects/${id}/delete`); location.hash = "#projects"; };
+  $("#pjExport").onclick = async () => { const r = await fetch(`/api/projects/${id}/export`, {headers: {"X-Run-Token": token}}); const blob = await r.blob();
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `project-${id}.csv`; a.click(); };
+  document.querySelectorAll("[data-pjprice]").forEach(i => i.onchange = async () => { await post("/api/project-channels/" + i.dataset.pjprice, {price_toman: i.value.replace(/[٬,]/g, "").replace(/[۰-۹]/g, c => "۰۱۲۳۴۵۶۷۸۹".indexOf(c))}); toast("قیمت ثبت شد"); });
+  $("#pjPlan").onclick = async () => { const amt = $("#pjBudget").value.replace(/[٬,]/g, "").replace(/[۰-۹]/g, c => "۰۱۲۳۴۵۶۷۸۹".indexOf(c));
+    const r = await api(`/api/projects/${id}/budget?amount=${amt}&min_fit=${$("#pjBfit").value}`);
+    $("#pjPlanOut").innerHTML = r.channels ? `<div>${fa(r.channels)} کانال · خرج ${mtoman(r.spent)} · حدود <b>${fa(r.views)}</b> بازدید آگهی · هر ۱۰۰۰ بازدید ${fa(r.cpm)} تومان${r.estimated ? ` · <span style="color:var(--amber)">${fa(r.estimated)} قیمت تخمینی است</span>` : ""}</div>
+      <ol style="margin:6px 0;padding-right:18px">${r.items.map(x => `<li>${esc(x.title || x.username)} <span class="muted ltr">@${esc(x.username)}</span> — ${mtoman(x.price)}${x.price_is_estimate ? " (تخمین)" : ""} · ${fa(x.expected_ad_views)} بازدید</li>`).join("")}</ol>` : "با این بودجه و فیلتر کانالی انتخاب نشد."; };
+  $("#pjOut").onclick = async () => { const ids = [...document.querySelectorAll("[data-pjc]:checked")].map(c => +c.dataset.pjc);
+    if (!ids.length) { toast("کانال‌ها را تیک بزنید (فقط آن‌هایی که آیدی تبلیغ دارند)"); return; }
+    try { const r = await post(`/api/projects/${id}/outreach`, {channel_ids: ids}); toast(`${fa(r.made)} پیش‌نویس ساخته شد${r.skipped ? "، " + fa(r.skipped) + " تکراری" : ""}`); loadOutreach(id, "project"); }
+    catch (e) { toast(e.message); } };
+  if (st.waiting) later(() => projectView(id), 60000);
 }
 
 // ================= CHANNELS =================

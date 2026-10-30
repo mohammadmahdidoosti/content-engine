@@ -5,7 +5,8 @@
 const VERSION = chrome.runtime.getManifest().version;
 const DEFAULTS = {
   panel: "https://content.caravansanat.com", token: "", torobInstance: "292181",
-  tasks: {outreach: true, eitaa: true, telegram: true, torob_prices: true, torob_panel: true, google: false},
+  crawler: "https://crawler.caravansanat.com", crawlerToken: "",
+  tasks: {outreach: true, eitaa: true, telegram: true, torob_prices: true, torob_panel: true, google: false, site_prices: true},
 };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const jitter = (a, b) => a + Math.random() * (b - a);
@@ -382,7 +383,7 @@ const TASKS = {
       batch.push([p.id, (d.results || []).slice(0, 12).map(x => ({name1: x.name1, price: x.price, shop_text: x.shop_text, web_client_absolute_url: x.web_client_absolute_url}))]);
       n++;
       if (batch.length >= 10) { await send("torob_prices", batch); batch = []; }
-      await sleep(jitter(8000, 11000));
+      await sleep(jitter(30000, 60000));                   // آهسته، تا حساب ترب بسته نشود
     }
     if (batch.length) await send("torob_prices", batch);
     return `${n} کالا با ترب مقایسه شد`;
@@ -403,6 +404,44 @@ const TASKS = {
       if (r.rows.length) await send("channel_candidates", r.rows);
       return `${r.rows.length} لینک کانال${r.blocked ? " — گوگل «ربات نیستم» خواست؛ متوقف شد" : ""}`;
     } finally { closeTab(tab); }
+  },
+  // قیمت محصولات خود سایت در ترب: کار را از کراولر می‌گیرد (/api/torob/next) و نتیجه را همان‌جا برمی‌گرداند.
+  // هر بار حداکثر ۱۵ کالا، بین هر دو کالا ۱ تا ۲.۵ دقیقه؛ سقف روزانه را خود کراولر نگه می‌دارد.
+  async site_prices(t, c) {
+    const base = c.crawler.replace(/\/$/, "");
+    const cr = async (method, path, body) => {
+      const r = await fetch(base + path, {method, body: body ? JSON.stringify(body) : undefined,
+        headers: {"Content-Type": "application/json", "X-Torob-Token": c.crawlerToken}});
+      if (r.status === 401) throw new Error("کلید کراولر نادرست است (از crawler.caravansanat.com/api/torob/token بردارید)");
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || ("کراولر: HTTP " + r.status));
+      return d;
+    };
+    const torob = async (path, params) => {
+      const u = new URL("https://api.torob.com/v4/base-product/" + path);
+      Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v));
+      const r = await fetch(u);
+      if (r.status !== 200) throw new Error("ترب جواب نداد: HTTP " + r.status);
+      return r.json();
+    };
+    let n = 0, high = 0, low = 0, why = "";
+    for (let i = 0; i < 15; i++) {
+      const job = await cr("GET", "/api/torob/next");
+      if (job.wait) { why = job.why || "فعلاً کاری نیست"; break; }
+      await progress(`کالای ${i + 1}: ${String(job.q).slice(0, 40)}`);
+      const s = await torob("search/", {q: job.q, page: 0, size: 8});
+      const items = (s.results || []).map(x => ({name1: x.name1 || x.name || "", price: x.price, random_key: x.random_key}));
+      let res = await cr("POST", "/api/torob/result", {id: job.id, items});
+      if (res.details) {
+        await sleep(jitter(8000, 18000));
+        const d = await torob("details/", {prk: res.details});
+        const offers = ((d.products_info || {}).result || []).map(o => ({shop: o.shop_text || o.shop_name || "", price: o.price, available: o.availability !== false}));
+        res = await cr("POST", "/api/torob/result", {id: job.id, prk: res.details, torob_name: res.torob_name, offers});
+      }
+      n++; if (res.verdict === "high") high++; if (res.verdict === "low") low++;
+      await sleep(jitter(60000, 150000));
+    }
+    return `${n} کالای سایت با ترب مقایسه شد` + (n ? ` (گران‌تر: ${high}، ارزان‌تر: ${low})` : "") + (why ? " — " + why : "");
   },
 };
 
@@ -429,7 +468,7 @@ async function runTask(name) {
   const keep = setInterval(() => chrome.runtime.getPlatformInfo(() => {}), 20000);  // سرویس‌ورکر خاموش نشود
   let out;
   try {
-    const t = await api("/api/collector/tasks");
+    const t = name === "site_prices" ? {} : await api("/api/collector/tasks");
     const summary = await TASKS[name](t, c);
     await log(name, true, summary);
     out = summary;
@@ -448,12 +487,16 @@ async function runTask(name) {
 // هر ۳۰ دقیقه: اولین کاری که وقتش رسیده (یکی‌یکی، تا مرورگر شلوغ نشود)
 async function tick() {
   const c = await cfg();
+  if (c.tasks.site_prices && c.crawlerToken) {      // جدا از پنل محتوا؛ ساعتی یک بار
+    const st = ((await chrome.storage.local.get(["status"])).status || {}).site_prices;
+    if (!st || Date.now() - Date.parse(st.at) > 3600 * 1000) { await runTask("site_prices"); return; }
+  }
   if (!c.token) return;
   let t;
   try { t = await api("/api/collector/tasks"); } catch (e) { return; }
   const status = (await chrome.storage.local.get(["status"])).status || {};
   for (const name of Object.keys(TASKS)) {
-    if (!c.tasks[name]) continue;
+    if (!c.tasks[name] || name === "site_prices") continue;
     const last = status[name] ? Date.parse(status[name].at) : 0;
     if (Date.now() - last < (t.intervals_hours[name] || 24) * 3600 * 1000) continue;
     if (name === "outreach") {                    // پنجره فقط وقتی کاری هست: پیام تأییدشده، یا هر ۳ ساعت خواندن جواب

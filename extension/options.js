@@ -1,8 +1,9 @@
 const NAMES = {outreach: "تلگرام: پیام به ادمین‌ها (فقط پیام‌های تأییدشده در پنل)", eitaa: "ایتا: جست‌وجوی سراسری و سنجش کانال‌ها", telegram: "تلگرام: جست‌وجوی کانال", torob_prices: "ترب: مقایسه‌ی قیمت کالاهای کمپین",
-  torob_panel: "پنل ترب: کلیک و هزینه (هفتگی)", google: "گوگل: پیدا کردن کانال تلگرام (کم‌اولویت)"};
+  torob_panel: "پنل ترب: کلیک و هزینه (هفتگی)", google: "گوگل: پیدا کردن کانال تلگرام (کم‌اولویت)",
+  site_prices: "ترب: بررسی قیمت محصولات سایت (برای کراولر، ساعتی ۱۵ کالا، آهسته)"};
 const $ = s => document.querySelector(s);
-const DEF = {panel: "https://content.caravansanat.com", token: "", torobInstance: "292181",
-  tasks: {outreach: true, eitaa: true, telegram: true, torob_prices: true, torob_panel: true, google: false}};
+const DEF = {panel: "https://content.caravansanat.com", token: "", torobInstance: "292181", crawler: "https://crawler.caravansanat.com", crawlerToken: "",
+  tasks: {outreach: true, eitaa: true, telegram: true, torob_prices: true, torob_panel: true, google: false, site_prices: true}};
 const fa = iso => iso ? new Date(iso).toLocaleString("fa-IR") : "هنوز اجرا نشده";
 async function showRunning() {
   const {running, queue} = await chrome.storage.local.get(["running", "queue"]);
@@ -17,7 +18,7 @@ async function load() {
   showRunning();
   const {cfg, status} = await chrome.storage.local.get(["cfg", "status"]);
   const c = {...DEF, ...(cfg || {}), tasks: {...DEF.tasks, ...((cfg || {}).tasks || {})}};
-  $("#panel").value = c.panel; $("#token").value = c.token; $("#torob").value = c.torobInstance;
+  $("#panel").value = c.panel; $("#token").value = c.token; $("#torob").value = c.torobInstance; $("#crawler").value = c.crawler; $("#ctoken").value = c.crawlerToken;
   const st = status || {};
   $("#tasks").innerHTML = Object.entries(NAMES).map(([k, n]) => `<div class="row"><div><label style="margin:0;color:inherit"><input type="checkbox" data-t="${k}" ${c.tasks[k] ? "checked" : ""}> ${n}</label>
     <div class="small ${st[k] && !st[k].ok ? "bad" : ""}">${fa(st[k] && st[k].at)}${st[k] ? " — " + st[k].summary : ""}</div></div>
@@ -29,7 +30,8 @@ async function load() {
 }
 async function save() {
   const tasks = {}; document.querySelectorAll("[data-t]").forEach(i => tasks[i.dataset.t] = i.checked);
-  await chrome.storage.local.set({cfg: {panel: $("#panel").value.trim() || DEF.panel, token: $("#token").value.trim(), torobInstance: $("#torob").value.trim() || DEF.torobInstance, tasks}});
+  await chrome.storage.local.set({cfg: {panel: $("#panel").value.trim() || DEF.panel, token: $("#token").value.trim(), torobInstance: $("#torob").value.trim() || DEF.torobInstance,
+    crawler: $("#crawler").value.trim() || DEF.crawler, crawlerToken: $("#ctoken").value.trim(), tasks}});
   $("#msg").textContent = "ذخیره شد";
 }
 $("#save").onclick = save;

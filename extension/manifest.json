@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "جمع‌آور کاروان صنعت",
-  "version": "1.3.2",
-  "description": "جمع‌آوری خودکار کانال‌های ایتا و تلگرام، قیمت ترب و آمار پنل ترب برای مدیر بازاریابی کاروان صنعت؛ با حساب‌های خود شما و بدون عضویت یا ارسال پیام.",
+  "version": "1.4.1",
+  "description": "جمع‌آوری خودکار کانال‌های ایتا و تلگرام، قیمت ترب و آمار پنل ترب برای مدیر بازاریابی کاروان صنعت؛ با حساب‌های خود شما؛ بدون عضویت در کانال‌ها و فقط پیام‌هایی که خودتان در پنل تأیید کرده‌اید.",
   "permissions": ["storage", "alarms", "tabs", "scripting", "idle"],
   "host_permissions": [
     "https://content.caravansanat.com/*",
+    "https://crawler.caravansanat.com/*",
     "https://web.eitaa.com/*",
     "https://web.telegram.org/*",
     "https://torob.com/*",

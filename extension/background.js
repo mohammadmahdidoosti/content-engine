@@ -67,7 +67,9 @@ async function openWindow(url, waitMs) {
   await sleep(waitMs);
   return {id, win: w.id};
 }
-const closeWindow = w => chrome.windows.remove(w.win).catch(() => {});
+// اگر کاربر تب را به پنجره‌ی دیگری برده بود، خود تب بسته می‌شود
+const closeWindow = async w => { try { await chrome.windows.remove(w.win); } catch (e) { /* پنجره دیگر نیست */ }
+  chrome.tabs.remove(w.id).catch(() => {}); };
 async function waitVisible(w, label) {
   for (let i = 0; i < 360; i++) {                         // حداکثر ۳ ساعت
     if ((await run(w.id, () => document.visibilityState)) === "visible") return;

@@ -85,15 +85,19 @@ def message_text(titles: list[str]) -> str:
             f"- مدت ماندن پست و امکان پین\n- ساعت‌های خالی این هفته\nممنون")
 
 
-def project_text(intro: str, titles: list[str]) -> str:
+def project_text(intro: str, titles: list[str], kind: str = "price") -> str:
     titles = [_clean_title(t) for t in titles]
     where = f"کانال «{titles[0]}»" if len(titles) == 1 else "کانال‌های " + "، ".join(f"«{t}»" for t in titles)
+    if kind == "partner":       # همکاری رسانه‌ای (انجمن‌ها و شوراها معمولاً تبلیغ نمی‌فروشند)
+        return (f"سلام، وقت بخیر\n{intro.strip()}\n"
+                f"فکر می‌کنیم این مسابقه برای مخاطبان {where} مفید است و خوشحال می‌شویم به‌عنوان «حامی رسانه‌ای» "
+                f"معرفی‌اش کنید.\nاگر امکان همکاری هست بفرمایید چه شرایطی برایتان مناسب است تا هماهنگ کنیم.\nممنون")
     return (f"سلام، وقت بخیر\n{intro.strip()}\n"
             f"برای تبلیغ در {where} لطفاً تعرفه‌ی یک پست (عکس + متن) را بفرمایید:\n"
             f"- مدت ماندن پست و امکان پین\n- ساعت‌های خالی این هفته\nممنون")
 
 
-def draft_project(project_id: int, channel_ids: list[int]) -> dict:
+def draft_project(project_id: int, channel_ids: list[int], kind: str = "price") -> dict:
     """پیش‌نویس برای کانال‌های انتخاب‌شده‌ی یک پروژه‌ی جدا (با معرفی همان پروژه، نه کاروان صنعت)."""
     from app.projects import Project, ProjectChannel
     made = skipped = 0
@@ -119,7 +123,7 @@ def draft_project(project_id: int, channel_ids: list[int]) -> dict:
                 skipped += 1
                 continue
             db.add(Outreach(project_id=project_id, platform="telegram", handle=h, channel_ids=[c.id for c in cs],
-                            text=project_text(p.intro, [c.title or c.username for c in cs]), status="draft"))
+                            text=project_text(p.intro, [c.title or c.username for c in cs], kind), status="draft"))
             made += 1
         db.commit()
     return {"made": made, "skipped": skipped, "no_contact": no_contact}

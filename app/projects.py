@@ -40,6 +40,7 @@ class Project(Base):
     topic: Mapped[str] = mapped_column(Text)                       # موضوع و مخاطب، به زبان صاحب پروژه
     keywords: Mapped[list] = mapped_column(JSON, default=list)      # برای «علاقه‌ی مخاطب»
     intro: Mapped[str | None] = mapped_column(Text)                 # معرفی فرستنده در پیام به ادمین‌ها
+    reg_url: Mapped[str | None] = mapped_column(Text)               # صفحه‌ی ثبت‌نام (مقصد لینک‌های ردیابی)
     status: Mapped[str] = mapped_column(String(20), default="active")   # active | paused
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
@@ -66,6 +67,8 @@ class ProjectChannel(Base):
     ad_contacts: Mapped[list | None] = mapped_column(JSON)
     est_price: Mapped[int | None] = mapped_column(BigInteger)
     price_toman: Mapped[int | None] = mapped_column(BigInteger)     # قیمت واقعی (دستی)
+    code: Mapped[str | None] = mapped_column(String(20), index=True)  # لینک ردیابی /p/<کد>
+    registrations: Mapped[int | None] = mapped_column(Integer)      # ثبت‌نام‌های این کانال (دستی یا از فرم)
     status: Mapped[str] = mapped_column(String(20), default="new")  # new | checked | error
     error: Mapped[str | None] = mapped_column(Text)
     checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -148,6 +151,11 @@ def update(pid: int, b: dict) -> dict:
             p.name = str(b["name"]).strip()[:200]
         if "intro" in b:
             p.intro = str(b["intro"]).strip()[:400] or None
+        if "reg_url" in b:
+            u = str(b["reg_url"] or "").strip()
+            if u and not re.match(r"^https?://[^\s]+\.[^\s]+", u):
+                raise ValueError("آدرس صفحه‌ی ثبت‌نام باید با http شروع شود")
+            p.reg_url = u[:500] or None
         if "status" in b and b["status"] in ("active", "paused"):
             p.status = b["status"]
         if "keywords" in b and isinstance(b["keywords"], list):
@@ -161,13 +169,55 @@ def update(pid: int, b: dict) -> dict:
 
 
 def set_price(pcid: int, price: int | None) -> dict:
+    return set_fields(pcid, {"price_toman": price})
+
+
+def set_fields(pcid: int, b: dict) -> dict:
+    """قیمت واقعی و تعداد ثبت‌نام یک کانال (دستی)."""
+    def num(v):
+        v = str(v if v is not None else "").replace(",", "").replace("٬", "").translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")).strip()
+        return int(v) if v.isdigit() else None
     with get_session() as db:
         c = db.get(ProjectChannel, pcid)
         if not c:
             raise ValueError("کانال پیدا نشد")
-        c.price_toman = int(price) if price else None
+        if "price_toman" in b:
+            c.price_toman = num(b["price_toman"])
+        if "registrations" in b:
+            c.registrations = num(b["registrations"])
         db.commit()
     return {"ok": True}
+
+
+# ---------------- لینک ردیابی ----------------
+def tracking_link(pcid: int) -> str | None:
+    """لینک کوتاه مخصوص هر کانال (/p/<کد>) که به صفحه‌ی ثبت‌نام با UTM همان کانال می‌رود."""
+    from app.config import get_settings
+    from app.tracking.links import new_code
+    base = (get_settings().public_base_url or "").rstrip("/")
+    with get_session() as db:
+        c = db.get(ProjectChannel, pcid)
+        p = db.get(Project, c.project_id) if c else None
+        if not c or not p or not p.reg_url or not base:
+            return None
+        if not c.code:
+            while True:
+                code = new_code("J")
+                if not db.query(ProjectChannel).filter(ProjectChannel.code == code).first():
+                    break
+            c.code = code
+            db.commit()
+        return f"{base}/p/{c.code}"
+
+
+def resolve(code: str) -> str | None:
+    from app.tracking.links import utm_url
+    with get_session() as db:
+        c = db.query(ProjectChannel).filter(ProjectChannel.code == code).first()
+        p = db.get(Project, c.project_id) if c else None
+        if not c or not p or not p.reg_url:
+            return None
+        return utm_url(p.reg_url, "telegram", f"project{p.id}", c.username)
 
 
 def delete(pid: int) -> dict:
@@ -332,6 +382,23 @@ def run_once(budget_sec: int = 240, mock: bool = False) -> dict:
 
 
 # ---------------- خواندن، بودجه، خروجی ----------------
+SEGMENTS = {"startup": "استارتاپ و کارآفرینی", "assoc": "انجمن / شورای صنفی", "news": "خبری دانشجویی (تبلیغ می‌فروشد)",
+            "tech": "فنی و برنامه‌نویسی", "official": "رسمی دانشگاه", "other": "سایر"}
+_SEG = [("startup", re.compile(r"استارت|کارآفرین|startup|karafarin|کسب\s*و?\s*کار|سرمایه\s*گذار|invest|شتاب\s*دهنده|نوآوری", re.I)),
+        ("assoc", re.compile(r"انجمن|\bssa|anjoman|association|society|شورای?\s*صنفی|senfi|shora|کانون|IEEE|club|باشگاه|فرهنگی|farhangi", re.I)),
+        ("tech", re.compile(r"python|program|computer|\bAI\b|\bdev|code|linux|برنامه\s*نویس|هوش\s*مصنوعی|کامپیوتر|data", re.I)),
+        ("official", re.compile(r"روابط\s*عمومی|official|رسمی|_pr\b|\bpr_|_ac\b|معاونت|اداره\s*کل", re.I))]
+
+
+def segment(c) -> str:
+    t = " ".join(str(x or "") for x in (c.title, c.username, c.audience, (c.description or "")[:200]))
+    for k, rx in _SEG:
+        if rx.search(t):
+            return k
+    m = c.metrics or {}
+    return "news" if (m.get("ads_per_day") or 0) >= 0.3 or c.ad_contacts else "other"
+
+
 def _value(c: ProjectChannel) -> float:
     """امتیاز نهایی برای مرتب‌سازی: ربط × کیفیت × علاقه‌ی مخاطب."""
     fit = c.fit if c.fit is not None else 0.5
@@ -339,10 +406,15 @@ def _value(c: ProjectChannel) -> float:
     return round((c.score or 0) * fit * lift, 1)
 
 
-def _row(c: ProjectChannel) -> dict:
+def _row(c: ProjectChannel, clicks: dict | None = None, base: str = "") -> dict:
     price = c.price_toman or c.est_price
     m = c.metrics or {}
+    seg = segment(c)
+    regs = c.registrations
     return {"id": c.id, "username": c.username, "title": c.title, "members": c.members,
+            "segment": seg, "segment_name": SEGMENTS[seg],
+            "link": f"{base}/p/{c.code}" if c.code and base else None, "clicks": (clicks or {}).get(c.code, 0) if c.code else 0,
+            "registrations": regs, "cost_per_reg": round(c.price_toman / regs) if c.price_toman and regs else None,
             "median_views": m.get("median_views"), "view_rate": m.get("view_rate"),
             "expected_ad_views": c.expected_ad_views, "ads_per_day": m.get("ads_per_day"),
             "score": c.score, "flags": c.flags or [], "fit": c.fit, "audience": c.audience, "city": c.city,
@@ -363,11 +435,25 @@ def get(pid: int) -> dict:
               "error": sum(r.status == "error" for r in rows), "waiting": sum(r.status == "new" for r in rows),
               "tagged": sum(r.tagged_at is not None for r in rows),
               "relevant": sum((r.fit or 0) >= 0.6 for r in rows)}
-        items = sorted((_row(r) for r in rows), key=lambda x: (x["status"] != "checked", -x["value"]))
+        from collections import Counter
+        from app.config import get_settings
+        from app.db.marketing import Click
+        codes = [r.code for r in rows if r.code]
+        clicks = Counter(code for (code,) in db.query(Click.code).filter(Click.code.in_(codes)).all()) if codes else {}
+        base = (get_settings().public_base_url or "").rstrip("/")
+        items = sorted((_row(r, clicks, base) for r in rows), key=lambda x: (x["status"] != "checked", -x["value"]))
+        segs = {}
+        for x in items:
+            if x["status"] == "checked":
+                g = segs.setdefault(x["segment"], {"name": x["segment_name"], "n": 0, "good": 0})
+                g["n"] += 1
+                g["good"] += (x["fit"] or 0) >= 0.6 and not any("فیک" in f or "خریدنی" in f for f in x["flags"])
         tpv, n = toman_per_view()
         eta_min = round(st["waiting"] * 3.4 * (360 / 240) / 60) if st["waiting"] else 0   # هر دور ۴ دقیقه کار + ۲ دقیقه استراحت
         return {"id": p.id, "name": p.name, "topic": p.topic, "keywords": p.keywords or [], "status": p.status,
-                "intro": p.intro or "",
+                "intro": p.intro or "", "reg_url": p.reg_url or "", "segments": segs,
+                "totals": {"clicks": sum(x["clicks"] for x in items), "registrations": sum(x["registrations"] or 0 for x in items),
+                           "spent": sum(x["price_toman"] or 0 for x in items if x["registrations"] is not None)},
                 "stats": st, "items": items, "toman_per_view": tpv, "price_samples": n, "eta_min": eta_min}
 
 
@@ -412,12 +498,15 @@ def export_csv(pid: int) -> bytes:
     w = csv.writer(buf)
     w.writerow(["کانال", "آیدی", "عضو", "میانه‌ی بازدید", "بازدید مورد انتظار آگهی", "امتیاز کیفیت", "ربط به موضوع",
                 "مخاطب", "شهر/دانشگاه", "علاقه‌ی مخاطب به موضوع", "امتیاز نهایی", "قیمت (تومان)", "قیمت تخمینی است؟",
-                "هزینه‌ی هر ۱۰۰۰ بازدید", "تبلیغ در روز", "هشدارها", "تماس تبلیغ", "وضعیت"])
+                "هزینه‌ی هر ۱۰۰۰ بازدید", "تبلیغ در روز", "هشدارها", "تماس تبلیغ", "وضعیت", "نوع کانال", "لینک ردیابی",
+                "کلیک", "ثبت‌نام", "هزینه‌ی هر ثبت‌نام"])
     for x in d["items"]:
         w.writerow([x["title"] or "", "@" + x["username"], x["members"] or "", x["median_views"] or "",
                     x["expected_ad_views"] or "", x["score"] or "", x["fit"] if x["fit"] is not None else "",
                     x["audience"] or "", x["city"] or "", x["topic_lift"] or "", x["value"],
                     x["price_toman"] or x["est_price"] or "", "بله" if x["price_is_estimate"] else "خیر",
                     x["cpm"] or "", x["ads_per_day"] or "", "؛ ".join(x["flags"]), " ".join(x["ad_contacts"]),
-                    {"checked": "سنجیده", "error": "خطا: " + (x["error"] or ""), "new": "در صف"}.get(x["status"], x["status"])])
+                    {"checked": "سنجیده", "error": "خطا: " + (x["error"] or ""), "new": "در صف"}.get(x["status"], x["status"]),
+                    x["segment_name"], x["link"] or "", x["clicks"], x["registrations"] if x["registrations"] is not None else "",
+                    x["cost_per_reg"] or ""])
     return ("﻿" + buf.getvalue()).encode("utf-8")          # BOM تا اکسل فارسی را درست نشان دهد

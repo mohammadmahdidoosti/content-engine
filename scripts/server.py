@@ -791,9 +791,28 @@ def api_project_export(req, m):
 
 
 def api_project_channel_price(req, m):
-    v = req.body().get("price_toman")
-    v = int(str(v).replace(",", "")) if str(v or "").replace(",", "").isdigit() else None
-    return _val(_pj().set_price, _int(m.group(1), "id"), v)
+    return _val(_pj().set_fields, _int(m.group(1), "id"), req.body())
+
+
+def api_project_links_make(req, m):
+    """لینک ردیابی برای کانال‌های انتخاب‌شده (نیاز به آدرس صفحه‌ی ثبت‌نام)."""
+    ids = req.body().get("channel_ids") or []
+    out = {str(i): _pj().tracking_link(int(i)) for i in ids[:300] if str(i).isdigit()}
+    if ids and not any(out.values()):
+        raise HttpError(400, "اول آدرس صفحه‌ی ثبت‌نام را در پروژه وارد کنید")
+    return {"links": out}
+
+
+def public_project_link(req, m):
+    from app.tracking.links import visitor_hash
+    code = m.group(1).upper()
+    url = _pj().resolve(code)
+    if url:
+        with get_session() as db:
+            db.add(Click(code=code, visitor=visitor_hash(req.client_ip(), req.headers.get("User-Agent", "")),
+                         referer=(req.headers.get("Referer") or "")[:300] or None))
+            db.commit()
+    raise Redirect(url or get_settings().brand_site_url)
 
 
 def api_project_outreach(req, m):
@@ -801,7 +820,8 @@ def api_project_outreach(req, m):
     ids = req.body().get("channel_ids") or []
     if not ids:
         raise HttpError(400, "هیچ کانالی انتخاب نشده")
-    return _val(outreach.draft_project, _int(m.group(1), "id"), ids)
+    kind = "partner" if req.body().get("kind") == "partner" else "price"
+    return _val(outreach.draft_project, _int(m.group(1), "id"), ids, kind)
 
 
 def project_loop() -> None:
@@ -1115,6 +1135,7 @@ ROUTES = [
     ("GET", r"/api/projects/(\d+)/budget", api_project_budget), ("GET", r"/api/projects/(\d+)/export", api_project_export),
     ("POST", r"/api/projects/(\d+)/outreach", api_project_outreach),
     ("POST", r"/api/project-channels/(\d+)", api_project_channel_price),
+    ("POST", r"/api/projects/(\d+)/tracking", api_project_links_make),
     ("GET", r"/api/outreach", api_outreach), ("POST", r"/api/campaigns/(\d+)/outreach", api_outreach_draft),
     ("POST", r"/api/outreach/approve", api_outreach_approve), ("POST", r"/api/outreach/resume", api_outreach_resume),
     ("POST", r"/api/outreach/(\d+)", api_outreach_update), ("POST", r"/api/campaigns/relink", api_campaigns_relink),
@@ -1123,6 +1144,7 @@ ROUTES = [
 _COMPILED = [(meth, re.compile("^" + pat + "$"), fn) for meth, pat, fn in ROUTES]
 _PUBLIC = [("GET", re.compile(r"^/r/([A-Za-z0-9]{3,12})$"), public_redirect),
            ("GET", re.compile(r"^/m/([A-Za-z0-9]{3,12})$"), public_support),
+           ("GET", re.compile(r"^/p/([A-Za-z0-9]{3,12})$"), public_project_link),
            ("POST", re.compile(r"^/public/ask$"), public_ask),
            ("GET", re.compile(r"^/widget\.js$"), public_widget),
            ("POST", re.compile(r"^/bot/(telegram|bale)/([0-9a-f]{24})$"), public_bot)]

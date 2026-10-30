@@ -484,3 +484,39 @@ def test_projects_flow(tmp_path, monkeypatch):
     O.approve([items[0]["id"]]); O.ingest_results([{"id": items[0]["id"], "ok": True}])
     O.ingest_replies([{"id": items[0]["id"], "text": "پست ۲۴ ساعته ۹۰۰"}], mock=True)
     assert any(x["price_toman"] == 900000 for x in P.get(pid)["items"])
+
+
+def test_project_tracking_and_segments(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path}/pt.db")
+    monkeypatch.setenv("PUBLIC_BASE_URL", "https://content.example.com")
+    from app.config import get_settings
+    get_settings.cache_clear() if hasattr(get_settings, "cache_clear") else None
+    from app.db import session as sess
+    monkeypatch.setattr(sess, "_engine", None)
+    monkeypatch.setattr(sess, "_Session", None)
+    sess.init_db()
+    from types import SimpleNamespace as N
+    from app import projects as P
+    seg = lambda **k: P.segment(N(**{"title": "", "username": "", "audience": "", "description": "", "metrics": {}, "ad_contacts": [], **k}))
+    assert seg(title="کارآفرینی شریف") == "startup" and seg(title="انجمن علمی مکانیک") == "assoc"
+    assert seg(username="pr_kntu") == "official" and seg(title="اخبار دانشجویی", ad_contacts=["@ad"]) == "news"
+    assert seg(title="Python4all") == "tech" and seg(title="هر چیز") == "other"
+    r = P.create("کارآفرینی", "مسابقه", "@chan_one1", mock=True)
+    pid = r["id"]
+    with sess.get_session() as db:
+        cid = db.query(P.ProjectChannel).first().id
+    assert P.tracking_link(cid) is None                      # بدون آدرس ثبت‌نام
+    import pytest
+    with pytest.raises(ValueError):
+        P.update(pid, {"reg_url": "not a url"})
+    P.update(pid, {"reg_url": "https://contest.example.ir/register", "intro": "از دبیرخانه هستیم."})
+    link = P.tracking_link(cid)
+    assert link.startswith("https://content.example.com/p/J") and P.tracking_link(cid) == link
+    u = P.resolve(link.rsplit("/", 1)[1])
+    assert u.startswith("https://contest.example.ir/register?utm_source=telegram") and "utm_content=chan_one1" in u
+    P.set_fields(cid, {"price_toman": "۱,۰۰۰,۰۰۰", "registrations": "۲۰"})
+    x = P.get(pid)["items"][0]
+    assert x["registrations"] == 20 and x["cost_per_reg"] == 50000 and x["link"] == link
+    from app.channels import outreach as O
+    assert "حامی رسانه‌ای" in O.project_text("از دبیرخانه هستیم.", ["انجمن 🔖"], "partner")
+    get_settings.cache_clear() if hasattr(get_settings, "cache_clear") else None

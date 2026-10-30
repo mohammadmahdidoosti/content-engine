@@ -39,6 +39,7 @@ class Outreach(Base):
     campaign_id: Mapped[int | None] = mapped_column(Integer, index=True)
     platform: Mapped[str] = mapped_column(String(20), default="telegram")
     handle: Mapped[str] = mapped_column(String(80), index=True)          # بدون @
+    peer: Mapped[str | None] = mapped_column(String(40))                  # شناسه‌ی گفتگو در تلگرام (برای خواندن جواب)
     channel_ids: Mapped[list] = mapped_column(JSON, default=list)
     text: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(20), default="draft")
@@ -64,9 +65,17 @@ def _handle_of(ch) -> str | None:
     return None
 
 
+_EMOJI = re.compile(r"[\U0001F000-\U0001FAFF\u2600-\u27BF\uFE0F\u200d]+")
+
+
+def _clean_title(t: str) -> str:
+    return re.sub(r"\s{2,}", " ", _EMOJI.sub("", t or "")).strip(" |-")
+
+
 def message_text(titles: list[str]) -> str:
     from app.config import get_settings
     s = get_settings()
+    titles = [_clean_title(t) for t in titles]
     site = re.sub(r"^https?://(www\.)?", "", s.brand_site_url).rstrip("/")
     where = f"کانال «{titles[0]}»" if len(titles) == 1 else "کانال‌های " + "، ".join(f"«{t}»" for t in titles)
     return (f"سلام، وقت بخیر\n"
@@ -139,7 +148,7 @@ def update(oid: int, b: dict) -> dict:
             if not t or len(t) > 1500:
                 raise ValueError("متن پیام خالی یا خیلی طولانی است")
             o.text = t
-        if b.get("status") in ("skipped", "draft", "sent") and o.status in ("draft", "approved", "manual", "skipped"):
+        if b.get("status") in ("skipped", "draft", "sent") and o.status in ("draft", "approved", "manual", "skipped", "failed"):
             o.status = b["status"]          # «sent» دستی: وقتی خودش از گوشی فرستاده
             if o.status == "sent":
                 o.sent_at = _now()
@@ -177,7 +186,8 @@ def tasks() -> dict:
             for o in db.query(Outreach).filter(Outreach.status == "approved", Outreach.platform == "telegram")
             .order_by(Outreach.approved_at, Outreach.id).limit(min(PER_RUN, left)).all()]
         since = _now() - timedelta(days=REPLY_WINDOW_DAYS)
-        check = [{"id": o.id, "handle": o.handle, "first": o.text.split("\n")[1] if "\n" in o.text else o.text}
+        check = [{"id": o.id, "handle": o.handle, "peer": o.peer,
+                  "first": o.text.split("\n")[1] if "\n" in o.text else o.text}
                  for o in db.query(Outreach).filter(Outreach.status.in_(["sent", "replied"]), Outreach.platform == "telegram").all()
                  if _aware(o.sent_at) and _aware(o.sent_at) > since][:20]
     return {"send": send, "check": check, "paused": paused, "gap_min": [4, 8]}
@@ -197,6 +207,8 @@ def ingest_results(rows: list) -> dict:
             if not o or o.status != "approved":
                 continue
             err = str(r.get("error") or "")[:300] or None
+            if str(r.get("peer") or "").lstrip("-").isdigit():
+                o.peer = str(r["peer"])[:40]
             if r.get("ok"):
                 o.status, o.sent_at, o.error = "sent", _now(), None
             elif r.get("skip"):
@@ -272,6 +284,8 @@ def ingest_replies(rows: list, mock: bool = False) -> dict:
         with get_session() as db:
             o = db.get(Outreach, int(r["id"]))
             o.reply, o.reply_at, o.parsed, o.status = text, _now(), q, "replied"
+            if str(r.get("peer") or "").lstrip("-").isdigit():
+                o.peer = str(r["peer"])[:40]
             per = {str(x.get("title") or "").strip(): x.get("price_toman") for x in q.get("per_channel") or []}
             for cid in o.channel_ids or []:
                 ch = db.get(Channel, cid)

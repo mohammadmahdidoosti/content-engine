@@ -406,9 +406,11 @@ def test_outreach_flow(tmp_path, monkeypatch):
     o.approve([x["id"] for x in items])
     t = o.tasks()
     assert len(t["send"]) == 2 and t["send"][0]["lines"][0] == "سلام، وقت بخیر"
-    o.ingest_results([{"id": items[0]["id"], "ok": True}, {"id": items[1]["id"], "ok": False, "error": "Too many requests"}])
+    o.ingest_results([{"id": items[0]["id"], "ok": True, "peer": "726306308"},
+                      {"id": items[1]["id"], "ok": False, "error": "Too many requests"}])
     t = o.tasks()
-    assert t["paused"] and t["send"] == [] and len(t["check"]) == 1
+    assert t["paused"] and t["send"] == [] and len(t["check"]) == 1 and t["check"][0]["peer"] == "726306308"
+    assert "🔖" not in o.message_text(["دزفوری | اخبار فوری دزفول 🔖"])
     o.ingest_replies([{"id": items[0]["id"], "text": "سلام، پست ۲۴ ساعته ۸۰۰ تومن"}], mock=True)
     with sess.get_session() as db:
         ch = db.query(Channel).filter(Channel.username == "gonbadnews").one()

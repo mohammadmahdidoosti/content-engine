@@ -179,25 +179,33 @@ async function pageTelegramSearch(q) {
 
 // ---------- پیام به ادمین‌ها (فقط پیام‌هایی که صاحب فروشگاه در پنل تأیید کرده) ----------
 // گفتگوی یک آیدی را با جست‌وجو باز می‌کند؛ فقط حساب شخص (نه کانال/گروه/ربات) و فقط با آیدی دقیقاً همان.
-async function pageTgOpenUser(handle) {
+async function pageTgOpenUser(handle, peer, allowName) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const inp = document.querySelector("#telegram-search-input");
   if (!inp) return {error: "ورود به تلگرام وب انجام نشده"};
   ["pointerdown", "mousedown", "mouseup", "click"].forEach(t => inp.dispatchEvent(new MouseEvent(t, {bubbles: true})));
   inp.focus(); await sleep(800); inp.select(); document.execCommand("insertText", false, handle);   // حالت جست‌وجو باید فعال شود
-  await sleep(4500);
-  const it = [...document.querySelectorAll("[class*='LeftSearch'] .ListItem, .search-result")].find(x =>
-    (x.querySelector(".handle")?.textContent || "").replace(/^@/, "").trim().toLowerCase() === handle.toLowerCase());
+  const norm = x => String(x || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const pid = x => x.querySelector("[data-peer-id]")?.getAttribute("data-peer-id") || x.getAttribute("data-peer-id") || "";
+  let it = null, how = "";
+  for (let i = 0; i < 6 && !it; i++) {                       // نتیجه‌ها کم‌کم می‌آیند
+    await sleep(1500);
+    const items = [...document.querySelectorAll("[class*='LeftSearch'] .ListItem, .search-result")];
+    if (peer) { it = items.find(x => pid(x) === String(peer)); how = "peer"; }
+    if (!it) { it = items.find(x => norm(x.querySelector(".handle")?.textContent) === norm(handle)); how = "handle"; }
+    // گفتگوی قبلی (مخاطب ذخیره‌شده) در جست‌وجو آیدی ندارد؛ فقط برای «خواندن جواب»، با نام هم‌خوان
+    if (!it && allowName && i >= 3) { it = items.find(x => !x.querySelector(".handle") && norm(x.querySelector(".fullName")?.textContent) === norm(handle)); how = "name"; }
+  }
   if (!it) return {error: "این آیدی در تلگرام پیدا نشد"};
   const st = (it.querySelector(".status")?.textContent || "") + " " + (it.querySelector(".subtitle")?.textContent || "");
   if (/subscriber|member|مشترک|عضو/i.test(st) || /bot$/i.test(handle)) return {error: "این آیدی کانال/گروه/ربات است، نه شخص"};
   const b = it.querySelector(".ListItem-button") || it;
   b.dispatchEvent(new MouseEvent("mousedown", {bubbles: true})); b.click();
   await sleep(5000);
-  const title = document.querySelector(".MiddleHeader .fullName")?.textContent || "";
   if (!document.getElementById("editable-message-text")) return {error: "گفتگو باز نشد (شاید ارسال پیام بسته است)"};
-  return {ok: true, title, own: document.querySelectorAll("#MiddleColumn .Message.own").length,
-          all: document.querySelectorAll("#MiddleColumn .Message").length};
+  return {ok: true, how, peer: (location.hash.match(/^#(-?\d+)/) || [])[1] || pid(it),
+          title: document.querySelector(".MiddleHeader .fullName")?.textContent || "",
+          own: document.querySelectorAll("#MiddleColumn .Message.own").length};
 }
 async function pageTgSend(lines) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -206,10 +214,14 @@ async function pageTgSend(lines) {
   const ed = document.getElementById("editable-message-text");
   if (!ed) return {ok: false, error: "کادر پیام پیدا نشد"};
   ed.focus();
+  document.execCommand("selectAll"); document.execCommand("delete");          // پیش‌نویس قبلی پاک شود
   lines.forEach((l, i) => { if (i) document.execCommand("insertLineBreak"); document.execCommand("insertText", false, l); });
   await sleep(800);
-  if (ed.innerText.replace(/\s+/g, " ").trim() !== lines.join(" ").replace(/\s+/g, " ").trim())
+  const letters = x => String(x || "").replace(/[^\p{L}\p{N}]/gu, "");     // ایموجی در کادر تصویر است؛ فقط حروف و عددها مقایسه شوند
+  if (letters(ed.innerText) !== letters(lines.join(" "))) {
+    document.execCommand("selectAll"); document.execCommand("delete");
     return {ok: false, error: "متن درست در کادر ننشست؛ ارسال نشد"};
+  }
   const before = document.querySelectorAll("#MiddleColumn .Message.own").length;
   const btn = document.querySelector("#MiddleColumn button.main-button.send");
   if (!btn) return {ok: false, error: "دکمه‌ی ارسال پیدا نشد"};
@@ -227,8 +239,10 @@ async function pageTgSend(lines) {
 async function pageTgReadReply(first) {
   const msgs = [...document.querySelectorAll("#MiddleColumn .Message")];
   let k = -1;
-  msgs.forEach((m, i) => { if (m.classList.contains("own") && (m.innerText || "").includes(first)) k = i; });
-  if (k < 0) return {text: ""};
+  const letters = x => String(x || "").replace(/[^\p{L}\p{N}]/gu, "");
+  const f = letters(first).slice(0, 40);
+  msgs.forEach((m, i) => { if (m.classList.contains("own") && letters(m.innerText).includes(f)) k = i; });
+  if (k < 0) return {text: "", found: false};
   const txt = msgs.slice(k + 1).filter(m => !m.classList.contains("own"))
     .map(m => (m.querySelector(".text-content")?.innerText || "").replace(/\n?\d{1,2}:\d{2}\s*$/, "").trim()).filter(Boolean);
   return {text: txt.join("\n").slice(0, 3000)};
@@ -322,14 +336,16 @@ const TASKS = {
     if (!o.send.length && !o.check.length) return "پیامی برای ارسال یا پیگیری نبود";
     const T = await openWindow("https://web.telegram.org/a/", 9000), tab = T.id;
     let sent = 0, replies = 0, stopped = "";
+    const notes = [];
     try {
       for (const [i, m] of o.send.entries()) {
         await waitVisible(T, "تلگرام");
         await progress(`ارسال پیام ${i + 1} از ${o.send.length} به @${m.handle}`);
-        let r = await run(tab, pageTgOpenUser, [m.handle]);
-        if (!r || !r.ok) r = {id: m.id, ok: false, error: (r && r.error) || "خطای صفحه"};
-        else if (r.own > 0) r = {id: m.id, ok: false, skip: true, error: "قبلاً با این آیدی گفتگو داشته‌اید؛ دستی پیگیری کنید"};
-        else r = {id: m.id, ...(await run(tab, pageTgSend, [m.lines]))};
+        const op = await run(tab, pageTgOpenUser, [m.handle, null, false]);
+        let r;
+        if (!op || !op.ok) r = {id: m.id, ok: false, error: (op && op.error) || "خطای صفحه"};
+        else if (op.own > 0) r = {id: m.id, ok: false, skip: true, peer: op.peer, error: "قبلاً با این آیدی گفتگو داشته‌اید؛ دستی پیگیری کنید"};
+        else r = {id: m.id, peer: op.peer, ...(await run(tab, pageTgSend, [m.lines]))};
         await send("outreach_result", [r]);
         if (r.ok) sent++;
         if (r.stop) { stopped = r.error; break; }
@@ -342,16 +358,17 @@ const TASKS = {
       if (!stopped) for (const m of o.check) {
         await waitVisible(T, "تلگرام");
         await progress(`خواندن جواب @${m.handle}`);
-        const r = await run(tab, pageTgOpenUser, [m.handle]);
-        if (!r || !r.ok) continue;
+        const r = await run(tab, pageTgOpenUser, [m.handle, m.peer, true]);
+        if (!r || !r.ok) { notes.push(`@${m.handle}: ${(r && r.error) || "باز نشد"}`); continue; }
         const rep = await run(tab, pageTgReadReply, [m.first]);
-        if (rep && rep.text) rows.push({id: m.id, text: rep.text});
+        if (rep && rep.text) rows.push({id: m.id, peer: r.peer, text: rep.text});
+        else if (rep && rep.found === false) notes.push(`@${m.handle}: پیام ما در گفتگو پیدا نشد`);
         await sleep(jitter(4000, 8000));
       }
       if (rows.length) { await send("outreach_replies", rows); replies = rows.length; }
     } finally { closeWindow(T); }
     if (stopped) throw new Error("ارسال متوقف شد: " + stopped);
-    return `${sent} پیام فرستاده شد، ${replies} جواب خوانده شد`;
+    return `${sent} پیام فرستاده شد، ${replies} جواب خوانده شد` + (notes.length ? " — " + notes.slice(0, 3).join("؛ ") : "");
   },
   async torob_prices(t) {
     let batch = [], n = 0;

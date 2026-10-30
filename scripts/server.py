@@ -805,7 +805,7 @@ def api_project_outreach(req, m):
 
 
 def project_loop() -> None:
-    """پروژه‌های جدا: هر ۵ دقیقه حدود ۴ دقیقه سنجش آهسته‌ی کانال‌ها + برچسب + قیمت تخمینی."""
+    """پروژه‌های جدا: هر ۶ دقیقه حدود ۴ دقیقه سنجش آهسته‌ی کانال‌ها + برچسب + قیمت تخمینی."""
     time.sleep(120)
     while True:
         try:
@@ -815,7 +815,7 @@ def project_loop() -> None:
                     log.info("پروژه‌ها: %s", r)
         except Exception:  # noqa: BLE001
             log.exception("خطای پروژه‌ها")
-        time.sleep(300)
+        time.sleep(120)
 
 
 # =============== دستیار، ربات‌ها، ویجت ===============

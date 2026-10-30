@@ -365,7 +365,7 @@ def get(pid: int) -> dict:
               "relevant": sum((r.fit or 0) >= 0.6 for r in rows)}
         items = sorted((_row(r) for r in rows), key=lambda x: (x["status"] != "checked", -x["value"]))
         tpv, n = toman_per_view()
-        eta_min = round(st["waiting"] * (DELAY * 1.6) / 60 * (900 / 240)) if st["waiting"] else 0
+        eta_min = round(st["waiting"] * 3.4 * (360 / 240) / 60) if st["waiting"] else 0   # هر دور ۴ دقیقه کار + ۲ دقیقه استراحت
         return {"id": p.id, "name": p.name, "topic": p.topic, "keywords": p.keywords or [], "status": p.status,
                 "intro": p.intro or "",
                 "stats": st, "items": items, "toman_per_view": tpv, "price_samples": n, "eta_min": eta_min}

@@ -81,7 +81,7 @@ def r_meta(req, m):
     from crm.db import User, session
     with session() as db:
         u = db.query(User).filter(User.username == req.user).first()
-    return {"user": req.user, "role": u.role if u else "sales", "stages": core.STAGES, "lost_reasons": core.LOST_REASONS, "sources": core.SOURCES,
+    return {"user": req.user, "name": (u.name if u else "") or req.user, "role": u.role if u else "sales", "stages": core.STAGES, "lost_reasons": core.LOST_REASONS, "sources": core.SOURCES,
             "bale": {"token": bool(bale._token()), "chats": get_setting("bale.chats") or [], "code": bale.link_code()},
             "categories": _categories()}
 
@@ -96,7 +96,7 @@ def _categories():
 
 ROUTES = [
     ("GET", r"/api/meta", r_meta),
-    ("GET", r"/api/today", lambda req, m: core.today_view()),
+    ("GET", r"/api/today", lambda req, m: core.today_view(min(_int(req.q("n") or 100, "n"), 2000))),
     ("GET", r"/api/deals", lambda req, m: core.pipeline(req.q("stage"), req.q("q") or "")),
     ("POST", r"/api/deals", lambda req, m: _val(core.quick_add, req.body(), req.user)),
     ("GET", r"/api/deals/(\d+)", lambda req, m: _val(core.deal_detail, _int(m.group(1), "id"))),
@@ -159,7 +159,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("X-Frame-Options", "DENY")
-        self.send_header("Cache-Control", "no-store")
+        if "Cache-Control" not in (extra or {}):
+            self.send_header("Cache-Control", "no-store")
         for k, v in (extra or {}).items():
             self.send_header(k, v)
         self.end_headers()
@@ -191,6 +192,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, (WEB / "index.html").read_bytes(), "text/html; charset=utf-8")
             if path == "/manifest.webmanifest":
                 return self._send(200, (WEB / "manifest.webmanifest").read_bytes(), "application/manifest+json")
+            fm = re.fullmatch(r"/fonts/([A-Za-z0-9-]+\.woff2)", path)
+            if fm and (WEB / "fonts" / fm.group(1)).is_file():
+                return self._send(200, (WEB / "fonts" / fm.group(1)).read_bytes(), "font/woff2",
+                                  {"Cache-Control": "public, max-age=31536000, immutable"})
             if path == "/health":
                 return self._json(200, {"ok": True})
             if path == "/api/stats" and method == "GET":         # برای پنل بازاریابی: فقط عدد

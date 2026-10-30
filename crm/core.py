@@ -286,7 +286,7 @@ def delete_deal(did: int) -> dict:
 
 
 # ---------------- فهرست‌ها ----------------
-def today_view() -> dict:
+def today_view(n: int = 100) -> dict:
     t = today()
     with session() as db:
         due = (db.query(Deal, Contact).join(Contact, Contact.id == Deal.contact_id)
@@ -294,11 +294,13 @@ def today_view() -> dict:
                .order_by(Deal.next_at, Deal.id).limit(200).all())
         fresh = (db.query(Deal, Contact).join(Contact, Contact.id == Deal.contact_id)
                  .filter(Deal.stage.in_(OPEN), Deal.next_at.is_(None))
-                 .order_by(Deal.created_at.desc()).limit(100).all())
+                 .order_by(Deal.created_at.desc()).limit(max(1, n)).all())
+        fresh_total = db.query(func.count(Deal.id)).filter(Deal.stage.in_(OPEN), Deal.next_at.is_(None)).scalar()
         counts = dict(db.query(Deal.stage, func.count()).filter(Deal.origin.notin_(["leads_import"])).group_by(Deal.stage).all())
         since = datetime.now(timezone.utc) - timedelta(days=30)
         month = db.query(Deal).filter(Deal.created_at >= since, Deal.origin != "leads_import").all()
     return {"today": jalali(t), "due": [_deal_row(d, c) for d, c in due], "no_followup": [_deal_row(d, c) for d, c in fresh],
+            "no_followup_total": fresh_total,
             "counts": {k: counts.get(k, 0) for k in STAGES},
             "month": {"deals": len(month), "won": sum(d.stage == "won" for d in month),
                       "revenue": sum(d.amount or 0 for d in month if d.stage == "won")}}

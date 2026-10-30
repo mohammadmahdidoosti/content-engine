@@ -3,67 +3,195 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1f6f5c">
+<meta name="theme-color" content="#155446">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="/manifest.webmanifest">
+<link rel="preload" href="/fonts/Vazirmatn-FD-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <title>CRM کاروان صنعت</title>
 <style>
-:root{--bg:#f6f7f9;--card:#fff;--ink:#1d2127;--ink2:#5b6470;--line:#e6e8ec;--brand:#1f6f5c;--brand-soft:#e3f1ec;--warn:#b26a00;--warn-soft:#fff3df;--bad:#b3261e;--bad-soft:#fde8e6;--ok:#1b7f3b;--ok-soft:#e5f5ea;--blue:#2457a6;--blue-soft:#e7eefb}
-@media (prefers-color-scheme: dark){:root{--bg:#121417;--card:#1b1e23;--ink:#e9ecef;--ink2:#a2abb6;--line:#2b3037;--brand:#4fb394;--brand-soft:#1c3530;--warn:#f0b35a;--warn-soft:#3a2d17;--bad:#f2867d;--bad-soft:#3b1f1d;--ok:#6fcf8c;--ok-soft:#1b3323;--blue:#8fb3f0;--blue-soft:#1d2a40}}
-*{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Vazirmatn,"Segoe UI",Tahoma,sans-serif;font-size:15px;line-height:1.6}
-a{color:var(--blue)}
-header{position:sticky;top:0;z-index:5;background:var(--brand);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
-header b{font-size:16px}
-main{padding:12px 12px 90px;max-width:720px;margin:0 auto}
-nav.tabs{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;z-index:6;padding-bottom:env(safe-area-inset-bottom)}
-nav.tabs a{flex:1;text-align:center;padding:9px 0 7px;color:var(--ink2);text-decoration:none;font-size:12px}
-nav.tabs a span{display:block;font-size:20px;line-height:1.1}
-nav.tabs a.on{color:var(--brand);font-weight:700}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.sp{justify-content:space-between}
-.muted{color:var(--ink2)}.small{font-size:12.5px}
-.badge{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;background:var(--line);color:var(--ink)}
-.b-new{background:var(--blue-soft);color:var(--blue)}.b-quoted{background:var(--warn-soft);color:var(--warn)}.b-followup{background:var(--warn-soft);color:var(--warn)}
-.b-invoice{background:var(--brand-soft);color:var(--brand)}.b-won{background:var(--ok-soft);color:var(--ok)}.b-lost{background:var(--bad-soft);color:var(--bad)}
-.late{color:var(--bad);font-weight:700}
-.item{display:block;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
-.item:last-child{border-bottom:0}
-h2{font-size:15px;margin:4px 0 8px}
-label{display:block;font-size:12.5px;color:var(--ink2);margin:10px 0 4px}
-input,select,textarea{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
-textarea{min-height:70px}
-button{font:inherit;border:0;border-radius:10px;padding:10px 14px;background:var(--brand);color:#fff;cursor:pointer}
-button.ghost{background:var(--brand-soft);color:var(--brand)}
-button.danger{background:var(--bad-soft);color:var(--bad)}
-button.full{width:100%;margin-top:12px;padding:12px}
-button:disabled{opacity:.5}
-.chips{display:flex;gap:6px;flex-wrap:wrap}
-.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:13px}
-.chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
-.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
-.kpi b{display:block;font-size:20px}
-.call{display:inline-flex;align-items:center;gap:6px;background:var(--ok);color:#fff;padding:9px 14px;border-radius:10px;text-decoration:none}
-.sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-end}
-.sheet .in{background:var(--bg);width:100%;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:14px 12px 30px}
-.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:8px 14px;border-radius:10px;opacity:0;transition:.2s;z-index:30;font-size:13px}
-.toast.on{opacity:1}
-table{width:100%;border-collapse:collapse;font-size:13px}
-td,th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:right}
+@font-face{font-family:Vz;src:url(/fonts/Vazirmatn-FD-Regular.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:Vz;src:url(/fonts/Vazirmatn-FD-Medium.woff2) format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:Vz;src:url(/fonts/Vazirmatn-FD-Bold.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:Vz;src:url(/fonts/Vazirmatn-FD-ExtraBold.woff2) format("woff2");font-weight:800;font-display:swap}
+:root{
+  --bg:#f3f4f1;--card:#fff;--card2:#f8f9f7;--ink:#17201d;--ink2:#5d6964;--ink3:#8b9590;--line:#e4e7e3;
+  --brand:#155446;--brand2:#1f7a64;--brand-soft:#e2f0eb;--accent:#e08a1e;--accent-soft:#fdf0dd;
+  --bad:#c0392b;--bad-soft:#fbe7e4;--ok:#1d8a4a;--ok-soft:#e1f4e8;--blue:#2c62b8;--blue-soft:#e6eefb;--violet:#6b4bb8;--violet-soft:#efe9fb;
+  --shadow:0 1px 2px rgba(20,40,30,.05),0 4px 14px rgba(20,40,30,.06);--r:16px;--head:#155446;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0f1312;--card:#181d1b;--card2:#1e2421;--ink:#e8ede9;--ink2:#a5b0ab;--ink3:#76817c;--line:#28302d;
+  --brand:#3fae8c;--brand2:#56c29f;--brand-soft:#173029;--accent:#f0a64a;--accent-soft:#33260f;
+  --bad:#f08a7e;--bad-soft:#3a1d1a;--ok:#6fd096;--ok-soft:#173222;--blue:#8db2f2;--blue-soft:#1b2840;--violet:#b9a3f0;--violet-soft:#2a2140;
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+}
+  --head:#123f35;
+}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Vz,Vazirmatn,Tahoma,sans-serif;font-size:15px;line-height:1.65}
+a{color:var(--blue);text-decoration:none}
+svg.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+svg.i.s{width:15px;height:15px}
+
+/* سربرگ */
+header{position:sticky;top:0;z-index:5;background:var(--head);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;justify-content:space-between;align-items:center}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.14);display:grid;place-items:center}
+.brand b{display:block;font-size:15px;line-height:1.2}.brand small{opacity:.7;font-size:11.5px}
+.me{color:#fff;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.18);display:grid;place-items:center;font-weight:700;font-size:14px}
+main{padding:14px 14px calc(100px + env(safe-area-inset-bottom));max-width:720px;margin:0 auto}
+
+/* نوار پایین */
+nav.tabs{position:fixed;bottom:0;left:0;right:0;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;z-index:6;padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
+nav.tabs a{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 0 4px;color:var(--ink3);font-size:11.5px;font-weight:500;border-radius:12px}
+nav.tabs a.on{color:var(--brand)}
+nav.tabs a.on svg{stroke-width:2.3}
+nav.tabs a.fab{position:relative;top:-16px;flex:none;width:58px;height:58px;margin:0 6px;border-radius:50%;background:var(--accent);color:#fff;justify-content:center;box-shadow:0 6px 18px rgba(224,138,30,.45);border:4px solid var(--bg)}
+nav.tabs a.fab svg{width:26px;height:26px;stroke-width:2.5}
+
+/* اجزای پایه */
+.card{background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:12px;box-shadow:var(--shadow)}
+.sec{display:flex;align-items:center;justify-content:space-between;margin:18px 4px 8px}
+.sec h2{font-size:15px;margin:0;display:flex;align-items:center;gap:8px}
+.cnt{min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:var(--line);color:var(--ink2);font-size:12px;font-weight:700;display:inline-grid;place-items:center}
+.cnt.hot{background:var(--bad);color:#fff}
+h3{font-size:14px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sp{justify-content:space-between}
+.muted{color:var(--ink2)}.faint{color:var(--ink3)}.small{font-size:12.5px}
 .ltr{direction:ltr;unicode-bidi:embed;display:inline-block}
-.tl{border-right:2px solid var(--line);padding-right:10px;margin-right:4px}
-.tl div{margin-bottom:8px}
+.pill{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:1px 10px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.s-new{background:var(--blue-soft);color:var(--blue)}.s-quoted{background:var(--violet-soft);color:var(--violet)}.s-followup{background:var(--accent-soft);color:var(--accent)}
+.s-invoice{background:var(--brand-soft);color:var(--brand)}.s-won{background:var(--ok-soft);color:var(--ok)}.s-lost{background:var(--bad-soft);color:var(--bad)}
+.c-new{--c:var(--blue)}.c-quoted{--c:var(--violet)}.c-followup{--c:var(--accent)}.c-invoice{--c:var(--brand)}.c-won{--c:var(--ok)}.c-lost{--c:var(--bad)}
+.empty{text-align:center;padding:26px 12px;color:var(--ink2)}
+.empty .big{font-size:34px;line-height:1;margin-bottom:6px}
+
+/* فرم */
+label{display:block;font-size:12.5px;font-weight:500;color:var(--ink2);margin:14px 2px 6px}
+input,select,textarea{width:100%;font:inherit;padding:12px 13px;border:1.5px solid var(--line);border-radius:12px;background:var(--card2);color:var(--ink);outline:none;transition:border-color .15s,background .15s}
+input:focus,textarea:focus,select:focus{border-color:var(--brand2);background:var(--card)}
+input::placeholder,textarea::placeholder{color:var(--ink3)}
+textarea{min-height:76px;resize:vertical}
+.field{position:relative}
+.field svg{position:absolute;top:50%;right:13px;transform:translateY(-50%);color:var(--ink3);pointer-events:none}
+.field input{padding-right:40px}
+.phone{font-size:20px;font-weight:700;letter-spacing:1px;text-align:left;direction:ltr}
+button{font:inherit;font-weight:700;border:0;border-radius:12px;padding:11px 16px;background:var(--brand);color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:transform .08s,opacity .15s}
+button:active{transform:scale(.97)}
+button.ghost{background:var(--brand-soft);color:var(--brand)}
+button.soft{background:var(--card2);color:var(--ink);border:1.5px solid var(--line)}
+button.danger{background:transparent;color:var(--bad);font-weight:500}
+button.full{width:100%;margin-top:14px;padding:14px}
+button:disabled{opacity:.5}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chips.scroll{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -14px;padding:0 14px}
+.chips.scroll::-webkit-scrollbar{display:none}
+.chip{font-weight:500;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 14px;font-size:13px;white-space:nowrap}
+.chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.chip .cnt{height:18px;min-width:18px;font-size:11px;margin-right:4px;background:rgba(127,127,127,.18);color:inherit}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.grid4 .chip{padding:7px 0}
+.stickybar{position:sticky;bottom:calc(78px + env(safe-area-inset-bottom));z-index:4;margin-top:6px}
+.stickybar button{box-shadow:0 6px 18px rgba(21,84,70,.3)}
+
+/* قهرمان امروز */
+.hero{background:linear-gradient(135deg,var(--head) 0%,#0f3f35 100%);color:#fff;border-radius:20px;padding:18px 16px 14px;margin-bottom:6px;position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;left:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.06)}
+.hero .hi{font-size:13px;opacity:.8}.hero .date{font-size:20px;font-weight:800;margin:2px 0 14px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;position:relative;z-index:1}
+.stat{background:rgba(255,255,255,.1);border-radius:14px;padding:10px 8px;text-align:center}
+.stat b{display:block;font-size:22px;font-weight:800;line-height:1.3}.stat span{font-size:11.5px;opacity:.8}
+.stat.alert{background:var(--accent)}
+.funnel{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--line);margin:4px 0 10px}
+.funnel i{display:block;background:var(--c)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px}
+.legend a{color:var(--ink2);display:inline-flex;align-items:center;gap:6px}
+.legend a i{width:9px;height:9px;border-radius:3px;background:var(--c)}
+.legend b{color:var(--ink)}
+
+/* کارت درخواست */
+.list{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.deal{display:flex;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer;position:relative}
+.deal:last-child{border-bottom:0}
+.deal:active{background:var(--card2)}
+.deal:before{content:"";position:absolute;right:0;top:12px;bottom:12px;width:3px;border-radius:3px 0 0 3px;background:var(--c)}
+.av{width:42px;height:42px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:800;font-size:16px;color:#fff;background:hsl(var(--h) 45% 46%)}
+.deal .body{flex:1;min-width:0}
+.deal .t1{display:flex;align-items:center;gap:8px}
+.deal .t1 b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deal .t2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
+.meta{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;color:var(--ink3);margin-top:2px}
+.meta span{display:inline-flex;align-items:center;gap:3px}
+.due{font-weight:700}.due.late{color:var(--bad)}.due.today{color:var(--accent)}
+.callbtn{width:42px;height:42px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--ok-soft);color:var(--ok)}
+.more{display:block;width:100%;text-align:center;padding:12px;color:var(--brand);font-weight:700;background:var(--card2);border-radius:0}
+
+/* برگه‌ی جزئیات */
+.sheet{position:fixed;inset:0;background:rgba(10,20,16,.5);z-index:20;display:flex;align-items:flex-end;animation:fade .18s}
+.sheet .in{background:var(--bg);width:100%;max-width:720px;margin:0 auto;max-height:94vh;overflow:auto;border-radius:22px 22px 0 0;padding:8px 14px calc(26px + env(safe-area-inset-bottom));animation:up .22s cubic-bezier(.2,.8,.2,1)}
+.grip{width:42px;height:5px;border-radius:9px;background:var(--line);margin:4px auto 10px}
+@keyframes up{from{transform:translateY(40px);opacity:.4}}@keyframes fade{from{background:rgba(0,0,0,0)}}
+.who{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.who .av{width:52px;height:52px;font-size:20px}
+.who b{font-size:17px;display:block;line-height:1.3}
+.x{width:38px;height:38px;border-radius:50%;padding:0;background:var(--card);color:var(--ink2);margin-right:auto;box-shadow:var(--shadow)}
+.acts{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.acts a,.acts button{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;border-radius:14px;font-weight:700;font-size:14px}
+.acts .call{background:var(--ok);color:#fff}
+.acts .alt{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+.steps{display:flex;gap:4px;margin-bottom:6px}
+.steps button{flex:1;min-width:0;line-height:1.35;padding:8px 2px 6px;border-radius:10px;background:var(--card2);color:var(--ink2);font-size:11.5px;font-weight:500;flex-direction:column;gap:3px;border:1.5px solid transparent}
+.steps button i{width:100%;height:4px;border-radius:4px;background:var(--line)}
+.steps button.done i{background:var(--c)}
+.steps button.on{border-color:var(--c);color:var(--c);font-weight:800;background:var(--card)}
+.steps button.on i{background:var(--c)}
+.lostbtn{margin-top:6px;width:100%;background:transparent;color:var(--bad);border:1.5px dashed var(--bad-soft);font-weight:500;padding:9px}
+.lostbtn.on{background:var(--bad-soft);border-style:solid}
+.tl{position:relative;padding-right:18px}
+.tl:before{content:"";position:absolute;right:5px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl .ev{position:relative;margin-bottom:12px}
+.tl .ev:before{content:"";position:absolute;right:-17px;top:7px;width:10px;height:10px;border-radius:50%;background:var(--card);border:2px solid var(--brand2)}
+.tl .ev.call:before{background:var(--brand2)}
+.known{margin-top:10px;padding:12px;border-radius:14px;background:var(--brand-soft);font-size:13px}
+
+/* گزارش */
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.kpi{background:var(--card);border-radius:14px;padding:12px 8px;text-align:center;box-shadow:var(--shadow)}
+.kpi b{display:block;font-size:19px;font-weight:800}.kpi span{font-size:11.5px;color:var(--ink2)}
+.bar{margin-bottom:10px}
+.bar .lb{display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px}
+.bar .tr{height:8px;border-radius:9px;background:var(--line);overflow:hidden;display:flex}
+.bar .tr i{display:block;height:100%}
+.set{display:flex;gap:12px;align-items:flex-start}
+.set .ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none}
+.code{font-size:26px;font-weight:800;letter-spacing:4px;background:var(--card2);border:1.5px dashed var(--line);border-radius:12px;padding:6px 16px;display:inline-block;direction:ltr}
+
+/* ورود */
+.login{min-height:calc(100vh - 140px);display:grid;place-items:center}
+.login .card{width:100%;max-width:380px;padding:26px 20px}
+.login .logo{width:58px;height:58px;border-radius:18px;background:var(--brand);color:#fff;margin:0 auto 10px}
+
+.toast{position:fixed;bottom:calc(96px + env(safe-area-inset-bottom));left:50%;transform:translate(-50%,10px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:12px;opacity:0;transition:.2s;z-index:30;font-size:13.5px;font-weight:500;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.sk{border-radius:12px;background:linear-gradient(90deg,var(--line) 0%,var(--card2) 50%,var(--line) 100%);background-size:200% 100%;animation:sh 1.2s infinite linear}
+@keyframes sh{to{background-position:-200% 0}}
+@media (min-width:600px){main{padding-top:20px}}
 </style>
 </head>
 <body>
-<header><b>CRM کاروان صنعت</b><span id="who" class="small"></span></header>
-<main id="view"><div class="card muted">در حال بارگذاری…</div></main>
+<header id="hdr" hidden>
+  <div class="brand"><div class="logo" id="logoSlot"></div><div><b>کاروان صنعت</b><small>مدیریت مشتری‌ها</small></div></div>
+  <a href="#more" class="me" id="me" aria-label="حساب"></a>
+</header>
+<main id="view"></main>
 <nav class="tabs" id="tabs" hidden>
-  <a href="#today"><span>☀️</span>امروز</a><a href="#add"><span>➕</span>ثبت</a><a href="#pipe"><span>📋</span>کاریز</a>
-  <a href="#customers"><span>👥</span>مشتری‌ها</a><a href="#more"><span>⋯</span>بیشتر</a>
+  <a href="#today" data-i="sun">امروز</a>
+  <a href="#pipe" data-i="layers">کاریز</a>
+  <a href="#add" class="fab" data-i="plus" aria-label="ثبت درخواست"></a>
+  <a href="#customers" data-i="users">مشتری‌ها</a>
+  <a href="#more" data-i="grid">بیشتر</a>
 </nav>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status"></div>
 <script>
 (() => {
 "use strict";
@@ -71,10 +199,39 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fa = n => n == null || n === "" ? "–" : Number(n).toLocaleString("fa-IR");
 const toman = n => n ? fa(n) + " تومان" : "–";
+const mil = n => n ? (n >= 1e9 ? fa(Math.round(n / 1e8) / 10) + " میلیارد" : fa(Math.round(n / 1e5) / 10) + " میلیون") : "–";
 const fd = s => String(s ?? "").replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]);
 const en = s => String(s ?? "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
 let META = null;
-function toast(m){ const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 2200); }
+
+// ---------- آیکن‌ها ----------
+const P = {
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  layers: '<path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="m2 13 10 5 10-5"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M21.5 20a6.5 6.5 0 0 0-4-6"/>',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+  phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/>',
+  msg: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-5A8 8 0 1 1 21 12Z"/>',
+  copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  pin: '<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  tag: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+  cal: '<rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  x: '<path d="M6 6l12 12M18 6 6 18"/>',
+  truck: '<path d="M2 6h11v10H2zM13 9h4.5l3.5 3.5V16h-8z"/><circle cx="6" cy="17.5" r="2"/><circle cx="17" cy="17.5" r="2"/>',
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+  upload: '<path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
+  userplus: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6"/>',
+  key: '<circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.3-9.3M17 6l3 3M14.5 8.5l2 2"/>',
+  chart: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-7"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+  trash: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+};
+const I = (n, cls = "") => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[n] || ""}</svg>`;
+
+function toast(m){ const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 2400); }
 async function api(path, opts = {}){
   const r = await fetch(path, {...opts, headers: {"Content-Type": "application/json", ...(opts.headers || {})}, credentials: "same-origin"});
   const d = await r.json().catch(() => ({}));
@@ -83,165 +240,273 @@ async function api(path, opts = {}){
   return d;
 }
 const post = (p, b) => api(p, {method: "POST", body: JSON.stringify(b || {})});
-const badge = d => `<span class="badge b-${d.stage}">${esc(d.stage_name)}</span>`;
-const dealItem = d => `<div class="item" data-deal="${d.id}"><div class="row sp"><b>${esc((d.contact && d.contact.name) || "بدون نام")}</b>${badge(d)}</div>
-  <div>${esc(d.title)}</div><div class="small muted">${d.contact && d.contact.city ? esc(d.contact.city) + " · " : ""}${d.ad_code ? "کد " + esc(d.ad_code) + " · " : d.source ? esc(d.source) + " · " : ""}${d.next_at_fa ? `<span class="${d.overdue ? "late" : ""}">پیگیری ${fd(d.next_at_fa)}${d.overdue ? " (عقب‌افتاده)" : ""}</span>` : "بدون تاریخ پیگیری"}</div></div>`;
-function bindDeals(root = document){ root.querySelectorAll("[data-deal]").forEach(e => e.onclick = () => openDeal(+e.dataset.deal)); }
+const skeleton = (n = 4) => `<div class="list">${Array.from({length: n}, () => `<div class="deal"><div class="av sk"></div><div class="body"><div class="sk" style="height:14px;width:45%;margin-bottom:8px"></div><div class="sk" style="height:12px;width:75%"></div></div></div>`).join("")}</div>`;
+const empty = (emoji, t) => `<div class="empty"><div class="big">${emoji}</div>${t}</div>`;
+
+// آواتار با رنگ ثابت برای هر اسم
+const hue = s => { let h = 0; for (const ch of String(s || "?")) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
+const initial = s => { const t = String(s || "").replace(/^(آقای|خانم|مهندس|دکتر|حاج|جناب)\s+/, "").trim(); return t ? t[0] : "؟"; };
+const avatar = c => `<div class="av" style="--h:${hue((c && (c.name || c.phone)) || "")}">${esc(initial(c && c.name))}</div>`;
+const pill = d => `<span class="pill s-${d.stage}">${esc(d.stage_name || (META.stages[d.stage] || d.stage))}</span>`;
+function dueTag(d){
+  if (!d.next_at_fa) return `<span>${I("clock", "s")}بدون تاریخ</span>`;
+  const isToday = d.next_at && d.next_at === TODAY_ISO;
+  const cls = d.overdue ? "late" : isToday ? "today" : "";
+  return `<span class="due ${cls}">${I("cal", "s")}${d.overdue ? "عقب‌افتاده · " : isToday ? "امروز · " : ""}${fd(d.next_at_fa)}</span>`;
+}
+let TODAY_ISO = new Date(Date.now() + 3.5 * 3600e3).toISOString().slice(0, 10);
+const dealItem = d => { const c = d.contact || {};
+  return `<div class="deal c-${d.stage}" data-deal="${d.id}">${avatar(c)}
+    <div class="body"><div class="t1"><b>${esc(c.name || "بدون نام")}</b>${pill(d)}</div>
+      <div class="t2">${esc(d.title || "—")}</div>
+      <div class="meta">${dueTag(d)}${c.city ? `<span>${I("pin", "s")}${esc(c.city)}</span>` : ""}${d.ad_code ? `<span>${I("tag", "s")}${esc(d.ad_code)}</span>` : d.source ? `<span>${I("tag", "s")}${esc(d.source)}</span>` : ""}</div></div>
+    ${c.phone ? `<a class="callbtn" href="tel:${esc(c.phone)}" data-call aria-label="تماس">${I("phone")}</a>` : ""}</div>`; };
+function bindDeals(root = document){
+  root.querySelectorAll("[data-deal]").forEach(e => e.onclick = ev => { if (ev.target.closest("[data-call]")) return; openDeal(+e.dataset.deal); });
+}
 
 // ---------- ورود ----------
 function loginView(){
-  $("#tabs").hidden = true; $("#who").textContent = "";
-  $("#view").innerHTML = `<div class="card"><h2>ورود</h2><label>نام کاربری</label><input id="u" autocomplete="username" class="ltr" style="text-align:left">
-    <label>رمز</label><input id="p" type="password" autocomplete="current-password"><button class="full" id="lg">ورود</button><div id="err" class="small" style="color:var(--bad)"></div></div>`;
-  $("#lg").onclick = async () => { try { await post("/api/login", {username: $("#u").value, password: $("#p").value}); boot(); } catch (e) { $("#err").textContent = e.message; } };
+  $("#tabs").hidden = true; $("#hdr").hidden = true;
+  $("#view").innerHTML = `<div class="login"><div class="card">
+    <div class="logo" style="display:grid;place-items:center">${I("truck")}</div>
+    <div style="text-align:center;margin-bottom:8px"><b style="font-size:18px">کاروان صنعت</b><div class="small muted">ورود به مدیریت مشتری‌ها</div></div>
+    <label>نام کاربری</label><input id="u" autocomplete="username" class="ltr" style="text-align:left;width:100%">
+    <label>رمز</label><input id="p" type="password" autocomplete="current-password">
+    <button class="full" id="lg">ورود</button><div id="err" class="small" style="color:var(--bad);text-align:center;margin-top:8px"></div></div></div>`;
+  $("#lg").onclick = async () => { const b = $("#lg"); b.disabled = true;
+    try { await post("/api/login", {username: $("#u").value, password: $("#p").value}); boot(); } catch (e) { $("#err").textContent = e.message; b.disabled = false; } };
   $("#p").onkeydown = e => { if (e.key === "Enter") $("#lg").click(); };
+  $("#u").focus();
 }
 
 // ---------- امروز ----------
+let NF = 100;
 async function today(){
-  const d = await api("/api/today");
-  $("#view").innerHTML = `<div class="kpis">
-      <div class="kpi"><b>${fa(d.due.length)}</b><span class="small muted">پیگیری امروز</span></div>
-      <div class="kpi"><b>${fa(d.month.deals)}</b><span class="small muted">درخواست ۳۰ روز</span></div>
-      <div class="kpi"><b>${fa(d.month.won)}</b><span class="small muted">خرید ۳۰ روز</span></div></div>
-    <div class="card" style="margin-top:10px"><h2>☀️ امروز ${fd(d.today)} باید پیگیری شوند</h2>${d.due.map(dealItem).join("") || '<div class="muted small">پیگیری‌ای برای امروز نیست 👌</div>'}</div>
-    <div class="card"><h2>🆕 درخواست‌های بدون تاریخ پیگیری</h2>${d.no_followup.map(dealItem).join("") || '<div class="muted small">همه تاریخ پیگیری دارند.</div>'}</div>
-    <div class="card small muted">در کاریز: ${Object.entries(META.stages).filter(([k]) => !["won","lost"].includes(k)).map(([k, v]) => `${esc(v)} ${fa(d.counts[k])}`).join(" · ")}</div>`;
+  $("#view").innerHTML = `<div class="hero"><div class="sk" style="height:110px;opacity:.2"></div></div>` + skeleton(3);
+  const d = await api("/api/today?n=" + NF);
+  const h = +new Date().toLocaleString("en-US", {timeZone: "Asia/Tehran", hour: "numeric", hour12: false});
+  const hi = h < 12 ? "صبح بخیر" : h < 17 ? "روز بخیر" : "عصر بخیر";
+  const late = d.due.filter(x => x.overdue).length;
+  const open = Object.entries(META.stages).filter(([k]) => !["won", "lost"].includes(k));
+  const openSum = open.reduce((s, [k]) => s + (d.counts[k] || 0), 0), totalOpen = openSum || 1;
+  const nfTotal = d.no_followup_total ?? d.no_followup.length;
+  $("#view").innerHTML = `
+    <div class="hero"><div class="hi">${hi} ${esc(META.name || META.user)} 👋</div><div class="date">امروز ${fd(d.today)}</div>
+      <div class="stats">
+        <div class="stat ${d.due.length ? "alert" : ""}"><b>${fa(d.due.length)}</b><span>پیگیری امروز</span></div>
+        <div class="stat"><b>${fa(d.month.deals)}</b><span>درخواست ۳۰ روز</span></div>
+        <div class="stat"><b>${fa(d.month.won)}</b><span>خرید ۳۰ روز</span></div></div></div>
+    <div class="sec"><h2>${I("bell")} باید پیگیری شوند ${d.due.length ? `<span class="cnt ${late ? "hot" : ""}">${fa(d.due.length)}</span>` : ""}</h2>${late ? `<span class="small" style="color:var(--bad)">${fa(late)} عقب‌افتاده</span>` : ""}</div>
+    ${d.due.length ? `<div class="list">${d.due.map(dealItem).join("")}</div>` : `<div class="card">${empty("🎉", "پیگیری‌ای برای امروز نمانده.")}</div>`}
+    <div class="sec"><h2>${I("clock")} بدون تاریخ پیگیری ${nfTotal ? `<span class="cnt">${fa(nfTotal)}</span>` : ""}</h2></div>
+    ${nfTotal ? `<div class="small muted" style="margin:-4px 4px 8px">برای هر کدام یا تاریخ پیگیری بگذارید، یا «خرید» / «انصراف» بزنید.</div>` : ""}
+    ${d.no_followup.length ? `<div class="list">${d.no_followup.map(dealItem).join("")}${nfTotal > d.no_followup.length ? `<button class="more" id="nfMore">نمایش ${fa(Math.min(100, nfTotal - d.no_followup.length))} مورد بیشتر (از ${fa(nfTotal)})</button>` : ""}</div>`
+      : `<div class="card">${empty("✅", "همه‌ی درخواست‌ها تاریخ پیگیری دارند.")}</div>`}
+    <div class="sec"><h2>${I("layers")} کاریز باز</h2><span class="small muted">${fa(openSum)} درخواست</span></div>
+    <div class="card"><div class="funnel">${open.map(([k]) => `<i class="c-${k}" style="width:${100 * (d.counts[k] || 0) / totalOpen}%"></i>`).join("")}</div>
+      <div class="legend">${open.map(([k, v]) => `<a href="#pipe" data-go="${k}" class="c-${k}"><i></i>${esc(v)} <b>${fa(d.counts[k] || 0)}</b></a>`).join("")}</div></div>`;
   bindDeals();
+  const m = $("#nfMore"); if (m) m.onclick = () => { NF += 100; today(); };
+  document.querySelectorAll("[data-go]").forEach(a => a.onclick = () => { PIPE.stage = a.dataset.go; });
 }
 
 // ---------- ثبت سریع ----------
-function chips(name, list, val){ return `<div class="chips" data-chips="${name}">${list.map(([v, t]) => `<button type="button" class="chip ${v === val ? "on" : ""}" data-v="${esc(v)}">${esc(t)}</button>`).join("")}</div>`; }
+function chips(name, list, val, cls = ""){ return `<div class="chips ${cls}" data-chips="${name}">${list.map(([v, t]) => `<button type="button" class="chip ${v === val ? "on" : ""}" data-v="${esc(v)}">${esc(t)}</button>`).join("")}</div>`; }
 function bindChips(root, name, onPick){ const all = [...root.querySelectorAll(`[data-chips="${name}"] .chip`)];
   all.forEach(b => b.onclick = () => { const was = b.classList.contains("on"); all.forEach(x => x.classList.remove("on")); if (!was) b.classList.add("on"); onPick && onPick(); }); }
 const picked = (root, name) => (root.querySelector(`[data-chips="${name}"] .chip.on`) || {}).dataset?.v || "";
 function add(){
-  $("#view").innerHTML = `<div class="card"><h2>➕ ثبت درخواست</h2>
-    <label>شماره‌ی تلفن *</label><input id="fPhone" type="tel" inputmode="tel" class="ltr" style="text-align:left" placeholder="0912…">
-    <div id="known" class="small"></div>
-    <label>نام</label><input id="fName">
-    <label>شهر</label><input id="fCity">
-    <label>کالای درخواستی *</label><input id="fTitle" placeholder="مثلاً الکتروموتور ۵٫۵ کیلووات سه‌فاز">
-    <label>دسته</label><input id="fCat" list="cats"><datalist id="cats">${META.categories.map(c => `<option value="${esc(c)}">`).join("")}</datalist>
-    <label>از کجا آمد؟</label>${chips("src", META.sources.map(s => [s, s]), "")}
-    <div id="codeBox" hidden><label>کد آگهی (در پیام مشتری هست، مثلاً CC2Y)</label><input id="fCode" class="ltr" style="text-align:left;text-transform:uppercase"></div>
-    <label>یادداشت</label><textarea id="fNote" placeholder="چه گفت؟ چه قیمتی دادید؟"></textarea>
-    <label>پیگیری بعدی</label>${chips("fu", [["0", "امروز"], ["1", "فردا"], ["3", "۳ روز"], ["7", "هفته‌ی بعد"]], "1")}
-    <button class="full" id="save">ثبت</button></div>`;
+  $("#view").innerHTML = `
+    <div class="sec" style="margin-top:4px"><h2>${I("plus")} درخواست تازه</h2></div>
+    <div class="card"><h3>${I("phone")} مشتری</h3>
+      <input id="fPhone" type="tel" inputmode="tel" class="phone" placeholder="09__ ___ ____" autocomplete="off">
+      <div id="known"></div>
+      <div class="row" style="flex-wrap:nowrap;gap:8px"><div style="flex:3"><label>نام</label><input id="fName" placeholder="مثلاً آقای رضایی"></div>
+        <div style="flex:2"><label>شهر</label><input id="fCity" placeholder="دزفول"></div></div></div>
+    <div class="card"><h3>${I("tag")} درخواست</h3>
+      <label style="margin-top:0">کالای درخواستی *</label><input id="fTitle" placeholder="مثلاً الکتروموتور ۵٫۵ کیلووات سه‌فاز">
+      <label>دسته</label><input id="fCat" list="cats" placeholder="انتخاب یا تایپ"><datalist id="cats">${META.categories.map(c => `<option value="${esc(c)}">`).join("")}</datalist>
+      <label>از کجا آمد؟</label>${chips("src", META.sources.map(s => [s, s]), "")}
+      <div id="codeBox" hidden><label>کد آگهی (در پیام مشتری هست، مثلاً CC2Y)</label><input id="fCode" class="ltr" style="text-align:left;text-transform:uppercase;width:100%"></div>
+      <label>یادداشت</label><textarea id="fNote" placeholder="چه گفت؟ چه قیمتی دادید؟"></textarea></div>
+    <div class="card"><h3>${I("cal")} پیگیری بعدی</h3>${chips("fu", [["0", "امروز"], ["1", "فردا"], ["3", "۳ روز دیگر"], ["7", "هفته‌ی بعد"]], "1")}</div>
+    <div class="stickybar"><button class="full" id="save" style="margin:0">ثبت درخواست</button></div>`;
   const root = $("#view");
   bindChips(root, "src", () => { $("#codeBox").hidden = picked(root, "src") !== "کد آگهی"; });
   bindChips(root, "fu");
-  $("#fPhone").onchange = async () => { const v = en($("#fPhone").value); if (v.replace(/\D/g, "").length < 8) return;
+  const look = async () => { const v = en($("#fPhone").value); if (v.replace(/\D/g, "").length < 10) { $("#known").innerHTML = ""; return; }
     const c = await api("/api/contacts/lookup?phone=" + encodeURIComponent(v)).catch(() => null);
-    if (c && c.id) { $("#known").innerHTML = `<div class="card" style="margin:8px 0;background:var(--brand-soft)">مشتری قبلی: <b>${esc(c.name || "بدون نام")}</b>${c.city ? " · " + esc(c.city) : ""}<br>${c.deals.slice(0, 5).map(d => `${badge(d)} ${esc(d.title)} <span class="muted">${fd(d.created_fa)}</span>`).join("<br>")}</div>`;
+    if (c && c.id) { $("#known").innerHTML = `<div class="known"><div class="row" style="flex-wrap:nowrap">${avatar(c)}<div><b>مشتری قبلی: ${esc(c.name || "بدون نام")}</b><div class="small muted">${c.city ? esc(c.city) : ""}</div></div></div>
+        ${c.deals.length ? `<div style="margin-top:8px">${c.deals.slice(0, 4).map(d => `<div class="row small" style="margin-top:3px">${pill(d)} ${esc(d.title)} <span class="faint">${fd(d.created_fa)}</span></div>`).join("")}</div>` : ""}</div>`;
       if (!$("#fName").value) $("#fName").value = c.name || ""; if (!$("#fCity").value) $("#fCity").value = c.city || ""; } else $("#known").innerHTML = ""; };
-  $("#save").onclick = async () => { const b = $("#save"); b.disabled = true;
+  $("#fPhone").oninput = () => { clearTimeout(look._t); look._t = setTimeout(look, 350); };
+  $("#fPhone").focus();
+  $("#save").onclick = async () => { const b = $("#save");
+    if (!en($("#fPhone").value).trim()) { toast("شماره‌ی تلفن را وارد کنید"); $("#fPhone").focus(); return; }
+    if (!$("#fTitle").value.trim()) { toast("کالای درخواستی را بنویسید"); $("#fTitle").focus(); return; }
+    b.disabled = true;
     try { await post("/api/deals", {phone: en($("#fPhone").value), name: $("#fName").value, city: $("#fCity").value, title: $("#fTitle").value,
         category: $("#fCat").value, source: picked(root, "src"), ad_code: $("#fCode").value, note: $("#fNote").value, follow_days: picked(root, "fu") || null});
-      toast("ثبت شد"); location.hash = "#today"; } catch (e) { toast(e.message); b.disabled = false; } };
+      toast("✓ ثبت شد"); location.hash = "#today"; } catch (e) { toast(e.message); b.disabled = false; } };
 }
 
 // ---------- کاریز ----------
 let PIPE = {stage: "", q: ""};
 async function pipe(){
-  const list = await api(`/api/deals?stage=${PIPE.stage}&q=${encodeURIComponent(PIPE.q)}`);
-  $("#view").innerHTML = `<div class="card"><input id="q" placeholder="جست‌وجو: نام، شماره، کالا، شهر، کد آگهی" value="${esc(PIPE.q)}">
-    <div class="chips" style="margin-top:8px">${[["", "همه‌ی باز"], ...Object.entries(META.stages)].map(([k, v]) => `<button class="chip ${PIPE.stage === k ? "on" : ""}" data-st="${k}">${esc(v)}</button>`).join("")}</div></div>
-    <div class="card">${list.map(dealItem).join("") || '<div class="muted small">چیزی نیست.</div>'}</div>`;
-  $("#q").onchange = e => { PIPE.q = e.target.value; pipe(); };
+  const head = counts => `<div class="field" style="margin-bottom:10px">${I("search")}<input id="q" type="search" placeholder="نام، شماره، کالا، شهر یا کد آگهی" value="${esc(PIPE.q)}"></div>
+    <div class="chips scroll" style="margin-bottom:12px">${[["", "همه‌ی باز"], ...Object.entries(META.stages)].map(([k, v]) => `<button class="chip ${PIPE.stage === k ? "on" : ""}" data-st="${k}">${esc(v)}${counts && k && counts[k] != null ? `<span class="cnt">${fa(counts[k])}</span>` : ""}</button>`).join("")}</div>`;
+  $("#view").innerHTML = head(null) + skeleton(5);
+  const [list, t] = await Promise.all([api(`/api/deals?stage=${PIPE.stage}&q=${encodeURIComponent(PIPE.q)}`), api("/api/today?n=1").catch(() => null)]);
+  $("#view").innerHTML = head(t && t.counts) + (list.length ? `<div class="small muted" style="margin:0 4px 6px">${fa(list.length)} مورد${list.length >= 200 ? " (۲۰۰ تای آخر)" : ""}</div><div class="list">${list.map(dealItem).join("")}</div>`
+    : `<div class="card">${empty("🔍", PIPE.q ? "چیزی با این جست‌وجو پیدا نشد." : "در این مرحله درخواستی نیست.")}</div>`);
+  const q = $("#q"); q.onchange = () => { PIPE.q = q.value; pipe(); };
+  q.onkeydown = e => { if (e.key === "Enter") q.blur(); };
   document.querySelectorAll("[data-st]").forEach(b => b.onclick = () => { PIPE.stage = b.dataset.st; pipe(); });
   bindDeals();
 }
 
-// ---------- جزئیات معامله ----------
+// ---------- جزئیات درخواست ----------
+const FLOW = ["new", "quoted", "followup", "invoice", "won"];
 async function openDeal(id){
   const d = await api("/api/deals/" + id); const c = d.contact || {};
+  let stage = d.stage;
   const el = document.createElement("div"); el.className = "sheet";
-  el.innerHTML = `<div class="in"><div class="row sp"><b style="font-size:16px">${esc(c.name || "بدون نام")}</b><button class="ghost" data-x>بستن</button></div>
-    <div class="row" style="margin:8px 0">${c.phone ? `<a class="call" href="tel:${esc(c.phone)}">📞 <span class="ltr">${esc(c.phone)}</span></a>` : ""}${c.city ? `<span class="muted">${esc(c.city)}</span>` : ""}</div>
-    <div class="card"><div class="row sp"><b>${esc(d.title)}</b>${badge(d)}</div>
-      <div class="small muted">${d.category ? esc(d.category) + " · " : ""}${d.ad_code ? "کد آگهی " + esc(d.ad_code) : esc(d.source || "منبع نامشخص")} · ثبت ${fd(d.created_fa)}</div>
-      ${d.note ? `<div style="margin-top:6px">${esc(d.note)}</div>` : ""}</div>
-    <div class="card"><h2>مرحله</h2>${chips("stage", Object.entries(META.stages), d.stage)}
-      <div id="lostBox" ${d.stage === "lost" ? "" : "hidden"}><label>دلیل انصراف</label>${chips("lost", META.lost_reasons.map(r => [r, r]), d.lost_reason || "")}</div>
-      <div id="amtBox" ${["invoice", "won"].includes(d.stage) ? "" : "hidden"}><label>مبلغ (تومان)</label><input id="amt" inputmode="numeric" value="${d.amount ?? ""}">
-        <label>سود (اختیاری)</label><input id="prf" inputmode="numeric" value="${d.profit ?? ""}"></div>
-      <button class="full" id="stSave">ذخیره‌ی مرحله</button></div>
-    <div class="card"><h2>پیگیری بعدی ${d.next_at_fa ? `<span class="small ${d.overdue ? "late" : "muted"}">(فعلاً ${fd(d.next_at_fa)})</span>` : ""}</h2>
-      ${chips("fu", [["1", "فردا"], ["2", "۲ روز"], ["3", "۳ روز"], ["7", "هفته‌ی بعد"], ["14", "دو هفته"]], "")}
-      <label>یا تاریخ (۱۴۰۵/۰۸/۲۰)</label><input id="fuDate" class="ltr" style="text-align:left">
-      <label>نتیجه‌ی تماس / یادداشت</label><textarea id="logT" placeholder="مثلاً: قیمت را فرستادم، گفت با شریک مشورت می‌کند"></textarea>
-      <button class="full" id="fuSave">ثبت تماس و پیگیری</button></div>
-    <div class="card"><h2>تاریخچه</h2><div class="tl">${d.activities.map(a => `<div><span class="small muted">${fd(a.at_fa)}${a.user ? " · " + esc(a.user) : ""}</span><br>${esc(a.text)}</div>`).join("") || '<span class="muted small">—</span>'}</div></div>
-    ${d.other_deals.length ? `<div class="card"><h2>درخواست‌های دیگر این مشتری</h2>${d.other_deals.map(o => `<div class="small">${badge(o)} ${esc(o.title)} <span class="muted">${fd(o.created_fa)}</span>${o.amount ? " · " + toman(o.amount) : ""}</div>`).join("")}</div>` : ""}
-    <button class="danger full" id="del">حذف این درخواست</button></div>`;
-  document.body.appendChild(el);
-  const close = () => { el.remove(); route(); };
-  el.querySelector("[data-x]").onclick = close; el.onclick = e => { if (e.target === el) close(); };
-  bindChips(el, "stage", () => { const s = picked(el, "stage"); el.querySelector("#lostBox").hidden = s !== "lost"; el.querySelector("#amtBox").hidden = !["invoice", "won"].includes(s); });
-  bindChips(el, "lost"); bindChips(el, "fu");
-  el.querySelector("#stSave").onclick = async () => { const s = picked(el, "stage") || d.stage;
-    try { await post("/api/deals/" + id, {stage: s, lost_reason: picked(el, "lost") || undefined, amount: en(el.querySelector("#amt").value), profit: en(el.querySelector("#prf").value)}); toast("ذخیره شد"); el.remove(); openDeal(id); }
+  el.innerHTML = `<div class="in" role="dialog" aria-modal="true"><div class="grip"></div>
+    <div class="who">${avatar(c)}<div><b>${esc(c.name || "بدون نام")}</b><span class="small muted">${[c.city, c.activity].filter(Boolean).map(esc).join(" · ") || "&nbsp;"}</span></div>
+      <button class="x" data-x aria-label="بستن">${I("x")}</button></div>
+    ${c.phone ? `<div class="acts"><a class="call" href="tel:${esc(c.phone)}">${I("phone")}<span class="ltr">${fd(c.phone)}</span></a>
+      <a class="alt" href="sms:${esc(c.phone)}">${I("msg")} پیامک</a><button class="alt" id="cp">${I("copy")} کپی</button></div>` : ""}
+    <div class="card"><div class="row sp" style="flex-wrap:nowrap;align-items:flex-start"><b style="font-size:15.5px">${esc(d.title || "—")}</b>${pill(d)}</div>
+      <div class="meta" style="margin-top:6px">${d.category ? `<span>${I("layers", "s")}${esc(d.category)}</span>` : ""}<span>${I("tag", "s")}${d.ad_code ? "کد " + esc(d.ad_code) : esc(d.source || "منبع نامشخص")}</span><span>${I("cal", "s")}ثبت ${fd(d.created_fa)}</span>${d.amount ? `<span style="color:var(--ok);font-weight:700">${toman(d.amount)}</span>` : ""}</div>
+      ${d.note ? `<div style="margin-top:8px;padding:10px;border-radius:10px;background:var(--card2);font-size:14px">${esc(d.note)}</div>` : ""}</div>
+
+    <div class="card"><h3>مرحله</h3>
+      <div class="steps">${FLOW.map(k => `<button class="c-${k}" data-stage="${k}"><i></i>${esc(META.stages[k])}</button>`).join("")}</div>
+      <button class="lostbtn" data-stage="lost">${esc(META.stages.lost)}</button>
+      <div id="lostBox" hidden><label>دلیل انصراف *</label>${chips("lost", META.lost_reasons.map(r => [r, r]), d.lost_reason || "")}</div>
+      <div id="amtBox" hidden><div class="row" style="flex-wrap:nowrap"><div style="flex:1"><label>مبلغ (تومان)</label><input id="amt" inputmode="numeric" value="${d.amount ?? ""}"></div>
+        <div style="flex:1"><label>سود (اختیاری)</label><input id="prf" inputmode="numeric" value="${d.profit ?? ""}"></div></div></div>
+      <button class="full" id="stSave" hidden>ذخیره‌ی مرحله</button></div>
+
+    <div class="card"><h3>${I("phone")} ثبت تماس و پیگیری بعدی ${d.next_at_fa ? `<span class="small ${d.overdue ? "due late" : "muted"}" style="font-weight:500;margin-right:auto">فعلاً ${fd(d.next_at_fa)}</span>` : ""}</h3>
+      <textarea id="logT" placeholder="نتیجه‌ی تماس… مثلاً: قیمت را فرستادم، با شریکش مشورت می‌کند"></textarea>
+      <label>پیگیری بعدی</label>${chips("fu", [["1", "فردا"], ["2", "۲ روز"], ["3", "۳ روز"], ["7", "هفته‌ی بعد"], ["14", "دو هفته"]], "")}
+      <input id="fuDate" class="ltr" style="text-align:left;width:100%;margin-top:8px" placeholder="یا تاریخ: ۱۴۰۵/۰۸/۲۰">
+      <button class="full" id="fuSave">ثبت</button></div>
+
+    <div class="card"><h3>${I("clock")} تاریخچه</h3><div class="tl">${d.activities.map(a => `<div class="ev ${a.kind === "call" ? "call" : ""}"><div class="small faint">${fd(a.at_fa)}${a.user ? " · " + esc(a.user) : ""}</div><div style="font-size:14px">${esc(a.text)}</div></div>`).join("") || '<span class="muted small">هنوز چیزی ثبت نشده.</span>'}</div></div>
+    ${d.other_deals.length ? `<div class="card"><h3>درخواست‌های دیگر این مشتری</h3>${d.other_deals.map(o => `<div class="row small" style="margin-bottom:6px">${pill(o)} ${esc(o.title)} <span class="faint">${fd(o.created_fa)}</span>${o.amount ? `<b style="color:var(--ok)">${toman(o.amount)}</b>` : ""}</div>`).join("")}</div>` : ""}
+    <button class="danger full" id="del">${I("trash", "s")} حذف این درخواست</button></div>`;
+  document.body.appendChild(el); document.body.style.overflow = "hidden";
+  const q = s => el.querySelector(s);
+  const paint = () => {
+    const at = FLOW.indexOf(stage);
+    el.querySelectorAll(".steps [data-stage]").forEach((b, i) => { b.classList.toggle("on", b.dataset.stage === stage); b.classList.toggle("done", at >= 0 && i < at); });
+    q(".lostbtn").classList.toggle("on", stage === "lost");
+    q("#lostBox").hidden = stage !== "lost";
+    q("#amtBox").hidden = !["invoice", "won"].includes(stage);
+    q("#stSave").hidden = stage === d.stage && !["invoice", "won"].includes(stage);
+  };
+  paint();
+  el.querySelectorAll("[data-stage]").forEach(b => b.onclick = () => { stage = b.dataset.stage; paint(); });
+  const close = () => { el.remove(); document.body.style.overflow = ""; route(); };
+  q("[data-x]").onclick = close; el.onclick = e => { if (e.target === el) close(); };
+  const onEsc = e => { if (e.key === "Escape") { document.removeEventListener("keydown", onEsc); close(); } }; document.addEventListener("keydown", onEsc);
+  if (q("#cp")) q("#cp").onclick = () => navigator.clipboard.writeText(c.phone).then(() => toast("شماره کپی شد"), () => toast(c.phone));
+  bindChips(el, "lost"); bindChips(el, "fu", () => { q("#fuDate").value = ""; });
+  const reopen = () => { el.remove(); document.body.style.overflow = ""; openDeal(id); };
+  q("#stSave").onclick = async () => {
+    try { await post("/api/deals/" + id, {stage, lost_reason: picked(el, "lost") || undefined, amount: en(q("#amt").value), profit: en(q("#prf").value)}); toast("✓ ذخیره شد"); reopen(); }
     catch (e) { toast(e.message); } };
-  el.querySelector("#fuSave").onclick = async () => { const days = picked(el, "fu"), dt = en(el.querySelector("#fuDate").value), t = el.querySelector("#logT").value;
-    if (!days && !dt && !t) { toast("زمان پیگیری یا یادداشت را وارد کنید"); return; }
+  q("#fuSave").onclick = async () => { const days = picked(el, "fu"), dt = en(q("#fuDate").value), t = q("#logT").value;
+    if (!days && !dt && !t) { toast("نتیجه‌ی تماس یا زمان پیگیری را وارد کنید"); return; }
     const b = {}; if (t) { b.log = t; b.log_kind = "call"; } if (dt) b.next_at = dt; else if (days) b.follow_days = days;
     if (d.stage === "new" && (days || dt)) b.stage = "followup";
-    try { await post("/api/deals/" + id, b); toast("ثبت شد"); el.remove(); openDeal(id); } catch (e) { toast(e.message); } };
-  el.querySelector("#del").onclick = async () => { if (!confirm("این درخواست حذف شود؟")) return; await post(`/api/deals/${id}/delete`); toast("حذف شد"); close(); };
+    try { await post("/api/deals/" + id, b); toast("✓ ثبت شد"); reopen(); } catch (e) { toast(e.message); } };
+  q("#del").onclick = async () => { if (!confirm("این درخواست حذف شود؟")) return; await post(`/api/deals/${id}/delete`); toast("حذف شد"); close(); };
 }
 
 // ---------- مشتری‌ها ----------
-let CUS = {q: "", cat: "", months: []};
+let CUS = {q: "", cat: "", months: [], open: false};
 const MONTHS = ["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
 async function customers(){
+  const filtered = CUS.cat || CUS.months.length;
+  const head = () => `<div class="field" style="margin-bottom:10px">${I("search")}<input id="cq" type="search" placeholder="نام، شماره یا شهر" value="${esc(CUS.q)}"></div>
+    <div class="card"><div class="row sp" id="fTog" style="cursor:pointer"><h3 style="margin:0">${I("cal")} مشتری‌های فصلی</h3><span class="small" style="color:var(--brand);font-weight:700">${CUS.open || filtered ? "بستن" : "باز کردن"}</span></div>
+      <div ${CUS.open || filtered ? "" : "hidden"}><div class="small muted" style="margin-top:6px">چه کسانی این کالا را در این ماه‌ها خریده‌اند؟ (مثلاً پمپ آب در خرداد و تیر)</div>
+      <label>دسته یا اسم کالا</label><input id="cc" list="cats2" value="${esc(CUS.cat)}" placeholder="مثلاً پمپ"><datalist id="cats2">${META.categories.map(c => `<option value="${esc(c)}">`).join("")}</datalist>
+      <label>ماه‌ها</label><div class="grid4">${MONTHS.map((m, i) => `<button class="chip ${CUS.months.includes(i + 1) ? "on" : ""}" data-m="${i + 1}">${m}</button>`).join("")}</div>
+      ${filtered ? `<button class="soft full" id="cClr" style="margin-top:10px;padding:10px">پاک کردن فیلتر</button>` : ""}</div></div>`;
+  $("#view").innerHTML = head() + skeleton(5);
   const list = await api(`/api/contacts?q=${encodeURIComponent(CUS.q)}&category=${encodeURIComponent(CUS.cat)}&months=${CUS.months.join(",")}`);
-  $("#view").innerHTML = `<div class="card"><input id="cq" placeholder="نام، شماره یا شهر" value="${esc(CUS.q)}">
-    <label>مشتری‌های فصلی: چه کسانی این دسته را خریده‌اند…</label><input id="cc" list="cats2" value="${esc(CUS.cat)}" placeholder="دسته یا اسم کالا"><datalist id="cats2">${META.categories.map(c => `<option value="${esc(c)}">`).join("")}</datalist>
-    <label>…در این ماه‌ها</label><div class="chips">${MONTHS.map((m, i) => `<button class="chip ${CUS.months.includes(i + 1) ? "on" : ""}" data-m="${i + 1}">${m}</button>`).join("")}</div></div>
-    <div class="card"><div class="small muted" style="margin-bottom:6px">${fa(list.length)} مشتری</div>${list.map(c => `<div class="item"><div class="row sp"><b>${esc(c.name || "بدون نام")}</b>${c.phone ? `<a href="tel:${esc(c.phone)}" class="ltr">${esc(c.phone)}</a>` : ""}</div>
-      <div class="small muted">${c.city ? esc(c.city) + " · " : ""}${c.activity ? esc(c.activity) + " · " : ""}${c.bought ? `${fa(c.bought)} خرید، ${toman(c.spent)}، آخرین ${fd(c.last)}` : "خرید ثبت‌شده ندارد"}</div>
-      ${c.items.length ? `<div class="small">${esc(c.items.join("، "))}</div>` : ""}</div>`).join("") || '<div class="muted small">کسی پیدا نشد.</div>'}</div>`;
-  $("#cq").onchange = e => { CUS.q = e.target.value; customers(); };
-  $("#cc").onchange = e => { CUS.cat = e.target.value; customers(); };
+  $("#view").innerHTML = head() + `<div class="small muted" style="margin:0 4px 6px">${fa(list.length)} مشتری</div>` + (list.length ? `<div class="list">${list.map(c => `<div class="deal" style="cursor:default">${avatar(c)}
+      <div class="body"><div class="t1"><b>${esc(c.name || "بدون نام")}</b>${c.bought ? `<span class="pill s-won">${fa(c.bought)} خرید</span>` : ""}</div>
+        <div class="meta">${c.phone ? `<span class="ltr">${fd(c.phone)}</span>` : ""}${c.city ? `<span>${I("pin", "s")}${esc(c.city)}</span>` : ""}${c.activity ? `<span>${esc(c.activity)}</span>` : ""}${c.spent ? `<span style="color:var(--ok)">${mil(c.spent)}</span>` : ""}${c.last ? `<span>آخرین ${fd(c.last)}</span>` : ""}</div>
+        ${c.items && c.items.length ? `<div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.items.join("، "))}</div>` : ""}</div>
+      ${c.phone ? `<a class="callbtn" href="tel:${esc(c.phone)}" aria-label="تماس">${I("phone")}</a>` : ""}</div>`).join("")}</div>`
+    : `<div class="card">${empty("👥", "کسی پیدا نشد.")}</div>`);
+  const cq = $("#cq"); cq.onchange = () => { CUS.q = cq.value; customers(); }; cq.onkeydown = e => { if (e.key === "Enter") cq.blur(); };
+  $("#fTog").onclick = () => { CUS.open = !(CUS.open || filtered); if (!CUS.open) { CUS.cat = ""; CUS.months = []; } customers(); };
+  if ($("#cc")) $("#cc").onchange = e => { CUS.cat = e.target.value; customers(); };
+  if ($("#cClr")) $("#cClr").onclick = () => { CUS.cat = ""; CUS.months = []; customers(); };
   document.querySelectorAll("[data-m]").forEach(b => b.onclick = () => { const m = +b.dataset.m; CUS.months = CUS.months.includes(m) ? CUS.months.filter(x => x !== m) : [...CUS.months, m]; customers(); });
 }
 
-// ---------- بیشتر: گزارش، بله، ورود فایل، رمز ----------
+// ---------- بیشتر ----------
+let RDAYS = 90;
 async function more(){
-  const r = await api("/api/report?days=90");
-  const tbl = rows => `<table><tr><th></th><th>درخواست</th><th>خرید</th><th>تبدیل</th><th>فروش</th></tr>${rows.slice(0, 15).map(x => `<tr><td>${esc(x.key)}</td><td>${fa(x.deals)}</td><td>${fa(x.won)}</td><td>${fa(x.conv_pct)}٪</td><td>${x.revenue ? fa(Math.round(x.revenue / 1e6 * 10) / 10) + "م" : "–"}</td></tr>`).join("")}</table>`;
+  $("#view").innerHTML = `<div class="kpis">${[1, 2, 3].map(() => `<div class="kpi"><div class="sk" style="height:40px"></div></div>`).join("")}</div>` + skeleton(2);
+  const r = await api("/api/report?days=" + RDAYS);
+  const conv = r.total ? Math.round(100 * r.won / r.total) : 0;
+  const bars = rows => rows.slice(0, 8).map(x => { const w = Math.max(...rows.map(y => y.deals)) || 1;
+    return `<div class="bar"><div class="lb"><span>${esc(x.key)}</span><span class="muted">${fa(x.deals)} درخواست، <b style="color:var(--ok)">${fa(x.won)} خرید</b>${x.revenue ? "، " + mil(x.revenue) : ""}</span></div>
+      <div class="tr" style="width:${Math.max(6, 100 * x.deals / w)}%"><i style="width:${100 * x.won / x.deals}%;background:var(--ok)"></i><i style="flex:1;background:var(--brand-soft)"></i></div></div>`; }).join("") || '<div class="muted small">هنوز داده‌ای نیست.</div>';
+  const lostMax = Math.max(1, ...r.lost_reasons.map(x => x[1]));
   const b = META.bale;
-  $("#view").innerHTML = `<div class="card"><h2>📊 ۹۰ روز اخیر</h2><div class="small muted">${fa(r.total)} درخواست · ${fa(r.won)} خرید · فروش ${toman(r.revenue)}</div>
-      <h2 style="margin-top:12px">به تفکیک منبع / کد آگهی</h2>${tbl(r.by_source)}
-      <h2 style="margin-top:12px">به تفکیک دسته</h2>${tbl(r.by_category)}
-      <h2 style="margin-top:12px">چرا نخریدند؟</h2>${r.lost_reasons.map(([k, v]) => `<div class="row sp small"><span>${esc(k)}</span><b>${fa(v)}</b></div>`).join("") || '<span class="muted small">—</span>'}</div>
-    <div class="card"><h2>🔔 یادآور صبحگاهی بله (ساعت ۸:۳۰)</h2>
-      ${b.token ? `<div class="small">۱) ربات بله‌ی CRM را باز کنید و این کد را برایش بفرستید: <b class="ltr" style="font-size:18px">${esc(b.code)}</b><br>۲) بعد این دکمه را بزنید:</div>
-        <button class="ghost" id="bLink" style="margin-top:8px">اتصال</button> <button class="ghost" id="bTest">ارسال آزمایشی الان</button>
-        <div class="small" style="margin-top:8px">${b.chats.map(c => `✅ ${esc(c.name || c.id)} <a href="#" data-unl="${esc(c.id)}">قطع</a>`).join("<br>") || "هنوز گفتگویی وصل نشده."}</div>`
-        : '<div class="small muted">توکن ربات بله (BALE_BOT_TOKEN) هنوز در سرور تنظیم نشده.</div>'}</div>
-    <div class="card"><h2>📥 ورود تاریخچه از فایل Leads (فقط مدیر)</h2><div class="small muted">فایل Leads (تماس‌ها و فاکتورها) و فایل «تماس ۱۴۰۵» (دفتر درخواست‌ها و فهرست شماره‌ها). تماس‌های قدیمی «سابقه» می‌شوند؛ درخواست‌های اخیرِ بی‌نتیجه به «درخواست باز» برای پیگیری تبدیل می‌شوند. تکراری وارد نمی‌شود.</div>
-      <input type="file" id="xl" accept=".xlsx" style="margin-top:8px"><button class="ghost" id="xlGo" style="margin-top:8px">ورود فایل</button><div id="xlOut" class="small"></div></div>
-    ${META.role === "admin" ? `<div class="card"><h2>👤 کاربر جدید (مثلاً فروشنده)</h2>
-      <input id="nu" class="ltr" style="text-align:left" placeholder="نام کاربری انگلیسی، مثلاً sara"><input id="nn" placeholder="اسم (فارسی)" style="margin-top:6px">
-      <input id="np" type="password" placeholder="رمز اولیه (حداقل ۸ حرف)" style="margin-top:6px">
-      <button class="ghost" id="nuGo" style="margin-top:8px">ساخت کاربر</button><div class="small muted">بعد از اولین ورود، خودش از همین صفحه رمزش را عوض کند.</div></div>` : ""}
-    <div class="card"><h2>🔑 تغییر رمز</h2><input id="pw0" type="password" placeholder="رمز فعلی"><input id="pw1" type="password" placeholder="رمز جدید (حداقل ۸ حرف)" style="margin-top:6px">
-      <button class="ghost" id="pwGo" style="margin-top:8px">تغییر رمز</button></div>
-    <button class="danger full" id="out">خروج</button>`;
+  const sec = (ic, bg, fg, title, body) => `<div class="card"><div class="set"><div class="ic" style="background:${bg};color:${fg}">${I(ic)}</div><div style="flex:1;min-width:0"><h3 style="margin:6px 0 8px">${title}</h3>${body}</div></div></div>`;
+  $("#view").innerHTML = `
+    <div class="sec" style="margin-top:4px"><h2>${I("chart")} گزارش</h2>${chips("rd", [["30", "۳۰ روز"], ["90", "۹۰ روز"], ["365", "یک سال"]], String(RDAYS))}</div>
+    <div class="kpis"><div class="kpi"><b>${fa(r.total)}</b><span>درخواست</span></div><div class="kpi"><b style="color:var(--ok)">${fa(r.won)}</b><span>خرید · ${fa(conv)}٪</span></div><div class="kpi"><b>${mil(r.revenue)}</b><span>فروش</span></div></div>
+    <div class="card"><h3>منبع / کد آگهی</h3>${bars(r.by_source)}<div class="small faint">سبز = خرید، کم‌رنگ = بقیه</div></div>
+    <div class="card"><h3>دسته‌ی کالا</h3>${bars(r.by_category)}</div>
+    <div class="card"><h3>چرا نخریدند؟</h3>${r.lost_reasons.map(([k, v]) => `<div class="bar"><div class="lb"><span>${esc(k)}</span><b>${fa(v)}</b></div><div class="tr"><i style="width:${100 * v / lostMax}%;background:var(--bad)"></i></div></div>`).join("") || '<div class="muted small">هنوز انصرافی ثبت نشده.</div>'}</div>
+
+    <div class="sec"><h2>${I("grid")} تنظیمات</h2></div>
+    ${sec("bell", "var(--accent-soft)", "var(--accent)", "یادآور صبحگاهی بله (۸:۳۰)", b.token ? `
+      <div class="small muted">۱) ربات بله‌ی CRM را باز کنید و این کد را برایش بفرستید:</div>
+      <div style="margin:8px 0"><span class="code">${fd(b.code)}</span></div>
+      <div class="small muted">۲) بعد «اتصال» را بزنید.</div>
+      <div class="row" style="margin-top:10px"><button class="ghost" id="bLink">اتصال</button><button class="soft" id="bTest">ارسال آزمایشی</button></div>
+      <div class="small" style="margin-top:10px">${b.chats.map(c => `<div class="row sp"><span>✅ ${esc(c.name || c.id)}</span><a href="#" data-unl="${esc(c.id)}" style="color:var(--bad)">قطع</a></div>`).join("") || '<span class="faint">هنوز گفتگویی وصل نشده.</span>'}</div>`
+      : '<div class="small muted">توکن ربات بله هنوز روی سرور تنظیم نشده.</div>')}
+    ${META.role === "admin" ? sec("userplus", "var(--blue-soft)", "var(--blue)", "کاربر جدید (مثلاً فروشنده)", `
+      <input id="nu" class="ltr" style="text-align:left;width:100%" placeholder="نام کاربری انگلیسی، مثلاً sara" autocomplete="off">
+      <input id="nn" placeholder="اسم (فارسی)" style="margin-top:8px">
+      <input id="np" type="password" placeholder="رمز اولیه (حداقل ۸ حرف)" style="margin-top:8px" autocomplete="new-password">
+      <button class="ghost" id="nuGo" style="margin-top:10px">ساخت کاربر</button>
+      <div class="small faint" style="margin-top:6px">بعد از اولین ورود، خودش از همین صفحه رمزش را عوض کند.</div>`) : ""}
+    ${META.role === "admin" ? sec("upload", "var(--violet-soft)", "var(--violet)", "ورود از فایل اکسل", `
+      <div class="small muted">فایل Leads یا «تماس ۱۴۰۵». ردیف تکراری دوباره وارد نمی‌شود.</div>
+      <input type="file" id="xl" accept=".xlsx" style="margin-top:8px;padding:9px">
+      <button class="ghost" id="xlGo" style="margin-top:8px">ورود فایل</button><div id="xlOut" class="small" style="margin-top:8px"></div>`) : ""}
+    ${sec("key", "var(--card2)", "var(--ink2)", "تغییر رمز", `
+      <input id="pw0" type="password" placeholder="رمز فعلی" autocomplete="current-password"><input id="pw1" type="password" placeholder="رمز جدید (حداقل ۸ حرف)" style="margin-top:8px" autocomplete="new-password">
+      <button class="soft" id="pwGo" style="margin-top:10px">تغییر رمز</button>`)}
+    <button class="danger full" id="out">${I("logout", "s")} خروج از حساب ${esc(META.user)}</button>`;
+  bindChips($("#view"), "rd", () => { RDAYS = +(picked($("#view"), "rd") || 90); more(); });
   if (b.token) {
-    $("#bLink").onclick = async () => { try { await post("/api/bale/link"); toast("وصل شد"); META = await api("/api/meta"); more(); } catch (e) { toast(e.message); } };
-    $("#bTest").onclick = async () => { try { const r = await post("/api/bale/test"); toast(r.sent ? "فرستاده شد" : "گفتگویی وصل نیست"); } catch (e) { toast(e.message); } };
+    $("#bLink").onclick = async () => { try { await post("/api/bale/link"); toast("✓ وصل شد"); META = await api("/api/meta"); more(); } catch (e) { toast(e.message); } };
+    $("#bTest").onclick = async () => { try { const r = await post("/api/bale/test"); toast(r.sent ? "✓ فرستاده شد" : "گفتگویی وصل نیست"); } catch (e) { toast(e.message); } };
     document.querySelectorAll("[data-unl]").forEach(a => a.onclick = async e => { e.preventDefault(); await post("/api/bale/unlink", {id: a.dataset.unl}); META = await api("/api/meta"); more(); });
   }
-  $("#xlGo").onclick = async () => { const f = $("#xl").files[0]; if (!f) { toast("فایل را انتخاب کنید"); return; }
+  if ($("#xlGo")) $("#xlGo").onclick = async () => { const f = $("#xl").files[0]; if (!f) { toast("فایل را انتخاب کنید"); return; }
     $("#xlOut").textContent = "در حال ورود…";
     try { const r = await fetch("/api/import/leads", {method: "POST", body: f, credentials: "same-origin"}); const d = await r.json(); if (!r.ok) throw new Error(d.error);
-      $("#xlOut").textContent = `${fa(d.added)} سابقه‌ی تماس، ${fa(d.opened)} درخواست باز برای پیگیری، ${fa(d.contacts_only)} مشتری از فهرست شماره‌ها وارد شد؛ ${fa(d.duplicates)} تکراری بود، ${fa(d.enriched_contacts)} مشتری کامل شد.`; META = await api("/api/meta"); } catch (e) { $("#xlOut").textContent = e.message; } };
+      $("#xlOut").textContent = `${fa(d.added)} سابقه‌ی تماس، ${fa(d.opened)} درخواست باز، ${fa(d.contacts_only)} مشتری وارد شد؛ ${fa(d.duplicates)} تکراری، ${fa(d.enriched_contacts)} مشتری کامل شد.`; META = await api("/api/meta"); } catch (e) { $("#xlOut").textContent = e.message; } };
   if ($("#nuGo")) $("#nuGo").onclick = async () => { try { await post("/api/users", {username: $("#nu").value, name: $("#nn").value, password: $("#np").value, role: "sales"});
-    toast("کاربر ساخته شد"); $("#nu").value = $("#nn").value = $("#np").value = ""; } catch (e) { toast(e.message); } };
-  $("#pwGo").onclick = async () => { try { await post("/api/password", {old: $("#pw0").value, new: $("#pw1").value}); toast("رمز عوض شد"); } catch (e) { toast(e.message); } };
+    toast("✓ کاربر ساخته شد"); $("#nu").value = $("#nn").value = $("#np").value = ""; } catch (e) { toast(e.message); } };
+  $("#pwGo").onclick = async () => { try { await post("/api/password", {old: $("#pw0").value, new: $("#pw1").value}); toast("✓ رمز عوض شد"); $("#pw0").value = $("#pw1").value = ""; } catch (e) { toast(e.message); } };
   $("#out").onclick = async () => { await post("/api/logout"); loginView(); };
 }
 
@@ -249,11 +514,14 @@ const VIEWS = {today, add, pipe, customers, more};
 async function route(){
   const v = (location.hash || "#today").slice(1);
   document.querySelectorAll("#tabs a").forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + v));
-  try { await (VIEWS[v] || today)(); } catch (e) { if (e.message !== "ورود لازم است") $("#view").innerHTML = `<div class="card" style="color:var(--bad)">${esc(e.message)}</div>`; }
+  window.scrollTo(0, 0);
+  try { await (VIEWS[v] || today)(); } catch (e) { if (e.message !== "ورود لازم است") $("#view").innerHTML = `<div class="card">${empty("⚠️", esc(e.message))}</div>`; }
 }
 async function boot(){
+  if (!boot.done) { boot.done = 1; document.querySelectorAll("#tabs a").forEach(a => { a.innerHTML = I(a.dataset.i) + a.innerHTML; }); $("#logoSlot").innerHTML = I("truck"); }
   try { META = await api("/api/meta"); } catch (e) { return; }
-  $("#tabs").hidden = false; $("#who").textContent = META.user; route();
+  $("#tabs").hidden = false; $("#hdr").hidden = false; $("#me").textContent = initial(META.name || META.user).toUpperCase();
+  route();
 }
 window.addEventListener("hashchange", route);
 boot();

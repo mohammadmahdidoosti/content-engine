@@ -151,6 +151,10 @@ def update(pid: int, b: dict) -> dict:
             p.name = str(b["name"]).strip()[:200]
         if "intro" in b:
             p.intro = str(b["intro"]).strip()[:400] or None
+        if "topic" in b and str(b["topic"]).strip() and str(b["topic"]).strip() != p.topic:
+            p.topic = str(b["topic"]).strip()[:2000]
+            db.query(ProjectChannel).filter(ProjectChannel.project_id == pid).update({ProjectChannel.tagged_at: None},
+                                                                                   synchronize_session=False)
         if "reg_url" in b:
             u = str(b["reg_url"] or "").strip()
             if u and not re.match(r"^https?://[^\s]+\.[^\s]+", u):
@@ -166,6 +170,15 @@ def update(pid: int, b: dict) -> dict:
                 c.topic_lift, c.topic_posts = _lift((c.metrics or {}).get("_posts") or [], rx)
         db.commit()
     return {"ok": True}
+
+
+def retag(pid: int) -> dict:
+    """ارزیابی «ربط» همه‌ی کانال‌های پروژه دوباره انجام شود (مثلاً بعد از تغییر موضوع یا قاعده)."""
+    with get_session() as db:
+        n = db.query(ProjectChannel).filter(ProjectChannel.project_id == pid, ProjectChannel.status == "checked") \
+            .update({ProjectChannel.tagged_at: None}, synchronize_session=False)
+        db.commit()
+    return {"queued": n}
 
 
 def set_price(pcid: int, price: int | None) -> dict:
@@ -285,7 +298,7 @@ def measure(pc_id: int, rx) -> None:
 
 class _T(BaseModel):
     id: int
-    fit: float = Field(0.0, description="۰ تا ۱: تبلیغِ این موضوع در این کانال چقدر به مخاطب درست می‌رسد")
+    fit: float = Field(0.0, description="۰ تا ۱: چه سهمی از مخاطبان این کانال جزو مخاطب هدف‌اند (نه موضوع پست‌ها)")
     audience: str = Field("", description="مخاطب کانال در چند کلمه، مثلاً «دانشجویان مهندسی شریف»")
     city: str = Field("", description="شهر/دانشگاه اگر محلی است، وگرنه خالی")
 
@@ -299,7 +312,7 @@ def tag(pid: int, deadline: float, batch: int = 15, mock: bool = False) -> int:
         p = db.get(Project, pid)
         topic = p.topic
         rows = (db.query(ProjectChannel).filter(ProjectChannel.project_id == pid, ProjectChannel.status == "checked",
-                                                ProjectChannel.tagged_at.is_(None)).limit(batch * 4).all())
+                                                ProjectChannel.tagged_at.is_(None)).limit(batch * 12).all())
         items = [(c.id, c.username, c.title, c.description, c.sample) for c in rows]
     done = 0
     for i in range(0, len(items), batch):
@@ -315,8 +328,11 @@ def tag(pid: int, deadline: float, batch: int = 15, mock: bool = False) -> int:
                                for cid, u, t, d, s in chunk)
             try:
                 r = get_llm(get_settings().llm_fast_model).generate_json(
-                    "تو تحلیل‌گر رسانه‌ی ایرانی هستی. برای هر کانال تلگرام بگو تبلیغِ موضوع زیر در آن چقدر به مخاطب درست "
-                    "می‌رسد (fit ۰ تا ۱؛ ۱ یعنی مخاطب دقیقاً همان است، ۰٫۵ یعنی تا حدی، ۰ یعنی بی‌ربط) و مخاطبش کیست. "
+                    "تو تحلیل‌گر رسانه‌ی ایرانی هستی. برای هر کانال تلگرام بگو «مخاطبان این کانال چقدر همان مخاطب هدفِ زیرند» "
+                    "(fit ۰ تا ۱؛ ۱ یعنی تقریباً همه‌ی مخاطبانش در گروه هدف‌اند، ۰٫۵ یعنی بخشی، ۰ یعنی هیچ). "
+                    "مهم: موضوع پست‌های کانال ملاک نیست، «چه کسانی آن را می‌خوانند» ملاک است؛ مثلاً کانالِ آموزشی یا "
+                    "خبری یک دانشگاه که خواننده‌اش دانشجوست برای مخاطبِ «دانشجویان» fit بالا دارد حتی اگر هیچ پستی درباره‌ی "
+                    "موضوع آگهی نداشته باشد. کانالِ سرگرمی یا سیاسی یا بی‌ربط fit پایین دارد. مخاطب کانال را هم بنویس. "
                     f"موضوع و مخاطب هدف: {topic}\nخروجی فقط JSON.",
                     text + f"\n\nاسکیما: {_Ts.model_json_schema()}", _Ts)
                 tags = r.data.items

@@ -456,7 +456,7 @@ function bindCampaigns(chans){
 }
 
 // ================= PROJECTS (جدا از کاروان صنعت) =================
-let PJF = {fit: "0.6", n: 200, seg: ""};
+let PJF = {fit: "0.6", n: 200, seg: "", q: ""};
 async function projects(){
   const id = +(location.hash.split("/")[1] || 0);
   if (id) return projectView(id);
@@ -477,7 +477,9 @@ async function projects(){
 async function projectView(id){
   const d = await api("/api/projects/" + id); const st = d.stats;
   const minFit = +PJF.fit;
-  const rows = d.items.filter(x => x.status === "checked" && (x.fit == null || x.fit >= minFit) && (!PJF.seg || x.segment === PJF.seg)).slice(0, PJF.n);
+  const qq = PJF.q.trim().toLowerCase().replace(/^@/, "");
+  const rows = d.items.filter(x => x.status === "checked" && (qq ? (x.username.toLowerCase().includes(qq) || (x.title || "").toLowerCase().includes(qq))
+    : (x.fit == null || x.fit >= minFit) && (!PJF.seg || x.segment === PJF.seg))).slice(0, PJF.n);
   const T = d.totals || {};
   const pct = st.total ? Math.round(100 * (st.checked + st.error) / st.total) : 0;
   $("#view").innerHTML = `<div class="card"><header><span><a href="#projects">پروژه‌ها</a> › <b>${esc(d.name)}</b></span>
@@ -506,7 +508,8 @@ async function projectView(id){
       <div id="pjPlanOut" class="small" style="margin-top:8px"></div></div></div></div>
   <div data-pjoutreach="${id}"></div>
   <div class="card"><header>کانال‌ها <span class="small muted">مرتب بر اساس «امتیاز نهایی» = کیفیت × ربط به موضوع × علاقه‌ی مخاطب</span>
-    <span class="inline small"><select id="pjFit" style="width:auto">${[["0", "همه"], ["0.4", "ربط ≥۰٫۴"], ["0.6", "ربط ≥۰٫۶"], ["0.8", "ربط ≥۰٫۸"]].map(([v, t]) => `<option value="${v}" ${PJF.fit === v ? "selected" : ""}>${t}</option>`).join("")}</select>
+    <span class="inline small"><input type="text" id="pjQ" class="ltr" placeholder="جست‌وجوی آیدی یا نام" value="${esc(PJF.q)}" style="width:170px">
+      <select id="pjFit" style="width:auto">${[["0", "همه"], ["0.4", "ربط ≥۰٫۴"], ["0.6", "ربط ≥۰٫۶"], ["0.8", "ربط ≥۰٫۸"]].map(([v, t]) => `<option value="${v}" ${PJF.fit === v ? "selected" : ""}>${t}</option>`).join("")}</select>
       <select id="pjKind" style="width:auto"><option value="price">پیام: پرسیدن قیمت</option><option value="partner">پیام: دعوت به حامی رسانه‌ای</option></select>
       <button class="btn sm" id="pjOut">پیش‌نویس پیام به ادمینِ تیک‌خورده‌ها</button>
       <button class="ghost sm" id="pjTrack">لینک ردیابی برای تیک‌خورده‌ها</button></span></header>
@@ -529,6 +532,7 @@ async function projectView(id){
       : `<div class="empty">${st.waiting ? "بررسی در پس‌زمینه در جریان است؛ چند دقیقه‌ی دیگر سر بزنید." : "کانالی با این فیلتر نیست."}</div>`}</div></div>`;
   loadOutreach(id, "project");
   $("#pjFit").onchange = e => { PJF.fit = e.target.value; projectView(id); };
+  $("#pjQ").onchange = e => { PJF.q = e.target.value; projectView(id); };
   document.querySelectorAll("[data-pjseg]").forEach(b => b.onclick = () => { PJF.seg = b.dataset.pjseg; projectView(id); });
   document.querySelectorAll("#view [data-copy]").forEach(b => b.onclick = () => copy(b.dataset.copy));
   document.querySelectorAll("[data-pjreg]").forEach(i => i.onchange = async () => { await post("/api/project-channels/" + i.dataset.pjreg, {registrations: i.value}); toast("ثبت شد"); projectView(id); });

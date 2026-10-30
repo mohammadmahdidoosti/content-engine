@@ -794,6 +794,10 @@ def api_project_channel_price(req, m):
     return _val(_pj().set_fields, _int(m.group(1), "id"), req.body())
 
 
+def api_project_retag(req, m):
+    return _pj().retag(_int(m.group(1), "id"))
+
+
 def api_project_links_make(req, m):
     """لینک ردیابی برای کانال‌های انتخاب‌شده (نیاز به آدرس صفحه‌ی ثبت‌نام)."""
     ids = req.body().get("channel_ids") or []
@@ -1136,6 +1140,7 @@ ROUTES = [
     ("POST", r"/api/projects/(\d+)/outreach", api_project_outreach),
     ("POST", r"/api/project-channels/(\d+)", api_project_channel_price),
     ("POST", r"/api/projects/(\d+)/tracking", api_project_links_make),
+    ("POST", r"/api/projects/(\d+)/retag", api_project_retag),
     ("GET", r"/api/outreach", api_outreach), ("POST", r"/api/campaigns/(\d+)/outreach", api_outreach_draft),
     ("POST", r"/api/outreach/approve", api_outreach_approve), ("POST", r"/api/outreach/resume", api_outreach_resume),
     ("POST", r"/api/outreach/(\d+)", api_outreach_update), ("POST", r"/api/campaigns/relink", api_campaigns_relink),

@@ -118,3 +118,16 @@ def test_import_real_leads(crm):
     rep = crm.report(3650, include_import=True)
     assert rep["won"] > 50
     assert crm.today_view()["due"] == [] and crm.stats_for_marketing()["codes"] == {}   # سابقه در آمار جاری نمی‌آید
+
+
+T1405 = "/mnt/user-data/attachments/8c04216c-f1f3-52e9-b52f-6f8776a8743a/6aa7df04-_____1405.xlsx"
+
+
+@pytest.mark.skipif(not os.path.exists(T1405), reason="فایل تماس ۱۴۰۵ در این محیط نیست")
+def test_import_1405_file(crm):
+    data = open(T1405, "rb").read()
+    r = crm.import_leads(data)
+    assert r["opened"] > 50 and r["contacts_only"] > 50
+    assert crm.import_leads(data)["opened"] == 0 and crm.import_leads(data)["contacts_only"] == 0
+    v = crm.today_view()
+    assert len(v["no_followup"]) >= 50                     # درخواست‌های باز برای پیگیری

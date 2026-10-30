@@ -101,10 +101,12 @@ def parse_day(v) -> date | None:
     if isinstance(v, date):
         return v
     s = str(v).translate(_FA).strip()
-    m = re.match(r"^(\d{4})[/-](\d{1,2})[/-](\d{1,2})", s)
+    m = re.match(r"^(\d{3,4})[/-](\d{1,2})[/-](\d{1,2})", s)
     if not m:
         return None
     y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    if not (1300 <= y <= 1500 or 1900 <= y <= 2100):
+        return None
     try:
         if y < 1700:
             import jdatetime
@@ -293,7 +295,7 @@ def today_view() -> dict:
         fresh = (db.query(Deal, Contact).join(Contact, Contact.id == Deal.contact_id)
                  .filter(Deal.stage.in_(OPEN), Deal.next_at.is_(None))
                  .order_by(Deal.created_at.desc()).limit(100).all())
-        counts = dict(db.query(Deal.stage, func.count()).filter(Deal.origin != "leads_import").group_by(Deal.stage).all())
+        counts = dict(db.query(Deal.stage, func.count()).filter(Deal.origin.notin_(["leads_import"])).group_by(Deal.stage).all())
         since = datetime.now(timezone.utc) - timedelta(days=30)
         month = db.query(Deal).filter(Deal.created_at >= since, Deal.origin != "leads_import").all()
     return {"today": jalali(t), "due": [_deal_row(d, c) for d, c in due], "no_followup": [_deal_row(d, c) for d, c in fresh],
@@ -416,7 +418,8 @@ def import_leads(data: bytes) -> dict:
     wb = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
     added = dup = skipped = enriched = 0
     with session() as db:
-        seen = {k for (k,) in db.query(Deal.ext_key).filter(Deal.origin == "leads_import").all() if k}
+        seen = {k for (k,) in db.query(Deal.ext_key).filter(Deal.ext_key.isnot(None)).all() if k}
+        opened = contacts_only = 0
         by_phone = {c.phone: c for c in db.query(Contact).all() if c.phone}
         by_name = defaultdict(list)
         for c in by_phone.values():
@@ -451,6 +454,55 @@ def import_leads(data: bytes) -> dict:
                                 changed = True
                         enriched += changed
                 continue
+            names = [i for i, h in enumerate(head) if h.startswith("نام")]
+            phones = [i for i, h in enumerate(head) if "شماره" in h]
+            req, icity = col("درخواست"), col("شهر")
+            if req is not None and ix["phone"] is not None and ix["want"] is None:
+                # دفتر درخواست‌های اخیر (تاریخ، نام، شهر، شماره، درخواست): نتیجه ثبت نشده ← درخواست باز برای پیگیری
+                for r in rows:
+                    g = lambda i: r[i] if i is not None and i < len(r) else None  # noqa: E731
+                    want, phone = _cell(g(req)), norm_phone(g(ix["phone"]))
+                    if not want or want == "None" or not phone:
+                        skipped += 1
+                        continue
+                    day = parse_day(g(ix["date"]))
+                    key = hashlib.sha1(f"{ws.title}|{phone}|{want[:300]}|{day}".encode()).hexdigest()
+                    if key in seen:
+                        dup += 1
+                        continue
+                    seen.add(key)
+                    c = by_phone.get(phone)
+                    if not c:
+                        c = Contact(phone=phone, name=_cell(g(ix["name"]))[:160], tags=["از دفتر درخواست‌ها"])
+                        db.add(c)
+                        db.flush()
+                        by_phone[phone] = c
+                    city = _cell(g(icity))
+                    if city and city not in ("None", "-") and not c.city:
+                        c.city = city[:80]
+                    created = datetime.combine(day, datetime.min.time(), tzinfo=TEHRAN) if day else datetime.now(timezone.utc)
+                    db.add(Deal(contact_id=c.id, title=want[:300], stage="new", origin="demand_import", ext_key=key,
+                                note="از دفتر درخواست‌ها؛ نتیجه‌ی تماس ثبت نشده بود", created_at=created, updated_at=created))
+                    opened += 1
+                continue
+            if ix["want"] is None and names and phones and len(names) == len(phones) and len(names) >= 2:
+                # فهرست ساده‌ی «نام / شماره» (چند ستون جفتی): فقط مشتری ساخته/کامل می‌شود
+                for r in rows:
+                    for ni, pi in zip(names, phones):
+                        phone = norm_phone(r[pi] if pi < len(r) else None)
+                        name = _cell(r[ni] if ni < len(r) else None)
+                        if not phone:
+                            continue
+                        c = by_phone.get(phone)
+                        if not c:
+                            c = Contact(phone=phone, name=("" if name == "None" else name)[:160], tags=[ws.title[:40]])
+                            db.add(c)
+                            db.flush()
+                            by_phone[phone] = c
+                            contacts_only += 1
+                        elif not c.name and name and name != "None":
+                            c.name = name[:160]
+                continue
             if ix["want"] is None or ix["buy"] is None or ix["phone"] is None:
                 continue
             for r in rows:
@@ -484,5 +536,5 @@ def import_leads(data: bytes) -> dict:
                 added += 1
         db.commit()
     wb.close()
-    return {"added": added, "duplicates": dup, "skipped": skipped, "enriched_contacts": enriched,
-            "invoices_sheet": invoices_sheet}
+    return {"added": added, "opened": opened, "contacts_only": contacts_only, "duplicates": dup, "skipped": skipped,
+            "enriched_contacts": enriched, "invoices_sheet": invoices_sheet}

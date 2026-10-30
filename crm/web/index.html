@@ -221,7 +221,7 @@ async function more(){
         <button class="ghost" id="bLink" style="margin-top:8px">اتصال</button> <button class="ghost" id="bTest">ارسال آزمایشی الان</button>
         <div class="small" style="margin-top:8px">${b.chats.map(c => `✅ ${esc(c.name || c.id)} <a href="#" data-unl="${esc(c.id)}">قطع</a>`).join("<br>") || "هنوز گفتگویی وصل نشده."}</div>`
         : '<div class="small muted">توکن ربات بله (BALE_BOT_TOKEN) هنوز در سرور تنظیم نشده.</div>'}</div>
-    <div class="card"><h2>📥 ورود تاریخچه از فایل Leads (فقط مدیر)</h2><div class="small muted">تماس‌های قبلی به‌عنوان «سابقه» وارد می‌شوند (در آمار ۹۰ روز حساب نمی‌شوند). تکراری وارد نمی‌شود.</div>
+    <div class="card"><h2>📥 ورود تاریخچه از فایل Leads (فقط مدیر)</h2><div class="small muted">فایل Leads (تماس‌ها و فاکتورها) و فایل «تماس ۱۴۰۵» (دفتر درخواست‌ها و فهرست شماره‌ها). تماس‌های قدیمی «سابقه» می‌شوند؛ درخواست‌های اخیرِ بی‌نتیجه به «درخواست باز» برای پیگیری تبدیل می‌شوند. تکراری وارد نمی‌شود.</div>
       <input type="file" id="xl" accept=".xlsx" style="margin-top:8px"><button class="ghost" id="xlGo" style="margin-top:8px">ورود فایل</button><div id="xlOut" class="small"></div></div>
     ${META.role === "admin" ? `<div class="card"><h2>👤 کاربر جدید (مثلاً فروشنده)</h2>
       <input id="nu" class="ltr" style="text-align:left" placeholder="نام کاربری انگلیسی، مثلاً sara"><input id="nn" placeholder="اسم (فارسی)" style="margin-top:6px">
@@ -238,7 +238,7 @@ async function more(){
   $("#xlGo").onclick = async () => { const f = $("#xl").files[0]; if (!f) { toast("فایل را انتخاب کنید"); return; }
     $("#xlOut").textContent = "در حال ورود…";
     try { const r = await fetch("/api/import/leads", {method: "POST", body: f, credentials: "same-origin"}); const d = await r.json(); if (!r.ok) throw new Error(d.error);
-      $("#xlOut").textContent = `${fa(d.added)} درخواست وارد شد، ${fa(d.duplicates)} تکراری، ${fa(d.enriched_contacts)} مشتری کامل شد.`; META = await api("/api/meta"); } catch (e) { $("#xlOut").textContent = e.message; } };
+      $("#xlOut").textContent = `${fa(d.added)} سابقه‌ی تماس، ${fa(d.opened)} درخواست باز برای پیگیری، ${fa(d.contacts_only)} مشتری از فهرست شماره‌ها وارد شد؛ ${fa(d.duplicates)} تکراری بود، ${fa(d.enriched_contacts)} مشتری کامل شد.`; META = await api("/api/meta"); } catch (e) { $("#xlOut").textContent = e.message; } };
   if ($("#nuGo")) $("#nuGo").onclick = async () => { try { await post("/api/users", {username: $("#nu").value, name: $("#nn").value, password: $("#np").value, role: "sales"});
     toast("کاربر ساخته شد"); $("#nu").value = $("#nn").value = $("#np").value = ""; } catch (e) { toast(e.message); } };
   $("#pwGo").onclick = async () => { try { await post("/api/password", {old: $("#pw0").value, new: $("#pw1").value}); toast("رمز عوض شد"); } catch (e) { toast(e.message); } };

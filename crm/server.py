@@ -78,7 +78,10 @@ def _val(fn, *a, **k):
 # ---------------- مسیرها ----------------
 def r_meta(req, m):
     from crm.db import get_setting
-    return {"user": req.user, "stages": core.STAGES, "lost_reasons": core.LOST_REASONS, "sources": core.SOURCES,
+    from crm.db import User, session
+    with session() as db:
+        u = db.query(User).filter(User.username == req.user).first()
+    return {"user": req.user, "role": u.role if u else "sales", "stages": core.STAGES, "lost_reasons": core.LOST_REASONS, "sources": core.SOURCES,
             "bale": {"token": bool(bale._token()), "chats": get_setting("bale.chats") or [], "code": bale.link_code()},
             "categories": _categories()}
 

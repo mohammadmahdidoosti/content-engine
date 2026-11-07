@@ -131,3 +131,18 @@ def test_import_1405_file(crm):
     assert crm.import_leads(data)["opened"] == 0 and crm.import_leads(data)["contacts_only"] == 0
     v = crm.today_view()
     assert len(v["no_followup"]) >= 50                     # درخواست‌های باز برای پیگیری
+
+
+def test_edit_contact_and_export(crm):
+    a = crm.quick_add({"phone": "09121112233", "name": "علی", "title": "پمپ", "category": "پمپ آب"}, "x")
+    b = crm.quick_add({"phone": "09351112233", "name": "رضا", "title": "دریل"}, "x")
+    crm.update_contact(a["contact_id"], {"name": "علی رضایی", "phone": "0912 111 2244", "city": "دزفول"})
+    c = crm.find_contact("09121112244")
+    assert c["name"] == "علی رضایی" and c["city"] == "دزفول" and crm.find_contact("09121112233") is None
+    with pytest.raises(ValueError):                                       # شماره‌ی مشتری دیگر
+        crm.update_contact(a["contact_id"], {"phone": "09351112233"})
+    csv_text = crm.export_contacts().decode("utf-8-sig")
+    assert "09121112244" in csv_text and "09351112233" in csv_text and csv_text.startswith("نام")
+    assert sorted(crm.export_contacts(fmt="txt").decode().split("\n")) == ["09121112244", "09351112233"]
+    crm.update_deal(a["deal_id"], {"stage": "won", "amount": "1000"})
+    assert crm.export_contacts(category="پمپ", fmt="txt").decode() == "09121112244"   # فقط خریداران این دسته

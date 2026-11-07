@@ -333,7 +333,7 @@ def search_contacts(q: str = "", tag: str = "", category: str = "", months: list
         if q:
             like = f"%{q.strip()}%"
             qry = qry.filter(or_(Contact.name.ilike(like), Contact.city.ilike(like), Contact.phone.like(like)))
-        rows = qry.order_by(Contact.created_at.desc()).limit(3000).all()
+        rows = qry.order_by(Contact.created_at.desc()).limit(max(3000, limit)).all()
         won = defaultdict(list)
         for d in db.query(Deal).filter(Deal.stage == "won").all():
             won[d.contact_id].append(d)
@@ -356,6 +356,21 @@ def search_contacts(q: str = "", tag: str = "", category: str = "", months: list
             if len(out) >= limit:
                 break
         return out
+
+
+def export_contacts(q: str = "", category: str = "", months: list[int] | None = None, fmt: str = "csv") -> bytes:
+    """خروجی باشگاه مشتریان: همه‌ی شماره‌های فیلتر فعلی (CSV با BOM برای اکسل، یا فقط شماره‌ها خط به خط)."""
+    rows = [r for r in search_contacts(q, "", category, months, limit=1_000_000) if r.get("phone")]
+    if fmt == "txt":
+        return "\n".join(r["phone"] for r in rows).encode()
+    import csv
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["نام", "شماره", "شهر", "استان", "زمینه‌ی فعالیت", "تعداد خرید", "مبلغ خرید (تومان)", "آخرین خرید", "کالاها"])
+    for r in rows:
+        w.writerow([r["name"] or "", r["phone"], r["city"] or "", r["province"] or "", r["activity"] or "",
+                    r["bought"], r["spent"] or "", r["last"] or "", "، ".join(r["items"])])
+    return ("\ufeff" + buf.getvalue()).encode()
 
 
 # ---------------- گزارش ----------------

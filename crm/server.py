@@ -220,6 +220,16 @@ class Handler(BaseHTTPRequestHandler):
             self.user = read_session(self._cookie("crm") or "")
             if path.startswith("/api/") and not self.user:
                 raise HttpError(401, "وارد نشده‌اید")
+            if path == "/api/contacts/export" and method == "GET":
+                self.admin()
+                fmt = "txt" if self.q("format") == "txt" else "csv"
+                data = core.export_contacts(self.q("q") or "", self.q("category") or "",
+                                            [int(x) for x in (self.q("months") or "").split(",") if x.isdigit()], fmt)
+                log.info("خروجی مشتریان (%s) توسط %s", fmt, self.user)
+                if fmt == "txt":
+                    return self._send(200, data, "text/plain; charset=utf-8")
+                return self._send(200, data, "text/csv; charset=utf-8",
+                                  {"Content-Disposition": 'attachment; filename="caravan-customers.csv"'})
             if path == "/api/import/leads" and method == "POST":
                 self.admin()
                 return self._json(200, _val(core.import_leads, self.raw()))

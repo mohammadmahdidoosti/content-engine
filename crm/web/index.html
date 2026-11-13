@@ -341,12 +341,20 @@ function add(){
   const root = $("#view");
   bindChips(root, "src", () => { $("#codeBox").hidden = picked(root, "src") !== "کد آگهی"; });
   bindChips(root, "fu");
-  const look = async () => { const v = en($("#fPhone").value); if (v.replace(/\D/g, "").length < 10) { $("#known").innerHTML = ""; return; }
+  // اسم و شهری که خودکار از مشتری قبلی پر شده، با عوض/پاک شدن شماره خودکار پاک می‌شود (اگر دستی تغییرش نداده باشید)
+  const AUTO = {fName: "", fCity: ""};
+  const clearAuto = () => { for (const k of ["fName", "fCity"]) { if (AUTO[k] && $("#" + k).value === AUTO[k]) $("#" + k).value = ""; AUTO[k] = ""; } };
+  const fillAuto = (k, v) => { const e = $("#" + k); if (!e.value || e.value === AUTO[k]) { e.value = v || ""; AUTO[k] = v || ""; } };
+  const look = async () => { const v = en($("#fPhone").value); look._seq = (look._seq || 0) + 1; const seq = look._seq;
+    if (v.replace(/\D/g, "").length < 11) { $("#known").innerHTML = ""; clearAuto(); return; }
     const c = await api("/api/contacts/lookup?phone=" + encodeURIComponent(v)).catch(() => null);
+    if (seq !== look._seq) return;
     if (c && c.id) { $("#known").innerHTML = `<div class="known"><div class="row" style="flex-wrap:nowrap">${avatar(c)}<div><b>مشتری قبلی: ${esc(c.name || "بدون نام")}</b><div class="small muted">${c.city ? esc(c.city) : ""}</div></div></div>
         ${c.deals.length ? `<div style="margin-top:8px">${c.deals.slice(0, 4).map(d => `<div class="row small" style="margin-top:3px">${pill(d)} ${esc(d.title)} <span class="faint">${fd(d.created_fa)}</span></div>`).join("")}</div>` : ""}</div>`;
-      if (!$("#fName").value) $("#fName").value = c.name || ""; if (!$("#fCity").value) $("#fCity").value = c.city || ""; } else $("#known").innerHTML = ""; };
-  $("#fPhone").oninput = () => { clearTimeout(look._t); look._t = setTimeout(look, 350); };
+      fillAuto("fName", c.name); fillAuto("fCity", c.city); } else { $("#known").innerHTML = ""; clearAuto(); } };
+  $("#fPhone").oninput = () => { const n = en($("#fPhone").value).replace(/\D/g, "").length;
+    if (n < 11) { $("#known").innerHTML = ""; clearAuto(); }
+    clearTimeout(look._t); look._t = setTimeout(look, 350); };
   if (PREFILL) { $("#fPhone").value = PREFILL; PREFILL = ""; look(); $("#fTitle").focus(); } else $("#fPhone").focus();
   $("#save").onclick = async () => {
     const phone = en($("#fPhone").value).trim();
